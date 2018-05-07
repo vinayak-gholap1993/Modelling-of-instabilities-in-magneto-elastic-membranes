@@ -1,0 +1,84 @@
+# Listing of Parameters
+# ---------------------
+
+subsection Boundary conditions
+  # Potential difference per unit length
+  set Potential difference per unit length = 1000
+end
+
+
+subsection Finite element system
+  # Minimum potential polynomial order
+  set Minimum polynomial degree = 1
+
+  # Maximum potential polynomial order
+  set Maximum polynomial degree = 8
+end
+
+
+subsection Geometry
+  # Mesh file for the toroidal geometry
+  set Mesh file                   = ../mesh/toroidal_membrane.inp
+
+  # Major radius of the torus
+  set Torus major radius          = 0.5
+
+  # Minor inner radius of the torus
+  set Torus minor radius (inner)  = 0.195
+
+  # Minor outer radius of the torus
+  set Torus minor radius (outer)  = 0.2
+
+  # Global grid scaling factor
+  set Grid scale          = 1.0
+end
+
+
+subsection Refinement
+  # Refinement strategy
+  # Options: h-GMR , p-GMR , h-AMR , p-AMR
+  set Refinement strategy         = h-AMR
+
+  # Initial global refinement level
+  set Initial global refinements  = 0
+
+  # Maximum number of refinement cycles
+  set Maximum cycles              = 13
+
+  # Maximum number of refinement levels
+  set Maximum h-level             = 20
+
+  # Fraction of cells to refine
+  set Refinement fraction         = 0.25
+
+  # Fraction of cells to coarsen
+  set Coarsening fraction         = 0.03
+  
+  # Force adaptive refinement at manifolds
+  set Force manifold_refinement  = true
+end
+
+
+subsection Linear solver
+  # Linear solver iterations (multiples of the system matrix size)
+  set Max iteration multiplier   = 1
+
+  # Linear solver residual
+  set Residual                   = 1e-12
+
+  # Preconditioner type
+  set Preconditioner type        = AMG
+
+  # Preconditioner relaxation value
+  set Preconditioner relaxation  = 1.2
+
+  # Type of solver used to solve the linear system
+  # Options: Direct ; Iterative
+  set Solver type                = Iterative
+end
+
+
+subsection Material properties
+  # Relative permeability of the toroidal membrane
+  set Membrane relative permeability = 6.0
+end
