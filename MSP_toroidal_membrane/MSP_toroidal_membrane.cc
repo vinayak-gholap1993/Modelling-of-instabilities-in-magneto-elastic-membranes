@@ -1516,7 +1516,7 @@ int main (int argc, char *argv[])
       ConditionalOStream pcout (std::cout,
                                 (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0));
 
-      const std::string input_file ("parameters.prm");
+      const std::string input_file ("/home/vinayak/Desktop/thesis/Master-Thesis/MSP_toroidal_membrane/parameters.prm");
 
       {
         const std::string title = "Running in 2-d...";
