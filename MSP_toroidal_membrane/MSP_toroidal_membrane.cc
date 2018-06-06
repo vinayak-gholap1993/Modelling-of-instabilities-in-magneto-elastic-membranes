@@ -1534,6 +1534,8 @@ int main (int argc, char *argv[])
       const std::string input_file ("parameters.prm");
 
       {
+        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
+              << " MPI processes" << std::endl;
         const std::string title = "Running in 2-d...";
         const std::string divider (title.size(), '=');
 
