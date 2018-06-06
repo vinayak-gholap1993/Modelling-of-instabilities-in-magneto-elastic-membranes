@@ -18,7 +18,7 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = /home/vinayak/Desktop/thesis/Master-Thesis/MSP_toroidal_membrane/mesh/toroidal_membrane.inp
+  set Mesh file                   = ../mesh/toroidal_membrane.inp
 
   # Major radius of the torus
   set Torus major radius          = 0.5

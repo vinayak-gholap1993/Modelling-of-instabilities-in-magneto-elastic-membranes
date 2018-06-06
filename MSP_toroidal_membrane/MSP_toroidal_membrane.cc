@@ -62,42 +62,42 @@ using namespace dealii;
 //
 // There are several parameters that can be set in the code so we set up a
 // ParameterHandler object to read in the choices at run-time.
-  namespace Parameters
-  {
+namespace Parameters
+{
 // @sect4{Boundary conditions}
 
-    struct BoundaryConditions
+  struct BoundaryConditions
+  {
+    double potential_difference_per_unit_length;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+
+  void BoundaryConditions::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Boundary conditions");
     {
-      double potential_difference_per_unit_length;
+      prm.declare_entry("Potential difference per unit length", "1000",
+                        Patterns::Double(1e-9),
+                        "Potential difference along the faux permanent magnet");
 
-      static void
-      declare_parameters(ParameterHandler &prm);
-
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
-
-
-    void BoundaryConditions::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Boundary conditions");
-      {
-        prm.declare_entry("Potential difference per unit length", "1000",
-                          Patterns::Double(1e-9),
-                          "Potential difference along the faux permanent magnet");
-
-      }
-      prm.leave_subsection();
     }
+    prm.leave_subsection();
+  }
 
-    void BoundaryConditions::parse_parameters(ParameterHandler &prm)
+  void BoundaryConditions::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Boundary conditions");
     {
-      prm.enter_subsection("Boundary conditions");
-      {
-        potential_difference_per_unit_length = prm.get_double("Potential difference per unit length");
-      }
-      prm.leave_subsection();
+      potential_difference_per_unit_length = prm.get_double("Potential difference per unit length");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{Finite Element system}
 
@@ -111,322 +111,322 @@ using namespace dealii;
 // specify the polynomial order used to approximate the solution.  The
 // quadrature order should be adjusted accordingly, but this is done at a
 // later stage.
-    struct FESystem
+  struct FESystem
+  {
+    unsigned int poly_degree_min;
+    unsigned int poly_degree_max;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+
+  void FESystem::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Finite element system");
     {
-      unsigned int poly_degree_min;
-      unsigned int poly_degree_max;
+      prm.declare_entry("Minimum polynomial degree", "1",
+                        Patterns::Integer(1),
+                        "Displacement system polynomial order");
 
-      static void
-      declare_parameters(ParameterHandler &prm);
-
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
-
-
-    void FESystem::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Finite element system");
-      {
-        prm.declare_entry("Minimum polynomial degree", "1",
-                          Patterns::Integer(1),
-                          "Displacement system polynomial order");
-
-        prm.declare_entry("Maximum polynomial degree", "2",
-                          Patterns::Integer(1),
-                          "Displacement system polynomial order");
-      }
-      prm.leave_subsection();
+      prm.declare_entry("Maximum polynomial degree", "2",
+                        Patterns::Integer(1),
+                        "Displacement system polynomial order");
     }
+    prm.leave_subsection();
+  }
 
-    void FESystem::parse_parameters(ParameterHandler &prm)
+  void FESystem::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Finite element system");
     {
-      prm.enter_subsection("Finite element system");
-      {
-        poly_degree_min = prm.get_integer("Minimum polynomial degree");
-        poly_degree_max = prm.get_integer("Maximum polynomial degree");
-      }
-      prm.leave_subsection();
+      poly_degree_min = prm.get_integer("Minimum polynomial degree");
+      poly_degree_max = prm.get_integer("Maximum polynomial degree");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{Geometry}
 
 // Make adjustments to the problem geometry and the applied load.  Since the
 // problem modelled here is quite specific, the load scale can be altered to
 // specific values to compare with the results given in the literature.
-    struct Geometry
+  struct Geometry
+  {
+    std::string mesh_file;
+    double      torus_major_radius;
+    double      torus_minor_radius_inner;
+    double      torus_minor_radius_outer;
+    double      grid_scale;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+  void Geometry::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Geometry");
     {
-      std::string mesh_file;
-      double      torus_major_radius;
-      double      torus_minor_radius_inner;
-      double      torus_minor_radius_outer;
-      double      grid_scale;
+      prm.declare_entry("Mesh file", "../mesh/toroidal_membrane.inp",
+                        Patterns::Anything(),
+                        "Mesh file for the toroidal geometry");
 
-      static void
-      declare_parameters(ParameterHandler &prm);
+      prm.declare_entry("Torus major radius", "0.5",
+                        Patterns::Double(0.0),
+                        "Major radius of the torus");
 
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
+      prm.declare_entry("Torus minor radius (inner)", "0.195",
+                        Patterns::Double(0.0),
+                        "Minor inner radius of the torus");
 
-    void Geometry::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Geometry");
-      {
-        prm.declare_entry("Mesh file", "../mesh/toroidal_membrane.inp",
-                          Patterns::Anything(),
-                          "Mesh file for the toroidal geometry");
+      prm.declare_entry("Torus minor radius (outer)", "0.2",
+                        Patterns::Double(0.0),
+                        "Minor outer radius of the torus");
 
-        prm.declare_entry("Torus major radius", "0.5",
-                          Patterns::Double(0.0),
-                          "Major radius of the torus");
-
-        prm.declare_entry("Torus minor radius (inner)", "0.195",
-                          Patterns::Double(0.0),
-                          "Minor inner radius of the torus");
-
-        prm.declare_entry("Torus minor radius (outer)", "0.2",
-                          Patterns::Double(0.0),
-                          "Minor outer radius of the torus");
-
-        prm.declare_entry("Grid scale", "1.0",
-                          Patterns::Double(0.0),
-                          "Global grid scaling factor");
-      }
-      prm.leave_subsection();
+      prm.declare_entry("Grid scale", "1.0",
+                        Patterns::Double(0.0),
+                        "Global grid scaling factor");
     }
+    prm.leave_subsection();
+  }
 
-    void Geometry::parse_parameters(ParameterHandler &prm)
+  void Geometry::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Geometry");
     {
-      prm.enter_subsection("Geometry");
-      {
-        mesh_file = prm.get("Mesh file");
-        torus_major_radius = prm.get_double("Torus major radius");
-        torus_minor_radius_inner = prm.get_double("Torus minor radius (inner)");
-        torus_minor_radius_outer = prm.get_double("Torus minor radius (outer)");
-        grid_scale = prm.get_double("Grid scale");
-      }
-      prm.leave_subsection();
+      mesh_file = prm.get("Mesh file");
+      torus_major_radius = prm.get_double("Torus major radius");
+      torus_minor_radius_inner = prm.get_double("Torus minor radius (inner)");
+      torus_minor_radius_outer = prm.get_double("Torus minor radius (outer)");
+      grid_scale = prm.get_double("Grid scale");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{Refinement}
 
-    struct Refinement
+  struct Refinement
+  {
+    std::string refinement_strategy;
+    unsigned int n_global_refinements;
+    unsigned int n_cycles_max;
+    unsigned int n_levels_max;
+    double frac_refine;
+    double frac_coarsen;
+    double force_manifold_refinement;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+
+  void Refinement::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Refinement");
     {
-      std::string refinement_strategy;
-      unsigned int n_global_refinements;
-      unsigned int n_cycles_max;
-      unsigned int n_levels_max;
-      double frac_refine;
-      double frac_coarsen;
-      double force_manifold_refinement;
+      prm.declare_entry("Refinement strategy", "h-AMR",
+                        Patterns::Selection("h-GMR|p-GMR|h-AMR|p-AMR"), // hp-AMR
+                        "Strategy used to perform hp refinement");
 
-      static void
-      declare_parameters(ParameterHandler &prm);
+      prm.declare_entry("Initial global refinements", "1",
+                        Patterns::Integer(0),
+                        "Initial global refinement level");
 
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
+      prm.declare_entry("Maximum cycles", "10",
+                        Patterns::Integer(0),
+                        "Maximum number of h-refinement cycles");
 
+      prm.declare_entry("Maximum h-level", "6",
+                        Patterns::Integer(0,20),
+                        "Number of h-refinement levels in the discretisation");
 
-    void Refinement::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Refinement");
-      {
-        prm.declare_entry("Refinement strategy", "h-AMR",
-                          Patterns::Selection("h-GMR|p-GMR|h-AMR|p-AMR"), // hp-AMR
-                          "Strategy used to perform hp refinement");
+      prm.declare_entry("Refinement fraction", "0.3",
+                        Patterns::Double(0.0,1.0),
+                        "Fraction of cells to refine");
 
-        prm.declare_entry("Initial global refinements", "1",
-                          Patterns::Integer(0),
-                          "Initial global refinement level");
+      prm.declare_entry("Coarsening fraction", "0.03",
+                        Patterns::Double(0.0,1.0),
+                        "Fraction of cells to coarsen");
 
-        prm.declare_entry("Maximum cycles", "10",
-                          Patterns::Integer(0),
-                          "Maximum number of h-refinement cycles");
-
-        prm.declare_entry("Maximum h-level", "6",
-                          Patterns::Integer(0,20),
-                          "Number of h-refinement levels in the discretisation");
-
-        prm.declare_entry("Refinement fraction", "0.3",
-                          Patterns::Double(0.0,1.0),
-                          "Fraction of cells to refine");
-
-        prm.declare_entry("Coarsening fraction", "0.03",
-                          Patterns::Double(0.0,1.0),
-                          "Fraction of cells to coarsen");
-
-        prm.declare_entry("Force manifold_refinement", "false",
-                          Patterns::Bool(),
-                          "Force adaptive refinement at manifolds");
-      }
-      prm.leave_subsection();
+      prm.declare_entry("Force manifold_refinement", "false",
+                        Patterns::Bool(),
+                        "Force adaptive refinement at manifolds");
     }
+    prm.leave_subsection();
+  }
 
-    void Refinement::parse_parameters(ParameterHandler &prm)
+  void Refinement::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Refinement");
     {
-      prm.enter_subsection("Refinement");
-      {
-        refinement_strategy = prm.get("Refinement strategy");
-        n_global_refinements = prm.get_integer("Initial global refinements");
-        n_cycles_max = prm.get_integer("Maximum cycles");
-        n_levels_max = prm.get_integer("Maximum h-level");
-        frac_refine = prm.get_double("Refinement fraction");
-        frac_coarsen = prm.get_double("Coarsening fraction");
-        force_manifold_refinement = prm.get_bool("Force manifold_refinement");
-      }
-      prm.leave_subsection();
+      refinement_strategy = prm.get("Refinement strategy");
+      n_global_refinements = prm.get_integer("Initial global refinements");
+      n_cycles_max = prm.get_integer("Maximum cycles");
+      n_levels_max = prm.get_integer("Maximum h-level");
+      frac_refine = prm.get_double("Refinement fraction");
+      frac_coarsen = prm.get_double("Coarsening fraction");
+      force_manifold_refinement = prm.get_bool("Force manifold_refinement");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{Materials}
 
 // We also need the shear modulus $ \mu $ and Poisson ration $ \nu $ for the
 // neo-Hookean material. We will let each benchmark problem set the shear modulus,
 // but will leave the level of incompressibility a flexible quantity.
-    struct Materials
+  struct Materials
+  {
+    double mu_r_air;
+    double mu_r_membrane;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+  void Materials::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Material properties");
     {
-      double mu_r_air;
-      double mu_r_membrane;
-
-      static void
-      declare_parameters(ParameterHandler &prm);
-
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
-
-    void Materials::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Material properties");
-      {
-        prm.declare_entry("Membrane relative permeability", "1.0",
-                          Patterns::Double(1e-9),
-                          "Relative permeability of the toroidal membrane");
-      }
-      prm.leave_subsection();
+      prm.declare_entry("Membrane relative permeability", "1.0",
+                        Patterns::Double(1e-9),
+                        "Relative permeability of the toroidal membrane");
     }
+    prm.leave_subsection();
+  }
 
-    void Materials::parse_parameters(ParameterHandler &prm)
+  void Materials::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Material properties");
     {
-      prm.enter_subsection("Material properties");
-      {
-        mu_r_air = 1.0;
-        mu_r_membrane = prm.get_double("Membrane relative permeability");
-      }
-      prm.leave_subsection();
+      mu_r_air = 1.0;
+      mu_r_membrane = prm.get_double("Membrane relative permeability");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{Linear solver}
 
 // Next, we choose both solver and preconditioner settings.  The use of an
 // effective preconditioner is critical to ensure convergence when a large
 // nonlinear motion occurs within a Newton increment.
-    struct LinearSolver
+  struct LinearSolver
+  {
+    std::string lin_slvr_type;
+    double      lin_slvr_tol;
+    double      lin_slvr_max_it;
+    std::string preconditioner_type;
+    double      preconditioner_relaxation;
+
+    static void
+    declare_parameters(ParameterHandler &prm);
+
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
+
+  void LinearSolver::declare_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Linear solver");
     {
-      std::string lin_slvr_type;
-      double      lin_slvr_tol;
-      double      lin_slvr_max_it;
-      std::string preconditioner_type;
-      double      preconditioner_relaxation;
+      prm.declare_entry("Solver type", "Iterative",
+                        Patterns::Selection("Iterative|Direct"),
+                        "Type of solver used to solve the linear system");
 
-      static void
-      declare_parameters(ParameterHandler &prm);
+      prm.declare_entry("Residual", "1e-6",
+                        Patterns::Double(0.0),
+                        "Linear solver residual (scaled by residual norm)");
 
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
+      prm.declare_entry("Max iteration multiplier", "1",
+                        Patterns::Double(0.0),
+                        "Linear solver iterations (multiples of the system matrix size)");
 
-    void LinearSolver::declare_parameters(ParameterHandler &prm)
-    {
-      prm.enter_subsection("Linear solver");
-      {
-        prm.declare_entry("Solver type", "Iterative",
-                          Patterns::Selection("Iterative|Direct"),
-                          "Type of solver used to solve the linear system");
+      prm.declare_entry("Preconditioner type", "ssor",
+                        Patterns::Selection("jacobi|ssor|AMG"),
+                        "Type of preconditioner");
 
-        prm.declare_entry("Residual", "1e-6",
-                          Patterns::Double(0.0),
-                          "Linear solver residual (scaled by residual norm)");
-
-        prm.declare_entry("Max iteration multiplier", "1",
-                          Patterns::Double(0.0),
-                          "Linear solver iterations (multiples of the system matrix size)");
-
-        prm.declare_entry("Preconditioner type", "ssor",
-                          Patterns::Selection("jacobi|ssor|AMG"),
-                          "Type of preconditioner");
-
-        prm.declare_entry("Preconditioner relaxation", "0.65",
-                          Patterns::Double(0.0),
-                          "Preconditioner relaxation value");
-      }
-      prm.leave_subsection();
+      prm.declare_entry("Preconditioner relaxation", "0.65",
+                        Patterns::Double(0.0),
+                        "Preconditioner relaxation value");
     }
+    prm.leave_subsection();
+  }
 
-    void LinearSolver::parse_parameters(ParameterHandler &prm)
+  void LinearSolver::parse_parameters(ParameterHandler &prm)
+  {
+    prm.enter_subsection("Linear solver");
     {
-      prm.enter_subsection("Linear solver");
-      {
-        lin_slvr_type = prm.get("Solver type");
-        lin_slvr_tol = prm.get_double("Residual");
-        lin_slvr_max_it = prm.get_double("Max iteration multiplier");
-        preconditioner_type = prm.get("Preconditioner type");
-        preconditioner_relaxation = prm.get_double("Preconditioner relaxation");
-      }
-      prm.leave_subsection();
+      lin_slvr_type = prm.get("Solver type");
+      lin_slvr_tol = prm.get_double("Residual");
+      lin_slvr_max_it = prm.get_double("Max iteration multiplier");
+      preconditioner_type = prm.get("Preconditioner type");
+      preconditioner_relaxation = prm.get_double("Preconditioner relaxation");
     }
+    prm.leave_subsection();
+  }
 
 // @sect4{All parameters}
 
 // Finally we consolidate all of the above structures into a single container
 // that holds all of our run-time selections.
-    struct AllParameters :
-      public BoundaryConditions,
-      public FESystem,
-      public Geometry,
-      public Refinement,
-      public Materials,
-      public LinearSolver
+  struct AllParameters :
+    public BoundaryConditions,
+    public FESystem,
+    public Geometry,
+    public Refinement,
+    public Materials,
+    public LinearSolver
 
-    {
-      AllParameters(const std::string &input_file);
+  {
+    AllParameters(const std::string &input_file);
 
-      static void
-      declare_parameters(ParameterHandler &prm);
+    static void
+    declare_parameters(ParameterHandler &prm);
 
-      void
-      parse_parameters(ParameterHandler &prm);
-    };
+    void
+    parse_parameters(ParameterHandler &prm);
+  };
 
-    AllParameters::AllParameters(const std::string &input_file)
-    {
-      ParameterHandler prm;
-      declare_parameters(prm);
-      prm.parse_input(input_file);
-      parse_parameters(prm);
-    }
-
-    void AllParameters::declare_parameters(ParameterHandler &prm)
-    {
-      BoundaryConditions::declare_parameters(prm);
-      FESystem::declare_parameters(prm);
-      Geometry::declare_parameters(prm);
-      Refinement::declare_parameters(prm);
-      Materials::declare_parameters(prm);
-      LinearSolver::declare_parameters(prm);
-    }
-
-    void AllParameters::parse_parameters(ParameterHandler &prm)
-    {
-      BoundaryConditions::parse_parameters(prm);
-      FESystem::parse_parameters(prm);
-      Geometry::parse_parameters(prm);
-      Refinement::parse_parameters(prm);
-      Materials::parse_parameters(prm);
-      LinearSolver::parse_parameters(prm);
-    }
+  AllParameters::AllParameters(const std::string &input_file)
+  {
+    ParameterHandler prm;
+    declare_parameters(prm);
+    prm.parse_input(input_file);
+    parse_parameters(prm);
   }
+
+  void AllParameters::declare_parameters(ParameterHandler &prm)
+  {
+    BoundaryConditions::declare_parameters(prm);
+    FESystem::declare_parameters(prm);
+    Geometry::declare_parameters(prm);
+    Refinement::declare_parameters(prm);
+    Materials::declare_parameters(prm);
+    LinearSolver::declare_parameters(prm);
+  }
+
+  void AllParameters::parse_parameters(ParameterHandler &prm)
+  {
+    BoundaryConditions::parse_parameters(prm);
+    FESystem::parse_parameters(prm);
+    Geometry::parse_parameters(prm);
+    Refinement::parse_parameters(prm);
+    Materials::parse_parameters(prm);
+    LinearSolver::parse_parameters(prm);
+  }
+}
 
 // @sect3{Nonconstant coefficients}
 
@@ -546,9 +546,9 @@ void Coefficient<dim>::value_list (const std::vector<Point<dim> > &points,
   for (unsigned int i=0; i<n_points; ++i)
     {
       if (geometry.within_membrane(points[i]) == true)
-      values[i] = mu_membrane;
-    else
-      values[i] = mu_membrane;
+        values[i] = mu_membrane;
+      else
+        values[i] = mu_membrane;
     }
 }
 
@@ -606,8 +606,8 @@ void LinearScalarPotential<dim>::value_list (const std::vector<Point<dim> > &poi
 template <int dim>
 class RefinementStrategy
 {
-  public:
-  RefinementStrategy (const std::string & refinement_strategy)
+public:
+  RefinementStrategy (const std::string &refinement_strategy)
     : _use_h_refinement (refinement_strategy == "h-GMR" ||
                          refinement_strategy == "h-AMR" ||
                          refinement_strategy == "hp-AMR"),
@@ -618,13 +618,28 @@ class RefinementStrategy
                 refinement_strategy == "p-AMR")
   {}
 
-  bool use_h_refinement (void) const {return _use_h_refinement;}
-  bool use_p_refinement (void) const {return _use_p_refinement;}
-  bool use_hp_refinement (void) const {return use_h_refinement() & use_p_refinement();}
-  bool use_AMR (void) const {return _use_AMR;}
-  bool use_GR (void) const {return !use_AMR();}
+  bool use_h_refinement (void) const
+  {
+    return _use_h_refinement;
+  }
+  bool use_p_refinement (void) const
+  {
+    return _use_p_refinement;
+  }
+  bool use_hp_refinement (void) const
+  {
+    return use_h_refinement() & use_p_refinement();
+  }
+  bool use_AMR (void) const
+  {
+    return _use_AMR;
+  }
+  bool use_GR (void) const
+  {
+    return !use_AMR();
+  }
 
-  private:
+private:
   const bool _use_h_refinement;
   const bool _use_p_refinement;
   const bool _use_AMR;
@@ -707,13 +722,13 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   this_mpi_process (Utilities::MPI::this_mpi_process(mpi_communicator)),
   pcout(std::cout, this_mpi_process == 0),
   computing_timer(mpi_communicator,
-                  pcout,
-                  TimerOutput::never,
-                  TimerOutput::wall_times),
+                 pcout,
+                 TimerOutput::never,
+                 TimerOutput::wall_times),
   parameters (input_file),
   geometry (parameters.torus_major_radius*parameters.grid_scale,
-            parameters.torus_minor_radius_inner*parameters.grid_scale,
-            parameters.torus_minor_radius_outer*parameters.grid_scale),
+           parameters.torus_minor_radius_inner*parameters.grid_scale,
+           parameters.torus_minor_radius_outer*parameters.grid_scale),
   manifold_id_inner_radius (100),
   manifold_id_outer_radius (101),
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
@@ -723,19 +738,19 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   refinement_strategy (parameters.refinement_strategy),
   hp_dof_handler (triangulation),
   function_material_coefficients (geometry,
-                                  parameters.mu_r_air,
-                                  parameters.mu_r_membrane)
+                                 parameters.mu_r_air,
+                                 parameters.mu_r_membrane)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
 
   for (unsigned int degree = parameters.poly_degree_min;
-      degree <= parameters.poly_degree_max; ++degree)
-  {
-    degree_collection.push_back(degree); // Polynomial degree
-    fe_collection.push_back(FE_Q<dim>(degree));
-    mapping_collection.push_back(MappingQGeneric<dim>(degree));
-    qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
-  }
+       degree <= parameters.poly_degree_max; ++degree)
+    {
+      degree_collection.push_back(degree); // Polynomial degree
+      fe_collection.push_back(FE_Q<dim>(degree));
+      mapping_collection.push_back(MappingQGeneric<dim>(degree));
+      qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
+    }
 }
 
 
@@ -757,15 +772,15 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
   cell = hp_dof_handler.begin_active(),
   endc = hp_dof_handler.end();
   for (; cell!=endc; ++cell)
-  {
+    {
 //    if (cell->is_locally_owned() == false) continue;
-    if (cell->subdomain_id() != this_mpi_process) continue;
+      if (cell->subdomain_id() != this_mpi_process) continue;
 
-    if (geometry.within_membrane(cell->center()))
-      cell->set_active_fe_index(0); // 1 for p-refinement test
-    else
-      cell->set_active_fe_index(0);
-  }
+      if (geometry.within_membrane(cell->center()))
+        cell->set_active_fe_index(0); // 1 for p-refinement test
+      else
+        cell->set_active_fe_index(0);
+    }
 }
 
 template <int dim>
@@ -865,49 +880,49 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
   cell = hp_dof_handler.begin_active(),
   endc = hp_dof_handler.end();
   for (; cell!=endc; ++cell)
-  {
-//    if (cell->is_locally_owned() == false) continue;
-    if (cell->subdomain_id() != this_mpi_process) continue;
-
-    hp_fe_values.reinit(cell);
-    const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
-    const unsigned int  &n_q_points = fe_values.n_quadrature_points;
-    const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
-
-    FullMatrix<double>   cell_matrix (n_dofs_per_cell, n_dofs_per_cell);
-    Vector<double>       cell_rhs (n_dofs_per_cell);
-    std::vector<types::global_dof_index> local_dof_indices (n_dofs_per_cell);
-    std::vector<double>    coefficient_values (n_q_points);
-
-    function_material_coefficients.value_list (fe_values.get_quadrature_points(),
-                                               coefficient_values);
-    for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
     {
-      const double mu_r_mu_0 = coefficient_values[q_index];
+//    if (cell->is_locally_owned() == false) continue;
+      if (cell->subdomain_id() != this_mpi_process) continue;
 
-      for (unsigned int i=0; i<n_dofs_per_cell; ++i)
-      {
-        for (unsigned int j=0; j<=i; ++j)
-          cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
-                              mu_r_mu_0*
-                              fe_values.shape_grad(j,q_index) *
-                              fe_values.JxW(q_index);
-      }
+      hp_fe_values.reinit(cell);
+      const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+      const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+      const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+
+      FullMatrix<double>   cell_matrix (n_dofs_per_cell, n_dofs_per_cell);
+      Vector<double>       cell_rhs (n_dofs_per_cell);
+      std::vector<types::global_dof_index> local_dof_indices (n_dofs_per_cell);
+      std::vector<double>    coefficient_values (n_q_points);
+
+      function_material_coefficients.value_list (fe_values.get_quadrature_points(),
+                                                 coefficient_values);
+      for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
+        {
+          const double mu_r_mu_0 = coefficient_values[q_index];
+
+          for (unsigned int i=0; i<n_dofs_per_cell; ++i)
+            {
+              for (unsigned int j=0; j<=i; ++j)
+                cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
+                                    mu_r_mu_0*
+                                    fe_values.shape_grad(j,q_index) *
+                                    fe_values.JxW(q_index);
+            }
+        }
+
+      // Finally, we need to copy the lower half of the local matrix into the
+      // upper half:
+      for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+        for (unsigned int j = i + 1; j < n_dofs_per_cell; ++j)
+          cell_matrix(i, j) = cell_matrix(j, i);
+
+      cell->get_dof_indices (local_dof_indices);
+      constraints.distribute_local_to_global (cell_matrix,
+                                              cell_rhs,
+                                              local_dof_indices,
+                                              system_matrix,
+                                              system_rhs);
     }
-
-    // Finally, we need to copy the lower half of the local matrix into the
-    // upper half:
-    for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
-      for (unsigned int j = i + 1; j < n_dofs_per_cell; ++j)
-        cell_matrix(i, j) = cell_matrix(j, i);
-
-    cell->get_dof_indices (local_dof_indices);
-    constraints.distribute_local_to_global (cell_matrix,
-                                            cell_rhs,
-                                            local_dof_indices,
-                                            system_matrix,
-                                            system_rhs);
-  }
 
   system_matrix.compress(VectorOperation::add);
   system_rhs.compress(VectorOperation::add);
@@ -928,90 +943,90 @@ void MSP_Toroidal_Membrane<dim>::solve ()
   SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.m(),
                                 parameters.lin_slvr_tol);
   if (parameters.lin_slvr_type == "Iterative")
-  {
-
-    TrilinosWrappers::SolverCG solver (solver_control);
-
-    // Default settings for AMG preconditioner are
-    // good for a Laplace problem
-    std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner;
-    if (parameters.preconditioner_type == "jacobi")
     {
-      TrilinosWrappers::PreconditionJacobi* ptr_prec
-        = new TrilinosWrappers::PreconditionJacobi ();
 
-      TrilinosWrappers::PreconditionJacobi::AdditionalData
-        additional_data (parameters.preconditioner_relaxation);
+      TrilinosWrappers::SolverCG solver (solver_control);
 
-      ptr_prec->initialize(system_matrix,
-                           additional_data);
-      preconditioner.reset(ptr_prec);
-    }
-    else if (parameters.preconditioner_type == "ssor")
-    {
-      TrilinosWrappers::PreconditionSSOR* ptr_prec
-        = new TrilinosWrappers::PreconditionSSOR ();
-
-      TrilinosWrappers::PreconditionSSOR::AdditionalData
-        additional_data (parameters.preconditioner_relaxation);
-
-      ptr_prec->initialize(system_matrix,
-                           additional_data);
-      preconditioner.reset(ptr_prec);
-    }
-    else // AMG
-    {
-      TrilinosWrappers::PreconditionAMG* ptr_prec
-        = new TrilinosWrappers::PreconditionAMG ();
-
-      TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
-
-      typename hp::DoFHandler<dim>::active_cell_iterator
-      cell = hp_dof_handler.begin_active(),
-      endc = hp_dof_handler.end();
-      for (; cell!=endc; ++cell)
-      {
-    //    if (cell->is_locally_owned() == false) continue;
-        if (cell->subdomain_id() != this_mpi_process) continue;
-
-        const unsigned int cell_fe_idx = cell->active_fe_index();
-        const unsigned int cell_poly = cell_fe_idx + 1;
-        if (cell_poly > 1)
+      // Default settings for AMG preconditioner are
+      // good for a Laplace problem
+      std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner;
+      if (parameters.preconditioner_type == "jacobi")
         {
-          additional_data.higher_order_elements = true;
-          break;
-        }
-      }
-      {
-        const int hoe = additional_data.higher_order_elements;
-        additional_data.higher_order_elements
-          = Utilities::MPI::max(hoe, mpi_communicator);
-      }
-      ptr_prec->initialize(system_matrix,
-                           additional_data);
-      preconditioner.reset(ptr_prec);
-    }
+          TrilinosWrappers::PreconditionJacobi *ptr_prec
+            = new TrilinosWrappers::PreconditionJacobi ();
 
-    solver.solve (system_matrix,
-                  distributed_solution,
-                  system_rhs,
-                  *preconditioner);
-  }
+          TrilinosWrappers::PreconditionJacobi::AdditionalData
+          additional_data (parameters.preconditioner_relaxation);
+
+          ptr_prec->initialize(system_matrix,
+                               additional_data);
+          preconditioner.reset(ptr_prec);
+        }
+      else if (parameters.preconditioner_type == "ssor")
+        {
+          TrilinosWrappers::PreconditionSSOR *ptr_prec
+            = new TrilinosWrappers::PreconditionSSOR ();
+
+          TrilinosWrappers::PreconditionSSOR::AdditionalData
+          additional_data (parameters.preconditioner_relaxation);
+
+          ptr_prec->initialize(system_matrix,
+                               additional_data);
+          preconditioner.reset(ptr_prec);
+        }
+      else // AMG
+        {
+          TrilinosWrappers::PreconditionAMG *ptr_prec
+            = new TrilinosWrappers::PreconditionAMG ();
+
+          TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
+
+          typename hp::DoFHandler<dim>::active_cell_iterator
+          cell = hp_dof_handler.begin_active(),
+          endc = hp_dof_handler.end();
+          for (; cell!=endc; ++cell)
+            {
+              //    if (cell->is_locally_owned() == false) continue;
+              if (cell->subdomain_id() != this_mpi_process) continue;
+
+              const unsigned int cell_fe_idx = cell->active_fe_index();
+              const unsigned int cell_poly = cell_fe_idx + 1;
+              if (cell_poly > 1)
+                {
+                  additional_data.higher_order_elements = true;
+                  break;
+                }
+            }
+          {
+            const int hoe = additional_data.higher_order_elements;
+            additional_data.higher_order_elements
+              = Utilities::MPI::max(hoe, mpi_communicator);
+          }
+          ptr_prec->initialize(system_matrix,
+                               additional_data);
+          preconditioner.reset(ptr_prec);
+        }
+
+      solver.solve (system_matrix,
+                    distributed_solution,
+                    system_rhs,
+                    *preconditioner);
+    }
   else // Direct
-  {
-    TrilinosWrappers::SolverDirect solver (solver_control);
-    solver.solve (system_matrix,
-                  distributed_solution,
-                  system_rhs);
-  }
+    {
+      TrilinosWrappers::SolverDirect solver (solver_control);
+      solver.solve (system_matrix,
+                    distributed_solution,
+                    system_rhs);
+    }
 
   constraints.distribute (distributed_solution);
   solution = distributed_solution;
 
   pcout
-    << "   Iterations: " << solver_control.last_step()
-    << "  Residual: " << solver_control.last_value()
-    << std::endl;
+      << "   Iterations: " << solver_control.last_step()
+      << "  Residual: " << solver_control.last_value()
+      << std::endl;
 }
 
 
@@ -1026,10 +1041,10 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
 
   hp::QCollection<dim-1> EE_qf_collection_face_QGauss;
   for (unsigned int degree = parameters.poly_degree_min;
-      degree <= parameters.poly_degree_max; ++degree)
-  {
-    EE_qf_collection_face_QGauss.push_back(QGauss<dim-1> (degree + 2));
-  }
+       degree <= parameters.poly_degree_max; ++degree)
+    {
+      EE_qf_collection_face_QGauss.push_back(QGauss<dim-1> (degree + 2));
+    }
 
   TrilinosWrappers::MPI::Vector distributed_solution(locally_owned_dofs,
                                                      mpi_communicator);
@@ -1057,109 +1072,109 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
 
   // Global refinement
   if (refinement_strategy.use_GR() == true)
-  {
-    if (refinement_strategy.use_h_refinement() == true)
     {
-      AssertThrow (triangulation.n_global_levels() < parameters.n_levels_max, ExcInternalError());
-      triangulation.refine_global (1);
-    }
-    else // p-refinement
-    {
-      AssertThrow(false, ExcNotImplemented());
+      if (refinement_strategy.use_h_refinement() == true)
+        {
+          AssertThrow (triangulation.n_global_levels() < parameters.n_levels_max, ExcInternalError());
+          triangulation.refine_global (1);
+        }
+      else // p-refinement
+        {
+          AssertThrow(false, ExcNotImplemented());
 //      AssertThrow(poly_refinement_strategy.use_p_refinement() == true, ExcInternalError());
+        }
     }
-  }
   else // Adaptive mesh refinement
-  {
-    // Mark cells for adaptive mesh refinement...
-    GridRefinement::refine_and_coarsen_fixed_number (triangulation,
-                                                     estimated_error_per_cell,
-                                                     parameters.frac_refine,
-                                                     parameters.frac_coarsen);
-
-    if (parameters.force_manifold_refinement)
     {
-      for (typename Triangulation<dim>::active_cell_iterator
-           cell = triangulation.begin_active();
-           cell != triangulation.end(); ++cell)
-      {
-        for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
-        {
-          if (cell->face(face)->manifold_id() == manifold_id_inner_radius ||
-              cell->face(face)->manifold_id() == manifold_id_outer_radius)
-          {
-            cell->clear_coarsen_flag();
-            cell->set_refine_flag();
-            continue;
-          }
-        }
-      }
-    }
+      // Mark cells for adaptive mesh refinement...
+      GridRefinement::refine_and_coarsen_fixed_number (triangulation,
+                                                       estimated_error_per_cell,
+                                                       parameters.frac_refine,
+                                                       parameters.frac_coarsen);
 
-    // Check that there are no violations on maximum cell level
-    // If so, then remove the marking
+      if (parameters.force_manifold_refinement)
+        {
+          for (typename Triangulation<dim>::active_cell_iterator
+               cell = triangulation.begin_active();
+               cell != triangulation.end(); ++cell)
+            {
+              for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+                {
+                  if (cell->face(face)->manifold_id() == manifold_id_inner_radius ||
+                      cell->face(face)->manifold_id() == manifold_id_outer_radius)
+                    {
+                      cell->clear_coarsen_flag();
+                      cell->set_refine_flag();
+                      continue;
+                    }
+                }
+            }
+        }
+
+      // Check that there are no violations on maximum cell level
+      // If so, then remove the marking
 //      if (triangulation.n_global_levels() > static_cast<int>(parameters.n_levels_max))
-    if (triangulation.n_levels() >= parameters.n_levels_max)
-      for (typename Triangulation<dim>::active_cell_iterator
-           cell = triangulation.begin_active(parameters.n_levels_max-1);
-           cell != triangulation.end(); ++cell)
-      {
-        cell->clear_refine_flag();
-      }
+      if (triangulation.n_levels() >= parameters.n_levels_max)
+        for (typename Triangulation<dim>::active_cell_iterator
+             cell = triangulation.begin_active(parameters.n_levels_max-1);
+             cell != triangulation.end(); ++cell)
+          {
+            cell->clear_refine_flag();
+          }
 
-    if (refinement_strategy.use_h_refinement() == true &&
-        refinement_strategy.use_p_refinement() == false) // h-refinement
-    {
-      triangulation.execute_coarsening_and_refinement ();
-      make_grid_manifold_ids();
-    }
-    else if (refinement_strategy.use_h_refinement() == false &&
-             refinement_strategy.use_p_refinement() == true) // p-refinement
-    {
-      typename hp::DoFHandler<dim>::active_cell_iterator
-        cell = hp_dof_handler.begin_active(),
-        endc = hp_dof_handler.end();
-        for (; cell!=endc; ++cell)
+      if (refinement_strategy.use_h_refinement() == true &&
+          refinement_strategy.use_p_refinement() == false) // h-refinement
         {
-      //    if (cell->is_locally_owned() == false) continue;
-          if (cell->subdomain_id() != this_mpi_process)
-          {
-            // Clear flags on non-owned cell that would
-            // be cleared on the owner processor anyway...
-            cell->clear_refine_flag();
-            cell->clear_coarsen_flag();
-            continue;
-          }
-
-          const unsigned int cell_fe_idx = cell->active_fe_index();
-          const unsigned int cell_poly = cell_fe_idx + 1;
-
-          if (cell->refine_flag_set())
-          {
-            if (cell_poly < parameters.poly_degree_max)
-              cell->set_active_fe_index(cell_fe_idx+1);
-            cell->clear_refine_flag();
-          }
-
-          if (cell->coarsen_flag_set())
-          {
-            if (cell_poly > parameters.poly_degree_min)
-              cell->set_active_fe_index(cell_fe_idx-1);
-            cell->clear_coarsen_flag();
-          }
-
-          AssertThrow(!(cell->refine_flag_set()), ExcInternalError());
-          AssertThrow(!(cell->coarsen_flag_set()), ExcInternalError());
+          triangulation.execute_coarsening_and_refinement ();
+          make_grid_manifold_ids();
         }
-    }
-    else // hp-refinement
-    {
-      AssertThrow(refinement_strategy.use_hp_refinement() == true, ExcInternalError());
-      AssertThrow(false, ExcNotImplemented());
-    }
+      else if (refinement_strategy.use_h_refinement() == false &&
+               refinement_strategy.use_p_refinement() == true) // p-refinement
+        {
+          typename hp::DoFHandler<dim>::active_cell_iterator
+          cell = hp_dof_handler.begin_active(),
+          endc = hp_dof_handler.end();
+          for (; cell!=endc; ++cell)
+            {
+              //    if (cell->is_locally_owned() == false) continue;
+              if (cell->subdomain_id() != this_mpi_process)
+                {
+                  // Clear flags on non-owned cell that would
+                  // be cleared on the owner processor anyway...
+                  cell->clear_refine_flag();
+                  cell->clear_coarsen_flag();
+                  continue;
+                }
+
+              const unsigned int cell_fe_idx = cell->active_fe_index();
+              const unsigned int cell_poly = cell_fe_idx + 1;
+
+              if (cell->refine_flag_set())
+                {
+                  if (cell_poly < parameters.poly_degree_max)
+                    cell->set_active_fe_index(cell_fe_idx+1);
+                  cell->clear_refine_flag();
+                }
+
+              if (cell->coarsen_flag_set())
+                {
+                  if (cell_poly > parameters.poly_degree_min)
+                    cell->set_active_fe_index(cell_fe_idx-1);
+                  cell->clear_coarsen_flag();
+                }
+
+              AssertThrow(!(cell->refine_flag_set()), ExcInternalError());
+              AssertThrow(!(cell->coarsen_flag_set()), ExcInternalError());
+            }
+        }
+      else // hp-refinement
+        {
+          AssertThrow(refinement_strategy.use_hp_refinement() == true, ExcInternalError());
+          AssertThrow(false, ExcNotImplemented());
+        }
 
 
-  }
+    }
 }
 
 
@@ -1269,12 +1284,12 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     cell = triangulation.begin_active(),
     endc = triangulation.end();
     for (; cell!=endc; ++cell, ++c)
-    {
+      {
 //      if (cell->is_locally_owned() == false) continue;
-      if (cell->subdomain_id() != this_mpi_process) continue;
+        if (cell->subdomain_id() != this_mpi_process) continue;
 
-      material_coefficients(c) = function_material_coefficients.value(cell->center());
-    }
+        material_coefficients(c) = function_material_coefficients.value(cell->center());
+      }
   }
 
   unsigned int max_used_poly_degree = 1;
@@ -1284,13 +1299,13 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     cell = hp_dof_handler.begin_active(),
     endc = hp_dof_handler.end();
     for (; cell!=endc; ++cell, ++c)
-    {
+      {
 //      if (cell->is_locally_owned() == false) continue;
-      if (cell->subdomain_id() != this_mpi_process) continue;
+        if (cell->subdomain_id() != this_mpi_process) continue;
 
-      polynomial_order(c) = degree_collection[cell->active_fe_index()];
-      max_used_poly_degree = std::max(max_used_poly_degree, cell->active_fe_index()+1);
-    }
+        polynomial_order(c) = degree_collection[cell->active_fe_index()];
+        max_used_poly_degree = std::max(max_used_poly_degree, cell->active_fe_index()+1);
+      }
 
     max_used_poly_degree = Utilities::MPI::max(max_used_poly_degree, mpi_communicator);
   }
@@ -1317,13 +1332,13 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     {
       std::ostringstream filename_vtu;
       filename_vtu
-      << "solution-"
-      << (std::to_string(dim) + "d")
-      << "."
-      << Utilities::int_to_string (process, n_digits)
-      << "."
-      << Utilities::int_to_string(cycle, n_digits)
-      << ".vtu";
+          << "solution-"
+          << (std::to_string(dim) + "d")
+          << "."
+          << Utilities::int_to_string (process, n_digits)
+          << "."
+          << Utilities::int_to_string(cycle, n_digits)
+          << ".vtu";
       return filename_vtu.str();
     }
 
@@ -1332,11 +1347,11 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     {
       std::ostringstream filename_vtu;
       filename_vtu
-      << "solution-"
-      << (std::to_string(dim) + "d")
-      << "."
-      << Utilities::int_to_string(timestep, n_digits)
-      << ".pvtu";
+          << "solution-"
+          << (std::to_string(dim) + "d")
+          << "."
+          << Utilities::int_to_string(timestep, n_digits)
+          << ".pvtu";
       return filename_vtu.str();
     }
 
@@ -1344,9 +1359,9 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     {
       std::ostringstream filename_vtu;
       filename_vtu
-      << "solution-"
-      << (std::to_string(dim) + "d")
-      << ".pvd";
+          << "solution-"
+          << (std::to_string(dim) + "d")
+          << ".pvd";
       return filename_vtu.str();
     }
   };
@@ -1359,27 +1374,27 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   // This next set of steps should only be performed
   // by master process
   if (this_mpi_process == 0)
-  {
-    // List of all files written out at this timestep by all processors
-    std::vector<std::string> parallel_filenames_vtu;
-    for (unsigned int p=0; p < n_mpi_processes; ++p)
     {
-      parallel_filenames_vtu.push_back(Filename::get_filename_vtu(p, cycle));
+      // List of all files written out at this timestep by all processors
+      std::vector<std::string> parallel_filenames_vtu;
+      for (unsigned int p=0; p < n_mpi_processes; ++p)
+        {
+          parallel_filenames_vtu.push_back(Filename::get_filename_vtu(p, cycle));
+        }
+
+      const std::string filename_pvtu (Filename::get_filename_pvtu(cycle));
+      std::ofstream pvtu_master(filename_pvtu.c_str());
+      data_out.write_pvtu_record(pvtu_master,
+                                 parallel_filenames_vtu);
+
+      // Time dependent data master file
+      static std::vector<std::pair<double,std::string> > time_and_name_history;
+      time_and_name_history.push_back (std::make_pair (cycle,
+                                                       filename_pvtu));
+      const std::string filename_pvd (Filename::get_filename_pvd());
+      std::ofstream pvd_output (filename_pvd.c_str());
+      DataOutBase::write_pvd_record (pvd_output, time_and_name_history);
     }
-
-    const std::string filename_pvtu (Filename::get_filename_pvtu(cycle));
-    std::ofstream pvtu_master(filename_pvtu.c_str());
-    data_out.write_pvtu_record(pvtu_master,
-                               parallel_filenames_vtu);
-
-    // Time dependent data master file
-    static std::vector<std::pair<double,std::string> > time_and_name_history;
-    time_and_name_history.push_back (std::make_pair (cycle,
-                                                     filename_pvtu));
-    const std::string filename_pvd (Filename::get_filename_pvd());
-    std::ofstream pvd_output (filename_pvd.c_str());
-    DataOutBase::write_pvd_record (pvd_output, time_and_name_history);
-  }
 
   if (this_mpi_process == 0)
     convergence_table.write_text(pcout.get_stream());
@@ -1391,22 +1406,22 @@ template <int dim>
 void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
 {
   // Set refinement manifold to keep geometry of particle
-    // as exact as possible
+  // as exact as possible
   typename Triangulation<dim>::active_cell_iterator
   cell = triangulation.begin_active(),
   endc = triangulation.end();
   for (; cell!=endc; ++cell)
-  {
-    const bool cell_1_is_membrane = geometry.within_membrane(cell->center());
-    if (!cell_1_is_membrane) continue;
-
-    for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
     {
+      const bool cell_1_is_membrane = geometry.within_membrane(cell->center());
+      if (!cell_1_is_membrane) continue;
+
+      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+        {
 //      if (cell->face(face)->at_boundary()) continue;
 //
 //      const bool cell_2_is_membrane = geometry.within_membrane(cell->neighbor(face)->center());
 //      if (cell_2_is_membrane != cell_1_is_membrane)
-        cell->face(face)->set_manifold_id(manifold_id_outer_radius);
+          cell->face(face)->set_manifold_id(manifold_id_outer_radius);
 
 //      for (unsigned int vertex=0; vertex<GeometryInfo<dim>::vertices_per_face; ++vertex)
 //      {
@@ -1416,8 +1431,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
 //        if (geometry.on_radius_inner(cell->face(face)->vertex(vertex)))
 //          cell->face(face)->set_manifold_id(manifold_id_inner_radius);
 //      }
+        }
     }
-  }
 }
 
 template <int dim>
@@ -1435,22 +1450,22 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
   cell = triangulation.begin_active(),
   endc = triangulation.end();
   for (; cell!=endc; ++cell)
-  {
-    for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
     {
-      if (cell->face(face)->at_boundary())
-      {
-        const Point<dim> &centre = cell->face(face)->center();
-        if (centre[0] > 0.0 && // Not on the y-axis...
-            centre[0] < geometry.get_membrane_minor_radius_centre()[0] && // ... but to the left of the toroid...
-            centre[1] < geometry.get_torus_minor_radius_outer() && // ...and contained within the height of the toroid
-            centre[1] > -geometry.get_torus_minor_radius_outer())
+      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
         {
-          cell->face(face)->set_boundary_id(boundary_id_magnet);
+          if (cell->face(face)->at_boundary())
+            {
+              const Point<dim> &centre = cell->face(face)->center();
+              if (centre[0] > 0.0 && // Not on the y-axis...
+                  centre[0] < geometry.get_membrane_minor_radius_centre()[0] && // ... but to the left of the toroid...
+                  centre[1] < geometry.get_torus_minor_radius_outer() && // ...and contained within the height of the toroid
+                  centre[1] > -geometry.get_torus_minor_radius_outer())
+                {
+                  cell->face(face)->set_boundary_id(boundary_id_magnet);
+                }
+            }
         }
-      }
     }
-  }
 
   // Rescale the geometry before attaching manifolds
   GridTools::scale(parameters.grid_scale, triangulation);
@@ -1475,26 +1490,26 @@ void MSP_Toroidal_Membrane<dim>::run ()
       pcout << "Cycle " << cycle << ':' << std::endl;
 
       if (cycle == 0)
-      {
-        make_grid ();
-        set_initial_fe_indices ();
-      }
+        {
+          make_grid ();
+          set_initial_fe_indices ();
+        }
       else
         refine_grid ();
 
 
       pcout << "   Number of active cells:       "
-                << triangulation.n_active_cells()
-                << " (on "
-                << triangulation.n_levels()
-                << " levels)"
-                << std::endl;
+            << triangulation.n_active_cells()
+            << " (on "
+            << triangulation.n_levels()
+            << " levels)"
+            << std::endl;
 
       setup_system ();
 
       pcout << "   Number of degrees of freedom: "
-                << hp_dof_handler.n_dofs()
-                << std::endl;
+            << hp_dof_handler.n_dofs()
+            << std::endl;
 
       assemble_system ();
       solve ();
@@ -1516,16 +1531,16 @@ int main (int argc, char *argv[])
       ConditionalOStream pcout (std::cout,
                                 (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0));
 
-      const std::string input_file ("/home/vinayak/Desktop/thesis/Master-Thesis/MSP_toroidal_membrane/parameters.prm");
+      const std::string input_file ("parameters.prm");
 
       {
         const std::string title = "Running in 2-d...";
         const std::string divider (title.size(), '=');
 
         pcout
-          << divider << std::endl
-          << title << std::endl
-          << divider << std::endl;
+            << divider << std::endl
+            << title << std::endl
+            << divider << std::endl;
 
         MSP_Toroidal_Membrane<2> msp_toroidal_membrane (input_file);
         msp_toroidal_membrane.run ();
@@ -1547,51 +1562,51 @@ int main (int argc, char *argv[])
 //      }
     }
   catch (std::exception &exc)
-  {
+    {
 //    for (unsigned int i=0; i < Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD); ++i)
 //    {
       if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
-      {
-        std::cerr << std::endl << std::endl
-            << "----------------------------------------------------"
-            << std::endl
+        {
+          std::cerr << std::endl << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl
 //            << "--- PROCESS " << i << "---"
-            << std::endl
-            << "----------------------------------------------------"
-            << std::endl;
-        std::cerr << "Exception on processing: " << std::endl
-            << exc.what() << std::endl
-            << "Aborting!" << std::endl
-            << "----------------------------------------------------"
-            << std::endl;
-      }
+                    << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl;
+          std::cerr << "Exception on processing: " << std::endl
+                    << exc.what() << std::endl
+                    << "Aborting!" << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl;
+        }
 //      MPI_Barrier(MPI_COMM_WORLD);
 //    }
 
-    return 1;
-  }
+      return 1;
+    }
   catch (...)
-  {
+    {
 //    for (unsigned int i=0; i < Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD); ++i)
 //    {
       if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
-      {
-        std::cerr << std::endl << std::endl
-            << "----------------------------------------------------"
-            << std::endl
+        {
+          std::cerr << std::endl << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl
 //            << "--- PROCESS " << i << "---"
-            << std::endl
-            << "----------------------------------------------------"
-            << std::endl;
-        std::cerr << "Unknown exception!" << std::endl
-            << "Aborting!" << std::endl
-            << "----------------------------------------------------"
-            << std::endl;
-      }
+                    << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl;
+          std::cerr << "Unknown exception!" << std::endl
+                    << "Aborting!" << std::endl
+                    << "----------------------------------------------------"
+                    << std::endl;
+        }
 //      MPI_Barrier(MPI_COMM_WORLD);
 //    }
-    return 1;
-  }
+      return 1;
+    }
 //  catch (std::exception &exc)
 //    {
 //      std::cerr << std::endl << std::endl
