@@ -888,6 +888,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
       const unsigned int  &n_q_points = fe_values.n_quadrature_points;
       const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+      const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
       FullMatrix<double>   cell_matrix (n_dofs_per_cell, n_dofs_per_cell);
       Vector<double>       cell_rhs (n_dofs_per_cell);
@@ -899,12 +900,15 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
           const double mu_r_mu_0 = coefficient_values[q_index];
+          const double radial_distance = std::sqrt( quadrature_points[q_index].square() );
 
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
               for (unsigned int j=0; j<=i; ++j)
                 cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
                                     mu_r_mu_0*
+                                    2.0 * dealii::numbers::PI *
+                                    radial_distance *
                                     fe_values.shape_grad(j,q_index) *
                                     fe_values.JxW(q_index);
             }
