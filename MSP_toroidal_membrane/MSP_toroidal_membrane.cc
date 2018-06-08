@@ -51,6 +51,8 @@
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_solver.h>
 
+#include <deal.II/distributed/shared_tria.h>
+
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -684,7 +686,7 @@ private:
   SphericalManifold<dim>   manifold_outer_radius;
   const types::boundary_id boundary_id_magnet;
 
-  Triangulation<dim>      triangulation;
+  parallel::shared::Triangulation<dim>      triangulation;
   RefinementStrategy<dim> refinement_strategy;
 
   std::vector<unsigned int>  degree_collection;
@@ -734,7 +736,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
   boundary_id_magnet (10),
-  triangulation(Triangulation<dim>::maximum_smoothing),
+  triangulation(mpi_communicator),
   refinement_strategy (parameters.refinement_strategy),
   hp_dof_handler (triangulation),
   function_material_coefficients (geometry,
@@ -800,13 +802,14 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
   {
     TimerOutput::Scope timer_scope (computing_timer, "Setup: distribute DoFs");
 
-    // Partition triangulation
-    GridTools::partition_triangulation (n_mpi_processes,
-                                        triangulation);
+    // Partition triangulation if using Triangulation<dim>
+//    GridTools::partition_triangulation (n_mpi_processes,
+//                                        triangulation);
 
     // Distribute DoFs
     hp_dof_handler.distribute_dofs (fe_collection);
-    DoFRenumbering::subdomain_wise (hp_dof_handler);
+   // When using parallel::shared::Triangulation no need to do this
+//    DoFRenumbering::subdomain_wise (hp_dof_handler);
 
     locally_owned_dofs.clear();
     locally_relevant_dofs.clear();
@@ -837,21 +840,24 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
         n_locally_owned_dofs_per_processor[i] = all_locally_owned_dofs[i].n_elements();
     }
 
-    DynamicSparsityPattern dsp (locally_relevant_dofs);
+    TrilinosWrappers::SparsityPattern sp (locally_owned_dofs,
+                                          locally_owned_dofs,
+                                          locally_relevant_dofs,
+                                          mpi_communicator);
     DoFTools::make_sparsity_pattern (hp_dof_handler,
-                                     dsp,
+                                     sp,
                                      constraints,
                                      /* keep constrained dofs */ false,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)); //keep constrained dofs as we need undocndensed matrices as well
 
-    dealii::SparsityTools::distribute_sparsity_pattern (dsp,
+    sp.compress();
+    /*
+     * dealii::SparsityTools::distribute_sparsity_pattern (sp,
                                                         n_locally_owned_dofs_per_processor,
                                                         mpi_communicator,
                                                         locally_relevant_dofs);
-    system_matrix.reinit (locally_owned_dofs,
-                          locally_owned_dofs,
-                          dsp,
-                          mpi_communicator);
+                                                        */
+    system_matrix.reinit (sp);
     system_rhs.reinit(locally_owned_dofs,
                       mpi_communicator);
     solution.reinit(locally_owned_dofs,
@@ -900,15 +906,16 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
           const double mu_r_mu_0 = coefficient_values[q_index];
-          const double radial_distance = std::sqrt( quadrature_points[q_index].square() );
+          // Get the x co-ord to the quadrature point
+          const double radial_distance = quadrature_points[q_index][0];
 
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
               for (unsigned int j=0; j<=i; ++j)
                 cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
                                     mu_r_mu_0*
-                                    2.0 * dealii::numbers::PI *
-                                    radial_distance *
+                                    /*2.0 * dealii::numbers::PI *
+                                    radial_distance **/
                                     fe_values.shape_grad(j,q_index) *
                                     fe_values.JxW(q_index);
             }
