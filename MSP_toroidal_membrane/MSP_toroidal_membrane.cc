@@ -736,7 +736,8 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
   boundary_id_magnet (10),
-  triangulation(mpi_communicator),
+  triangulation(mpi_communicator,
+                Triangulation<dim>::maximum_smoothing),
   refinement_strategy (parameters.refinement_strategy),
   hp_dof_handler (triangulation),
   function_material_coefficients (geometry,
@@ -775,8 +776,8 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
   endc = hp_dof_handler.end();
   for (; cell!=endc; ++cell)
     {
-//    if (cell->is_locally_owned() == false) continue;
-      if (cell->subdomain_id() != this_mpi_process) continue;
+    if (cell->is_locally_owned() == false) continue;
+//      if (cell->subdomain_id() != this_mpi_process) continue;
 
       if (geometry.within_membrane(cell->center()))
         cell->set_active_fe_index(0); // 1 for p-refinement test
@@ -887,8 +888,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
   endc = hp_dof_handler.end();
   for (; cell!=endc; ++cell)
     {
-//    if (cell->is_locally_owned() == false) continue;
-      if (cell->subdomain_id() != this_mpi_process) continue;
+    if (cell->is_locally_owned() == false) continue;
+//      if (cell->subdomain_id() != this_mpi_process) continue;
 
       hp_fe_values.reinit(cell);
       const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
@@ -1070,10 +1071,11 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
                                       typename FunctionMap<dim>::type(),
                                       localised_solution,
                                       estimated_error_per_cell,
-                                      ComponentMask(),
-                                      /*coefficients = */ 0,
-                                      /*n_threads = */ numbers::invalid_unsigned_int,
-                                      /*subdomain_id = */this_mpi_process);
+                                      ComponentMask());
+//                                      ,
+//                                      /*coefficients = */ 0,
+//                                      /*n_threads = */ numbers::invalid_unsigned_int,
+//                                      /*subdomain_id = */this_mpi_process);
 }
 
 template <int dim>
