@@ -909,14 +909,19 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           const double mu_r_mu_0 = coefficient_values[q_index];
           // Get the x co-ord to the quadrature point
           const double radial_distance = quadrature_points[q_index][0];
+          // If dim == 2, assembly using axisymmetric formulation
+          const double coord_transformation_scaling = ( dim == 2
+                                                        ?
+                                                          2.0 * dealii::numbers::PI * radial_distance
+                                                        :
+                                                          1.0);
 
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
               for (unsigned int j=0; j<=i; ++j)
                 cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
                                     mu_r_mu_0*
-                                    /*2.0 * dealii::numbers::PI *
-                                    radial_distance **/
+                                    coord_transformation_scaling *
                                     fe_values.shape_grad(j,q_index) *
                                     fe_values.JxW(q_index);
             }
