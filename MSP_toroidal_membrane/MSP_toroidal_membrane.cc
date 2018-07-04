@@ -662,7 +662,7 @@ public:
 private:
   void set_initial_fe_indices ();
   void setup_system ();
-  void make_dirichlet_constraints (ConstraintMatrix &constraints);
+  void make_constraints (ConstraintMatrix &constraints);
   void assemble_system ();
   void solve ();
   void make_grid ();
@@ -787,14 +787,35 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 }
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::make_dirichlet_constraints (ConstraintMatrix &constraints)
+void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints)
 {
   // Assume a homogeneous magnetic field is generated at
   // an infinite distance from the particle
-  VectorTools::interpolate_boundary_values (hp_dof_handler,
-                                            boundary_id_magnet,
-                                            LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length),
-                                            constraints);
+//  VectorTools::interpolate_boundary_values (hp_dof_handler,
+//                                            boundary_id_magnet,
+//                                            LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length),
+//                                            constraints);
+
+    std::map< types::global_dof_index, Point<dim> > support_points;
+    DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
+    LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
+
+    for(auto it : support_points)
+    {
+        const auto dof_index = it.first;
+        const auto supp_point = it.second;
+
+        // Check for the support point if inside the permanent magnet region:
+        // In 2D axisymmetric we have x,z <=> r,z so need to compare 0th and 1st component of point
+        // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
+        if( std::abs(supp_point[0]) < 0.025 && // X coord of support point less than magnet radius...
+            std::abs(supp_point[1]) < 0.025) // Z coord of support point less than magnet height
+        {
+            const double potential_value = linear_scalar_potential.value(supp_point);
+            constraints.add_line(dof_index);
+            constraints.set_inhomogeneity(dof_index, potential_value);
+        }
+    }
 }
 
 template <int dim>
@@ -827,7 +848,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
 //    constraints.reinit(locally_relevant_dofs); // make_hanging_node_constraints needs locally owned and ghost cells. Cannot do it with normal triangulation with subdomain is indicator of locally owned cells
     DoFTools::make_hanging_node_constraints (hp_dof_handler,
                                              constraints);
-    make_dirichlet_constraints(constraints);
+//    make_dirichlet_constraints(constraints);
+    make_constraints(constraints);
     constraints.close ();
   }
 
@@ -1464,7 +1486,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
   gridin.read_abaqus(input);
 
   // Set boundary IDs
-  typename Triangulation<dim>::active_cell_iterator
+/*  typename Triangulation<dim>::active_cell_iterator
   cell = triangulation.begin_active(),
   endc = triangulation.end();
   for (; cell!=endc; ++cell)
@@ -1484,7 +1506,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
             }
         }
     }
-
+*/
   // Rescale the geometry before attaching manifolds
   GridTools::scale(parameters.grid_scale, triangulation);
 
@@ -1571,12 +1593,12 @@ int main (int argc, char *argv[])
 //      {
 //        const std::string title = "Running in 3-d...";
 //        const std::string divider (title.size(), '=');
-//
+
 //        pcout
 //          << divider << std::endl
 //          << title << std::endl
 //          << divider << std::endl;
-//
+
 //        MSP_Toroidal_Membrane<3> msp_toroidal_membrane (input_file);
 //        msp_toroidal_membrane.run ();
 //      }
