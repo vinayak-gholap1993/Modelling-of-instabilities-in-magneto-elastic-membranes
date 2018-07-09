@@ -163,6 +163,8 @@ namespace Parameters
     double      torus_minor_radius_inner;
     double      torus_minor_radius_outer;
     double      grid_scale;
+    double      bounding_box_r;
+    double      bounding_box_z;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -193,7 +195,15 @@ namespace Parameters
 
       prm.declare_entry("Grid scale", "1.0",
                         Patterns::Double(0.0),
-                        "Global grid scaling factor");
+                        "Global grid scaling factor");      
+
+      prm.declare_entry("Magnet bounding box radial length", "0.035",
+                        Patterns::Double(0.0),
+                        "Permanent magnet region radial (x) length");
+
+      prm.declare_entry("Magnet bounding box axial length", "0.10",
+                        Patterns::Double(0.0),
+                        "Permanent magnet region axial (z) length");
     }
     prm.leave_subsection();
   }
@@ -207,6 +217,8 @@ namespace Parameters
       torus_minor_radius_inner = prm.get_double("Torus minor radius (inner)");
       torus_minor_radius_outer = prm.get_double("Torus minor radius (outer)");
       grid_scale = prm.get_double("Grid scale");
+      bounding_box_r = prm.get_double("Magnet bounding box radial length");
+      bounding_box_z = prm.get_double("Magnet bounding box axial length");
     }
     prm.leave_subsection();
   }
@@ -808,10 +820,12 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         // Check for the support point if inside the permanent magnet region:
         // In 2D axisymmetric we have x,z <=> r,z so need to compare 0th and 1st component of point
         // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
-        if( std::abs(supp_point[0]) < 0.025 && // X coord of support point less than magnet radius...
-            std::abs(supp_point[1]) < 0.025) // Z coord of support point less than magnet height
+        if( std::abs(supp_point[0]) < parameters.bounding_box_r && // X coord of support point less than magnet radius...
+            std::abs(supp_point[1]) < parameters.bounding_box_z) // Z coord of support point less than magnet height
         {
+            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
+            pcout << "Potential value: " << potential_value << std::endl;
             constraints.add_line(dof_index);
             constraints.set_inhomogeneity(dof_index, potential_value);
         }
@@ -1507,6 +1521,25 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
         }
     }
 */
+
+  // Refine adaptively the permanent magnet region for given
+  // input parameters of box lenghts
+  typename Triangulation<dim>::active_cell_iterator
+          cell = triangulation.begin_active(),
+          endc = triangulation.end();
+    for (; cell!=endc; ++cell)
+        if(cell->is_locally_owned())
+        {
+            for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+            {
+                if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
+                    std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
+                    cell->set_refine_flag();
+                break;
+            }
+        }
+    triangulation.execute_coarsening_and_refinement();
+
   // Rescale the geometry before attaching manifolds
   GridTools::scale(parameters.grid_scale, triangulation);
 
