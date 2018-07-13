@@ -1524,21 +1524,24 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
-  typename Triangulation<dim>::active_cell_iterator
-          cell = triangulation.begin_active(),
-          endc = triangulation.end();
-    for (; cell!=endc; ++cell)
-        if(cell->is_locally_owned())
-        {
-            for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
-            {
-                if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
-                    std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
-                    cell->set_refine_flag();
-                break;
-            }
-        }
-    triangulation.execute_coarsening_and_refinement();
+  for(unsigned int cycle = 0; cycle < 3; ++cycle)
+  {
+      typename Triangulation<dim>::active_cell_iterator
+              cell = triangulation.begin_active(),
+              endc = triangulation.end();
+      for (; cell!=endc; ++cell)
+          if(cell->is_locally_owned())
+          {
+              for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+              {
+                  if (std::abs(cell->vertex(vertex)[0]) < 0.035/*parameters.bounding_box_r*/ &&
+                      std::abs(cell->vertex(vertex)[1]) < 0.1/*parameters.bounding_box_z*/)
+                      cell->set_refine_flag();
+                  continue;
+              }
+          }
+      triangulation.execute_coarsening_and_refinement();
+  }
 
   // Rescale the geometry before attaching manifolds
   GridTools::scale(parameters.grid_scale, triangulation);
