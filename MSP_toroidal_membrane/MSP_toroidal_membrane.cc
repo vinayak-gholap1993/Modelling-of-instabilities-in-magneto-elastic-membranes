@@ -1534,8 +1534,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           {
               for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
               {
-                  if (std::abs(cell->vertex(vertex)[0]) < 0.035/*parameters.bounding_box_r*/ &&
-                      std::abs(cell->vertex(vertex)[1]) < 0.1/*parameters.bounding_box_z*/)
+                  if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
+                      std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
                       cell->set_refine_flag();
                   continue;
               }

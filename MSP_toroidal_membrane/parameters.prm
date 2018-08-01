@@ -18,7 +18,7 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = ../mesh/toroidal_membrane.inp
+  set Mesh file                   = ../../mesh/2d_toroidal_membrane.inp
 
   # Major radius of the torus
   set Torus major radius          = 0.5
@@ -31,6 +31,12 @@ subsection Geometry
 
   # Global grid scaling factor
   set Grid scale          = 1.0
+
+  # Permanent magnet region radial (x) length
+  set Magnet bounding box radial length  = 0.2
+
+  # Permanent magnet region axial (z) length
+  set Magnet bounding box axial length = 0.1
 end
 
 
@@ -43,7 +49,7 @@ subsection Refinement
   set Initial global refinements  = 0
 
   # Maximum number of refinement cycles
-  set Maximum cycles              = 13
+  set Maximum cycles              = 2
 
   # Maximum number of refinement levels
   set Maximum h-level             = 20
