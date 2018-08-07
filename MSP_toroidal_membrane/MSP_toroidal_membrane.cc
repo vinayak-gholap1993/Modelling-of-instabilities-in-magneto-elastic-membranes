@@ -823,9 +823,9 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         if( std::abs(supp_point[0]) < parameters.bounding_box_r && // X coord of support point less than magnet radius...
             std::abs(supp_point[1]) < parameters.bounding_box_z) // Z coord of support point less than magnet height
         {
-            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
+//            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
-            pcout << "Potential value: " << potential_value << std::endl;
+//            pcout << "Potential value: " << potential_value << std::endl;
             constraints.add_line(dof_index);
             constraints.set_inhomogeneity(dof_index, potential_value);
         }
@@ -1236,8 +1236,9 @@ template <int dim>
 class MagneticFieldPostprocessor : public DataPostprocessorVector<dim>
 {
 public:
-  MagneticFieldPostprocessor ()
-    : DataPostprocessorVector<dim> ("magnetic_field", update_gradients)
+  MagneticFieldPostprocessor (const unsigned int material_id)
+    : DataPostprocessorVector<dim> ("magnetic_field", update_gradients),
+      material_id(material_id)
   {}
 
   virtual ~MagneticFieldPostprocessor() {}
@@ -1261,9 +1262,18 @@ public:
         // into the output slots:
         AssertDimension (computed_quantities[p].size(), dim);
         for (unsigned int d=0; d<dim; ++d)
-          computed_quantities[p][d] = -input_data.solution_gradients[p][d];
+        {
+            auto current_cell = input_data.template get_cell<hp::DoFHandler<dim> >();
+            if(current_cell->material_id() == material_id)
+                computed_quantities[p][d] = -input_data.solution_gradients[p][d];
+            else
+                computed_quantities[p][d] = 0;
+        }
       }
   }
+
+private:
+  const unsigned int material_id;
 };
 
 
@@ -1317,14 +1327,18 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   TimerOutput::Scope timer_scope (computing_timer, "Output results");
   pcout << "   Outputting results" << std::endl;
 
-  MagneticFieldPostprocessor<dim> mag_field_postprocessor;
+  MagneticFieldPostprocessor<dim> mag_field_postprocessor_bar_magnet(boundary_id_magnet);
+//  MagneticFieldPostprocessor<dim> MSP_toroid(1);
+//  MagneticFieldPostprocessor<dim> vaccum(2);
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
   data_out.attach_dof_handler (hp_dof_handler);
 
   data_out.add_data_vector (solution, "solution");
   data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
-  data_out.add_data_vector (solution, mag_field_postprocessor);
+  data_out.add_data_vector (solution, mag_field_postprocessor_bar_magnet);
+//  data_out.add_data_vector (solution, MSP_toroid);
+//  data_out.add_data_vector (solution, vaccum);
 
   // --- Additional data ---
   // Material coefficients; polynomial order
@@ -1365,6 +1379,22 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   }
   data_out.add_data_vector (material_coefficients, "material_coefficients");
   data_out.add_data_vector (polynomial_order, "polynomial_order");
+
+  std::vector<types::material_id> material_ids (triangulation.n_active_cells());
+  {
+      unsigned int c = 0;
+      typename hp::DoFHandler<dim>::active_cell_iterator
+      cell = hp_dof_handler.begin_active(),
+      endc = hp_dof_handler.end();
+      for (; cell!=endc; ++cell, ++c)
+      {
+  //      if (cell->is_locally_owned() == false) continue;
+          if (cell->subdomain_id() != this_mpi_process) continue;
+
+          material_ids[c] = cell->material_id();
+      }
+  }
+//  data_out.add_data_vector(material_ids, "material_id");
 
   std::vector<types::subdomain_id> partition_int (triangulation.n_active_cells());
   GridTools::get_subdomain_association (triangulation, partition_int);
@@ -1524,7 +1554,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
-  for(unsigned int cycle = 0; cycle < 3; ++cycle)
+  for(unsigned int cycle = 0; cycle < 1; ++cycle)
   {
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
@@ -1536,7 +1566,10 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
               {
                   if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
                       std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
+                  {
                       cell->set_refine_flag();
+                      cell->set_material_id(boundary_id_magnet);
+                  }
                   continue;
               }
           }
