@@ -697,6 +697,9 @@ private:
   SphericalManifold<dim>   manifold_inner_radius;
   SphericalManifold<dim>   manifold_outer_radius;
   const types::boundary_id boundary_id_magnet;
+  const types::material_id material_id_toroid;
+  const types::material_id material_id_vacuum;
+  const types::material_id material_id_bar_magnet;
 
   parallel::shared::Triangulation<dim>      triangulation;
   RefinementStrategy<dim> refinement_strategy;
@@ -748,6 +751,9 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
   boundary_id_magnet (10),
+  material_id_toroid(1),
+  material_id_vacuum(2),
+  material_id_bar_magnet(3),
   triangulation(mpi_communicator,
                 Triangulation<dim>::maximum_smoothing),
   refinement_strategy (parameters.refinement_strategy),
@@ -1237,7 +1243,7 @@ class MagneticFieldPostprocessor : public DataPostprocessorVector<dim>
 {
 public:
   MagneticFieldPostprocessor (const unsigned int material_id)
-    : DataPostprocessorVector<dim> ("magnetic_field", update_gradients),
+    : DataPostprocessorVector<dim> ("magnetic_field_"+std::to_string(material_id), update_gradients),
       material_id(material_id)
   {}
 
@@ -1327,25 +1333,27 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   TimerOutput::Scope timer_scope (computing_timer, "Output results");
   pcout << "   Outputting results" << std::endl;
 
-  MagneticFieldPostprocessor<dim> mag_field_postprocessor_bar_magnet(boundary_id_magnet);
-//  MagneticFieldPostprocessor<dim> MSP_toroid(1);
-//  MagneticFieldPostprocessor<dim> vaccum(2);
+  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
+  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
+  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
   data_out.attach_dof_handler (hp_dof_handler);
 
   data_out.add_data_vector (solution, "solution");
   data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
-  data_out.add_data_vector (solution, mag_field_postprocessor_bar_magnet);
-//  data_out.add_data_vector (solution, MSP_toroid);
-//  data_out.add_data_vector (solution, vaccum);
+  data_out.add_data_vector (solution, mag_field_bar_magnet);
+  data_out.add_data_vector (solution, mag_field_toroid);
+  data_out.add_data_vector (solution, mag_field_vacuum);
 
   // --- Additional data ---
-  // Material coefficients; polynomial order
+  // Material coefficients; polynomial order; material id
   Vector<double> material_coefficients;
   Vector<double> polynomial_order;
+  Vector<double> material_id;
   material_coefficients.reinit(triangulation.n_active_cells());
   polynomial_order.reinit(triangulation.n_active_cells());
+  material_id.reinit(triangulation.n_active_cells());
   {
     unsigned int c = 0;
     typename Triangulation<dim>::active_cell_iterator
@@ -1357,8 +1365,10 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
         if (cell->subdomain_id() != this_mpi_process) continue;
 
         material_coefficients(c) = function_material_coefficients.value(cell->center());
+        material_id(c) = cell->material_id();
       }
   }
+  data_out.add_data_vector(material_id, "material_id");
 
   unsigned int max_used_poly_degree = 1;
   {
@@ -1379,22 +1389,6 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   }
   data_out.add_data_vector (material_coefficients, "material_coefficients");
   data_out.add_data_vector (polynomial_order, "polynomial_order");
-
-  std::vector<types::material_id> material_ids (triangulation.n_active_cells());
-  {
-      unsigned int c = 0;
-      typename hp::DoFHandler<dim>::active_cell_iterator
-      cell = hp_dof_handler.begin_active(),
-      endc = hp_dof_handler.end();
-      for (; cell!=endc; ++cell, ++c)
-      {
-  //      if (cell->is_locally_owned() == false) continue;
-          if (cell->subdomain_id() != this_mpi_process) continue;
-
-          material_ids[c] = cell->material_id();
-      }
-  }
-//  data_out.add_data_vector(material_ids, "material_id");
 
   std::vector<types::subdomain_id> partition_int (triangulation.n_active_cells());
   GridTools::get_subdomain_association (triangulation, partition_int);
@@ -1568,7 +1562,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                       std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
                   {
                       cell->set_refine_flag();
-                      cell->set_material_id(boundary_id_magnet);
+                      cell->set_material_id(material_id_bar_magnet);
                   }
                   continue;
               }
