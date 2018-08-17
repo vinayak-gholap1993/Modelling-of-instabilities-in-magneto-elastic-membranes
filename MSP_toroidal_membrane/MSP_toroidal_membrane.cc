@@ -827,7 +827,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         // In 2D axisymmetric we have x,z <=> r,z so need to compare 0th and 1st component of point
         // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
         if( std::abs(supp_point[0]) < parameters.bounding_box_r && // X coord of support point less than magnet radius...
-            std::abs(supp_point[1]) < parameters.bounding_box_z) // Z coord of support point less than magnet height
+            std::abs(supp_point[1]) < parameters.bounding_box_z && // Z coord of support point less than magnet height
+            (dim == 3 ?  std::abs(supp_point[2]) < parameters.bounding_box_r : true))
         {
 //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
@@ -1554,19 +1555,32 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
               cell = triangulation.begin_active(),
               endc = triangulation.end();
       for (; cell!=endc; ++cell)
+      {
           if(cell->is_locally_owned())
           {
+              const Point<dim> cell_center = cell->center();
+              if( std::abs(cell_center[0]) < parameters.bounding_box_r &&
+                  std::abs(cell_center[1]) < parameters.bounding_box_z &&
+                  (dim == 3 ? std::abs(cell_center[2]) < parameters.bounding_box_r : true))
+                  cell->set_material_id(material_id_bar_magnet);
+
+
+
               for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
               {
                   if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
-                      std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z)
+                      std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
+                      (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
                   {
                       cell->set_refine_flag();
-                      cell->set_material_id(material_id_bar_magnet);
+//                      cell->set_material_id(material_id_bar_magnet);
                   }
+
                   continue;
               }
           }
+      }
+
       triangulation.execute_coarsening_and_refinement();
   }
 
