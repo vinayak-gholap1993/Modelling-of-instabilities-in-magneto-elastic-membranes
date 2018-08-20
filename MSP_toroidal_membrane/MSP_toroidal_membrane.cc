@@ -1549,39 +1549,49 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
-  for(unsigned int cycle = 0; cycle < 1; ++cycle)
+  for(unsigned int cycle = 0; cycle < 2; ++cycle)
   {
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
               endc = triangulation.end();
       for (; cell!=endc; ++cell)
       {
-          if(cell->is_locally_owned())
+          for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
           {
-              const Point<dim> cell_center = cell->center();
-              if( std::abs(cell_center[0]) < parameters.bounding_box_r &&
-                  std::abs(cell_center[1]) < parameters.bounding_box_z &&
-                  (dim == 3 ? std::abs(cell_center[2]) < parameters.bounding_box_r : true))
-                  cell->set_material_id(material_id_bar_magnet);
-
-
-
-              for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+              if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
+                  std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
+                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
               {
-                  if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
-                      std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
-                      (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
-                  {
-                      cell->set_refine_flag();
-//                      cell->set_material_id(material_id_bar_magnet);
-                  }
-
-                  continue;
+                  cell->set_refine_flag();
               }
+              continue;
           }
       }
-
       triangulation.execute_coarsening_and_refinement();
+  }
+
+  // Set material id to bar magnet for the constrained cells
+  typename Triangulation<dim>::active_cell_iterator
+          cell = triangulation.begin_active(),
+          endc = triangulation.end();
+  for (; cell!=endc; ++cell)
+  {
+      unsigned int vertex_count = 0;
+      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+      {
+          if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
+              std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
+              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true) &&
+              (dim == 2 ? std::sqrt(std::pow(cell->vertex(vertex)[0],2) +
+                                    std::pow(cell->vertex(vertex)[1],2)) < parameters.bounding_box_r
+                  : std::sqrt(std::pow(cell->vertex(vertex)[0],2) +
+                              std::pow(cell->vertex(vertex)[1],2) +
+                              std::pow(cell->vertex(vertex)[2],2)) < parameters.bounding_box_r))
+                  vertex_count++;
+      }
+
+      if(vertex_count == GeometryInfo<dim>::vertices_per_cell)
+          cell->set_material_id(material_id_bar_magnet);
   }
 
   // Rescale the geometry before attaching manifolds
@@ -1668,6 +1678,8 @@ int main (int argc, char *argv[])
       pcout << std::endl << std::endl;
 
 //      {
+//        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
+//              << " MPI processes" << std::endl;
 //        const std::string title = "Running in 3-d...";
 //        const std::string divider (title.size(), '=');
 
