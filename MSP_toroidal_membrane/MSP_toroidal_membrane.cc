@@ -682,6 +682,7 @@ private:
   void refine_grid ();
   void compute_error();
   void output_results (const unsigned int cycle) const;
+  void postprocess_energy ();
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
@@ -1605,6 +1606,70 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
 }
 
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::postprocess_energy()
+{
+    TimerOutput::Scope timer_scope (computing_timer, "Postprocess energy");
+
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_cell,
+                                    update_values |
+                                    update_gradients |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+
+    TrilinosWrappers::MPI::Vector distributed_solution(locally_relevant_dofs,
+                                                       mpi_communicator);
+    distributed_solution = solution;
+
+    std::vector<Tensor<1, dim> > fe_solution_gradient;
+    double Energy = 0.0;
+
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
+    for (; cell!=endc; ++cell)
+    {
+        if (cell->is_locally_owned())
+        {
+            hp_fe_values.reinit(cell);
+            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+            const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+            const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
+
+            fe_solution_gradient.resize(n_q_points);
+            fe_values.get_function_gradients (distributed_solution, fe_solution_gradient);
+
+            std::vector<double>    coefficient_values (n_q_points);
+            function_material_coefficients.value_list (fe_values.get_quadrature_points(),
+                                                       coefficient_values);
+
+            Assert(n_q_points == fe_values.get_quadrature_points().size(), ExcInternalError());
+
+            for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+            {
+                // Get the x co-ord to the quadrature point
+                const double radial_distance = quadrature_points[q_point][0];
+                // If dim == 2, assembly using axisymmetric formulation
+                const double coord_transformation_scaling = ( dim == 2
+                                                              ?
+                                                                2.0 * dealii::numbers::PI * radial_distance
+                                                              :
+                                                                1.0);
+                const double mu_r_mu_0 = coefficient_values[q_point];
+
+                Energy += (0.5 * mu_r_mu_0 *
+                           coord_transformation_scaling *
+                           fe_solution_gradient[q_point].norm_square() *
+                           fe_values.JxW(q_point));
+            }
+        }
+    }
+    Energy = Utilities::MPI::sum (Energy, mpi_communicator);
+    pcout << "Total energy: " << Energy << std::endl;
+}
+
 // @sect4{MSP_Toroidal_Membrane::run}
 
 template <int dim>
@@ -1642,6 +1707,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       solve ();
       compute_error ();
       output_results (cycle);
+      postprocess_energy();
     }
 }
 
