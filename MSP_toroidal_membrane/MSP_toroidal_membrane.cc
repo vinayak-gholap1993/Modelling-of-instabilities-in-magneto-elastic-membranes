@@ -695,8 +695,11 @@ private:
   const Geometry<dim>      geometry;
   const types::manifold_id manifold_id_inner_radius;
   const types::manifold_id manifold_id_outer_radius;
+  const types::manifold_id manifold_id_magnet;
   SphericalManifold<dim>   manifold_inner_radius;
   SphericalManifold<dim>   manifold_outer_radius;
+  SphericalManifold<dim>   manifold_spherical;
+  TransfiniteInterpolationManifold<dim>   manifold_magnet;
   const types::boundary_id boundary_id_magnet;
   const types::material_id material_id_toroid;
   const types::material_id material_id_vacuum;
@@ -749,6 +752,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
            parameters.torus_minor_radius_outer*parameters.grid_scale),
   manifold_id_inner_radius (100),
   manifold_id_outer_radius (101),
+  manifold_id_magnet(3),
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
   boundary_id_magnet (10),
@@ -827,9 +831,9 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         // Check for the support point if inside the permanent magnet region:
         // In 2D axisymmetric we have x,z <=> r,z so need to compare 0th and 1st component of point
         // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
-        if( std::abs(supp_point[0]) < parameters.bounding_box_r && // X coord of support point less than magnet radius...
-            std::abs(supp_point[1]) < parameters.bounding_box_z && // Z coord of support point less than magnet height
-            (dim == 3 ?  std::abs(supp_point[2]) < parameters.bounding_box_r : true))
+        if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
+            std::abs(supp_point[1]) <= parameters.bounding_box_z && // Z coord of support point less than magnet height
+            (dim == 3 ?  std::abs(supp_point[2]) <= parameters.bounding_box_r : true))
         {
 //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
@@ -1548,6 +1552,31 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
     }
 */
 
+  // Attach manifold to the cells within the permanent magnet region
+//  for (const auto &cell : triangulation.active_cell_iterators())
+//  {
+//      unsigned int vertex_count = 0;
+//      for(unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+//      {
+//          if(std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+//             std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+//             cell->vertex(vertex).distance(Point<dim>()) <= parameters.bounding_box_r)
+//              vertex_count++;
+//      }
+//      if(vertex_count == GeometryInfo<dim>::vertices_per_cell)
+//      {
+//          for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+//          {
+//              cell->face(face)->set_manifold_id(manifold_id_magnet);
+//          }
+//      }
+//  }
+//  triangulation.set_all_manifold_ids(manifold_id_magnet);
+//  triangulation.set_all_manifold_ids_on_boundary(0);
+//  triangulation.set_manifold(0, manifold_spherical);
+//  manifold_magnet.initialize(triangulation);
+//  triangulation.set_manifold(manifold_id_magnet, manifold_magnet);
+
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
   for(unsigned int cycle = 0; cycle < 2; ++cycle)
@@ -1580,14 +1609,13 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       unsigned int vertex_count = 0;
       for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
       {
-          if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
-              std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
-              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true) &&
-              (dim == 2 ? std::sqrt(std::pow(cell->vertex(vertex)[0],2) +
-                                    std::pow(cell->vertex(vertex)[1],2)) < parameters.bounding_box_r
+          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
+              (dim == 2 ? true
                   : std::sqrt(std::pow(cell->vertex(vertex)[0],2) +
                               std::pow(cell->vertex(vertex)[1],2) +
-                              std::pow(cell->vertex(vertex)[2],2)) < parameters.bounding_box_r))
+                              std::pow(cell->vertex(vertex)[2],2)) <= parameters.bounding_box_r))
                   vertex_count++;
       }
 
@@ -1633,37 +1661,41 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
     {
         if (cell->is_locally_owned())
         {
-            hp_fe_values.reinit(cell);
-            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
-            const unsigned int  &n_q_points = fe_values.n_quadrature_points;
-            const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
-
-            fe_solution_gradient.resize(n_q_points);
-            fe_values.get_function_gradients (distributed_solution, fe_solution_gradient);
-
-            std::vector<double>    coefficient_values (n_q_points);
-            function_material_coefficients.value_list (fe_values.get_quadrature_points(),
-                                                       coefficient_values);
-
-            Assert(n_q_points == fe_values.get_quadrature_points().size(), ExcInternalError());
-
-            for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+            if(cell->material_id() == 1)
             {
-                // Get the x co-ord to the quadrature point
-                const double radial_distance = quadrature_points[q_point][0];
-                // If dim == 2, assembly using axisymmetric formulation
-                const double coord_transformation_scaling = ( dim == 2
-                                                              ?
-                                                                2.0 * dealii::numbers::PI * radial_distance
-                                                              :
-                                                                1.0);
-                const double mu_r_mu_0 = coefficient_values[q_point];
+                hp_fe_values.reinit(cell);
+                const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+                const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+                const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
-                Energy += (0.5 * mu_r_mu_0 *
-                           coord_transformation_scaling *
-                           fe_solution_gradient[q_point].norm_square() *
-                           fe_values.JxW(q_point));
+                fe_solution_gradient.resize(n_q_points);
+                fe_values.get_function_gradients (distributed_solution, fe_solution_gradient);
+
+                std::vector<double>    coefficient_values (n_q_points);
+                function_material_coefficients.value_list (fe_values.get_quadrature_points(),
+                                                           coefficient_values);
+
+                Assert(n_q_points == fe_values.get_quadrature_points().size(), ExcInternalError());
+
+                for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                {
+                    // Get the x co-ord to the quadrature point
+                    const double radial_distance = quadrature_points[q_point][0];
+                    // If dim == 2, assembly using axisymmetric formulation
+                    const double coord_transformation_scaling = ( dim == 2
+                                                                  ?
+                                                                    2.0 * dealii::numbers::PI * radial_distance
+                                                                  :
+                                                                    1.0);
+                    const double mu_r_mu_0 = coefficient_values[q_point];
+
+                    Energy += (0.5 * mu_r_mu_0 *
+                               coord_transformation_scaling *
+                               fe_solution_gradient[q_point].norm_square() *
+                               fe_values.JxW(q_point));
+                }
             }
+
         }
     }
     Energy = Utilities::MPI::sum (Energy, mpi_communicator);
