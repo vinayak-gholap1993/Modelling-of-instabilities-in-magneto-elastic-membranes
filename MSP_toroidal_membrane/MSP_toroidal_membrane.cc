@@ -698,7 +698,7 @@ private:
   const types::manifold_id manifold_id_magnet;
   SphericalManifold<dim>   manifold_inner_radius;
   SphericalManifold<dim>   manifold_outer_radius;
-  SphericalManifold<dim>   manifold_spherical;
+  CylindricalManifold<dim>   manifold_cylindrical;
   TransfiniteInterpolationManifold<dim>   manifold_magnet;
   const types::boundary_id boundary_id_magnet;
   const types::material_id material_id_toroid;
@@ -755,6 +755,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   manifold_id_magnet(3),
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
+  manifold_cylindrical(1),
   boundary_id_magnet (10),
   material_id_toroid(1),
   material_id_vacuum(2),
@@ -833,7 +834,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
         if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
             std::abs(supp_point[1]) <= parameters.bounding_box_z && // Z coord of support point less than magnet height
-            (dim == 3 ?  std::abs(supp_point[2]) <= parameters.bounding_box_r : true))
+            (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) &&
+            (dim == 3 ? std::hypot(supp_point[0], supp_point[2]) <= parameters.bounding_box_r : true))
         {
 //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
@@ -1552,34 +1554,41 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
     }
 */
 
+/*  for (const auto &cell : triangulation.active_cell_iterators())
+  {
+      unsigned int vertex_count = 0;
+      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+      {
+          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+              std::abs(std::abs(cell->vertex(vertex)[0]) - parameters.bounding_box_r) > 1e-9 &&
+              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
+              (dim == 2 ? true
+                  : std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) <= parameters.bounding_box_r))
+                  vertex_count++;
+      }
+
+      if(vertex_count == (GeometryInfo<dim>::vertices_per_cell))
+          cell->set_material_id(5);
+  }*/
+
   // Attach manifold to the cells within the permanent magnet region
-//  for (const auto &cell : triangulation.active_cell_iterators())
-//  {
-//      unsigned int vertex_count = 0;
-//      for(unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
-//      {
-//          if(std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
-//             std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-//             cell->vertex(vertex).distance(Point<dim>()) <= parameters.bounding_box_r)
-//              vertex_count++;
-//      }
-//      if(vertex_count == GeometryInfo<dim>::vertices_per_cell)
-//      {
-//          for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
-//          {
-//              cell->face(face)->set_manifold_id(manifold_id_magnet);
-//          }
-//      }
-//  }
-//  triangulation.set_all_manifold_ids(manifold_id_magnet);
-//  triangulation.set_all_manifold_ids_on_boundary(0);
-//  triangulation.set_manifold(0, manifold_spherical);
+  for (const auto &cell : triangulation.active_cell_iterators())
+  {
+          if(cell->center().distance(Point<dim>()) > 0.17 &&
+             cell->center().distance(Point<dim>()) < 0.27)
+          {
+              cell->set_all_manifold_ids(manifold_id_magnet);
+          }
+  }
+  triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
+
 //  manifold_magnet.initialize(triangulation);
-//  triangulation.set_manifold(manifold_id_magnet, manifold_magnet);
+//  triangulation.set_manifold(1, manifold_magnet);
 
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
-  for(unsigned int cycle = 0; cycle < 2; ++cycle)
+  for(unsigned int cycle = 0; cycle < 1; ++cycle)
   {
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
@@ -1606,21 +1615,22 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           endc = triangulation.end();
   for (; cell!=endc; ++cell)
   {
-      unsigned int vertex_count = 0;
-      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+//      if(cell->material_id() == 5)
       {
-          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
-              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
-              (dim == 2 ? true
-                  : std::sqrt(std::pow(cell->vertex(vertex)[0],2) +
-                              std::pow(cell->vertex(vertex)[1],2) +
-                              std::pow(cell->vertex(vertex)[2],2)) <= parameters.bounding_box_r))
+          unsigned int vertex_count = 0;
+          for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+          {
+              if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+                  std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
+                  (dim == 3 ? std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) <= parameters.bounding_box_r
+                   : true))
                   vertex_count++;
-      }
+          }
 
-      if(vertex_count == GeometryInfo<dim>::vertices_per_cell)
-          cell->set_material_id(material_id_bar_magnet);
+          if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell-2))
+              cell->set_material_id(material_id_bar_magnet);
+      }
   }
 
   // Rescale the geometry before attaching manifolds
@@ -1758,37 +1768,37 @@ int main (int argc, char *argv[])
 
       const std::string input_file ("parameters.prm");
 
-      {
-        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
-              << " MPI processes" << std::endl;
-        const std::string title = "Running in 2-d...";
-        const std::string divider (title.size(), '=');
-
-        pcout
-            << divider << std::endl
-            << title << std::endl
-            << divider << std::endl;
-
-        MSP_Toroidal_Membrane<2> msp_toroidal_membrane (input_file);
-        msp_toroidal_membrane.run ();
-      }
-
-      pcout << std::endl << std::endl;
-
 //      {
 //        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
 //              << " MPI processes" << std::endl;
-//        const std::string title = "Running in 3-d...";
+//        const std::string title = "Running in 2-d...";
 //        const std::string divider (title.size(), '=');
 
 //        pcout
-//          << divider << std::endl
-//          << title << std::endl
-//          << divider << std::endl;
+//            << divider << std::endl
+//            << title << std::endl
+//            << divider << std::endl;
 
-//        MSP_Toroidal_Membrane<3> msp_toroidal_membrane (input_file);
+//        MSP_Toroidal_Membrane<2> msp_toroidal_membrane (input_file);
 //        msp_toroidal_membrane.run ();
 //      }
+
+//      pcout << std::endl << std::endl;
+
+      {
+        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
+              << " MPI processes" << std::endl;
+        const std::string title = "Running in 3-d...";
+        const std::string divider (title.size(), '=');
+
+        pcout
+          << divider << std::endl
+          << title << std::endl
+          << divider << std::endl;
+
+        MSP_Toroidal_Membrane<3> msp_toroidal_membrane (input_file);
+        msp_toroidal_membrane.run ();
+      }
     }
   catch (std::exception &exc)
     {
