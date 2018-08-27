@@ -698,7 +698,6 @@ private:
   const types::manifold_id manifold_id_magnet;
   SphericalManifold<dim>   manifold_inner_radius;
   SphericalManifold<dim>   manifold_outer_radius;
-  CylindricalManifold<dim>   manifold_cylindrical;
   TransfiniteInterpolationManifold<dim>   manifold_magnet;
   const types::boundary_id boundary_id_magnet;
   const types::material_id material_id_toroid;
@@ -718,6 +717,7 @@ private:
   IndexSet              locally_owned_dofs;
   IndexSet              locally_relevant_dofs;
   ConstraintMatrix      constraints;
+  ConstraintMatrix      hanging_node_constraints;
 
   TrilinosWrappers::SparseMatrix system_matrix;
   TrilinosWrappers::MPI::Vector  system_rhs;
@@ -755,7 +755,6 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   manifold_id_magnet(3),
   manifold_inner_radius(geometry.get_membrane_minor_radius_centre()),
   manifold_outer_radius(geometry.get_membrane_minor_radius_centre()),
-  manifold_cylindrical(1),
   boundary_id_magnet (10),
   material_id_toroid(1),
   material_id_vacuum(2),
@@ -830,12 +829,14 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         const auto supp_point = it.second;
 
         // Check for the support point if inside the permanent magnet region:
-        // In 2D axisymmetric we have x,z <=> r,z so need to compare 0th and 1st component of point
-        // In 3D we have x,z,y <=> r,z,theta so need to compare 0th and 1st component of point
+        // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
+        // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
         if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
-            std::abs(supp_point[1]) <= parameters.bounding_box_z && // Z coord of support point less than magnet height
-            (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) &&
-            (dim == 3 ? std::hypot(supp_point[0], supp_point[2]) <= parameters.bounding_box_r : true))
+            std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
+            (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
+            (dim == 3 ?
+             std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
+             : true))
         {
 //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
             const double potential_value = linear_scalar_potential.value(supp_point);
@@ -873,12 +874,16 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     TimerOutput::Scope timer_scope (computing_timer, "Setup: constraints");
 
     constraints.clear ();
+    hanging_node_constraints.clear();
 //    constraints.reinit(locally_relevant_dofs); // make_hanging_node_constraints needs locally owned and ghost cells. Cannot do it with normal triangulation with subdomain is indicator of locally owned cells
     DoFTools::make_hanging_node_constraints (hp_dof_handler,
-                                             constraints);
+                                             hanging_node_constraints);
 //    make_dirichlet_constraints(constraints);
     make_constraints(constraints);
+    hanging_node_constraints.close();
     constraints.close ();
+    // merge both constraints matrices with dbc constraints dominating when conflict occurs on same dof
+    constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::left_object_wins);
   }
 
   {
@@ -1498,26 +1503,37 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
   endc = triangulation.end();
   for (; cell!=endc; ++cell)
     {
-      const bool cell_1_is_membrane = geometry.within_membrane(cell->center());
-      if (!cell_1_is_membrane) continue;
+//      const bool cell_1_is_membrane = geometry.within_membrane(cell->center());
+//      if (!cell_1_is_membrane) continue;
 
-      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
-        {
-//      if (cell->face(face)->at_boundary()) continue;
-//
-//      const bool cell_2_is_membrane = geometry.within_membrane(cell->neighbor(face)->center());
-//      if (cell_2_is_membrane != cell_1_is_membrane)
-          cell->face(face)->set_manifold_id(manifold_id_outer_radius);
-
-//      for (unsigned int vertex=0; vertex<GeometryInfo<dim>::vertices_per_face; ++vertex)
+//      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
 //      {
-//        if (geometry.on_radius_outer(cell->face(face)->vertex(vertex)))
-//          cell->face(face)->set_manifold_id(manifold_id_outer_radius);
-//
-//        if (geometry.on_radius_inner(cell->face(face)->vertex(vertex)))
-//          cell->face(face)->set_manifold_id(manifold_id_inner_radius);
+    //      if (cell->face(face)->at_boundary()) continue;
+    //
+    //      const bool cell_2_is_membrane = geometry.within_membrane(cell->neighbor(face)->center());
+    //      if (cell_2_is_membrane != cell_1_is_membrane)
+//              cell->face(face)->set_manifold_id(manifold_id_outer_radius);
+
+    //      for (unsigned int vertex=0; vertex<GeometryInfo<dim>::vertices_per_face; ++vertex)
+    //      {
+    //        if (geometry.on_radius_outer(cell->face(face)->vertex(vertex)))
+    //          cell->face(face)->set_manifold_id(manifold_id_outer_radius);
+    //
+    //        if (geometry.on_radius_inner(cell->face(face)->vertex(vertex)))
+    //          cell->face(face)->set_manifold_id(manifold_id_inner_radius);
+    //      }
 //      }
-        }
+
+      if(cell->material_id() == 1)
+      {
+          for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if(cell->neighbor(face)->material_id() != cell->material_id())
+              {
+                  cell->face(face)->set_manifold_id(manifold_id_outer_radius);
+              }
+          }
+      }
     }
 }
 
@@ -1554,41 +1570,30 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
     }
 */
 
-/*  for (const auto &cell : triangulation.active_cell_iterators())
-  {
-      unsigned int vertex_count = 0;
-      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
-      {
-          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
-              std::abs(std::abs(cell->vertex(vertex)[0]) - parameters.bounding_box_r) > 1e-9 &&
-              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
-              (dim == 2 ? true
-                  : std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) <= parameters.bounding_box_r))
-                  vertex_count++;
-      }
-
-      if(vertex_count == (GeometryInfo<dim>::vertices_per_cell))
-          cell->set_material_id(5);
-  }*/
-
   // Attach manifold to the cells within the permanent magnet region
-  for (const auto &cell : triangulation.active_cell_iterators())
+  if(dim == 3)
   {
-          if(cell->center().distance(Point<dim>()) > 0.17 &&
-             cell->center().distance(Point<dim>()) < 0.27)
+      CylindricalManifold<dim>   manifold_cylindrical(1);
+      for (const auto &cell : triangulation.active_cell_iterators())
+      {
+          // For a block of cells at center within a torous region of rectangular cross section
+          const auto cell_center = cell->center();
+          if(std::hypot(cell_center[0], cell_center[2]) >= 0.17 && // inner (min) radial distance
+             std::hypot(cell_center[0], cell_center[2]) <= 0.27 && // outer (max) radial distance
+             std::abs(cell_center[1]) <= 0.06) // max axial height
           {
               cell->set_all_manifold_ids(manifold_id_magnet);
           }
-  }
-  triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
+      }
+      triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
 
-//  manifold_magnet.initialize(triangulation);
-//  triangulation.set_manifold(1, manifold_magnet);
+    //  manifold_magnet.initialize(triangulation);
+    //  triangulation.set_manifold(1, manifold_magnet);
+  }
 
   // Refine adaptively the permanent magnet region for given
   // input parameters of box lenghts
-  for(unsigned int cycle = 0; cycle < 1; ++cycle)
+  for(unsigned int cycle = 0; cycle < 2; ++cycle)
   {
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
@@ -1615,30 +1620,39 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           endc = triangulation.end();
   for (; cell!=endc; ++cell)
   {
-//      if(cell->material_id() == 5)
+      unsigned int vertex_count = 0;
+      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
       {
-          unsigned int vertex_count = 0;
-          for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
-          {
-              if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
-                  std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
-                  (dim == 3 ? std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) <= parameters.bounding_box_r
-                   : true))
-                  vertex_count++;
-          }
-
-          if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell-2))
-              cell->set_material_id(material_id_bar_magnet);
+          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
+              (dim == 3 ?
+               std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) < (0.98 * parameters.bounding_box_r) //radial distance with tolerance of 2%
+               :
+               true))
+              vertex_count++;
       }
+
+      if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
+          cell->set_material_id(material_id_bar_magnet);
   }
 
   // Rescale the geometry before attaching manifolds
   GridTools::scale(parameters.grid_scale, triangulation);
 
   make_grid_manifold_ids();
-  triangulation.set_manifold (manifold_id_outer_radius, manifold_outer_radius);
-  triangulation.set_manifold (manifold_id_inner_radius, manifold_inner_radius);
+
+  if(dim == 2) // Use Spherical Manifold for torous membrane
+  {
+      triangulation.set_manifold (manifold_id_outer_radius, manifold_outer_radius);
+      triangulation.set_manifold (manifold_id_inner_radius, manifold_inner_radius);
+  }
+  if(dim == 3) // Use Torus Manifold for torus membrane
+  {
+      TorusManifold<dim> manifold_torus_outer_radius (geometry.get_membrane_minor_radius_centre()[0],
+                                                      geometry.get_torus_minor_radius_outer());
+      triangulation.set_manifold(manifold_id_outer_radius, manifold_torus_outer_radius);
+  }
 
   triangulation.refine_global (parameters.n_global_refinements);
 
