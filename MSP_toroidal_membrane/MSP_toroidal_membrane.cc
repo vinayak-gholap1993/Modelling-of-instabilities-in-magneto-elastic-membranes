@@ -802,9 +802,13 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
     if (cell->is_locally_owned() == false) continue;
 //      if (cell->subdomain_id() != this_mpi_process) continue;
 
-      if (geometry.within_membrane(cell->center()))
-        cell->set_active_fe_index(0); // 1 for p-refinement test
-      else
+//      if (geometry.within_membrane(cell->center()))
+//        cell->set_active_fe_index(0); // 1 for p-refinement test
+
+    // Setting of higher degree FE to cells in toroid membrane
+    if (cell->material_id() == 1)
+        cell->set_active_fe_index(0); // 1 for FE_Q(2) or 2 for FE_Q(3)
+    else
         cell->set_active_fe_index(0);
     }
 }
@@ -1584,11 +1588,16 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           {
               cell->set_all_manifold_ids(manifold_id_magnet);
           }
+          if(std::hypot(cell_center[0], cell_center[2]) < 0.17 &&
+             std::abs(cell_center[1]) <= 0.06)
+          {
+              cell->set_all_manifold_ids(5);
+          }
       }
       triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
 
-    //  manifold_magnet.initialize(triangulation);
-    //  triangulation.set_manifold(1, manifold_magnet);
+      manifold_magnet.initialize(triangulation);
+      triangulation.set_manifold(5, manifold_magnet);
   }
 
   // Refine adaptively the permanent magnet region for given
