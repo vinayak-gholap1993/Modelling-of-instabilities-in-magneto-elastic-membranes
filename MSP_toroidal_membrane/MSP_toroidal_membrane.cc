@@ -5,6 +5,7 @@
 #include <deal.II/base/timer.h>
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
+#include <deal.II/base/path_search.h>
 
 #include <deal.II/dofs/dof_renumbering.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -177,7 +178,7 @@ namespace Parameters
   {
     prm.enter_subsection("Geometry");
     {
-      prm.declare_entry("Mesh file", "../mesh/toroidal_membrane.inp",
+      prm.declare_entry("Mesh file", "../../../../mesh/new_2d_toroidal_membrane.inp",
                         Patterns::Anything(),
                         "Mesh file for the toroidal geometry");
 
@@ -417,7 +418,28 @@ namespace Parameters
   {
     ParameterHandler prm;
     declare_parameters(prm);
-    prm.parse_input(input_file);
+    const bool print_default_prm_file = true;
+    try
+    {
+        prm.parse_input(input_file);
+    }
+    catch (const PathSearch::ExcFileNotFound &)
+    {
+        std::cerr << "ParameterHandler::parse_input: could not open file <"
+                  << input_file
+                  << "> for reading."
+                  << std::endl;
+        if (print_default_prm_file)
+          {
+            std::cerr << "Trying to make file <"
+                      << input_file
+                      << "> with default values for you."
+                      << std::endl;
+            std::ofstream output (input_file);
+            prm.print_parameters (output,
+                                  ParameterHandler::OutputStyle::Text);
+          }
+    }
     parse_parameters(prm);
   }
 
@@ -1660,7 +1682,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
   {
       TorusManifold<dim> manifold_torus_outer_radius (geometry.get_membrane_minor_radius_centre()[0],
                                                       geometry.get_torus_minor_radius_outer());
-      triangulation.set_manifold(manifold_id_outer_radius, manifold_torus_outer_radius);
+//      triangulation.set_manifold(manifold_id_outer_radius, manifold_torus_outer_radius);
   }
 
   triangulation.refine_global (parameters.n_global_refinements);
@@ -1791,37 +1813,37 @@ int main (int argc, char *argv[])
 
       const std::string input_file ("parameters.prm");
 
-//      {
-//        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
-//              << " MPI processes" << std::endl;
-//        const std::string title = "Running in 2-d...";
-//        const std::string divider (title.size(), '=');
-
-//        pcout
-//            << divider << std::endl
-//            << title << std::endl
-//            << divider << std::endl;
-
-//        MSP_Toroidal_Membrane<2> msp_toroidal_membrane (input_file);
-//        msp_toroidal_membrane.run ();
-//      }
-
-//      pcout << std::endl << std::endl;
-
       {
         pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
               << " MPI processes" << std::endl;
-        const std::string title = "Running in 3-d...";
+        const std::string title = "Running in 2-d...";
         const std::string divider (title.size(), '=');
 
         pcout
-          << divider << std::endl
-          << title << std::endl
-          << divider << std::endl;
+            << divider << std::endl
+            << title << std::endl
+            << divider << std::endl;
 
-        MSP_Toroidal_Membrane<3> msp_toroidal_membrane (input_file);
+        MSP_Toroidal_Membrane<2> msp_toroidal_membrane (input_file);
         msp_toroidal_membrane.run ();
       }
+
+      pcout << std::endl << std::endl;
+
+//      {
+//        pcout << "Running with " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)
+//              << " MPI processes" << std::endl;
+//        const std::string title = "Running in 3-d...";
+//        const std::string divider (title.size(), '=');
+
+//        pcout
+//          << divider << std::endl
+//          << title << std::endl
+//          << divider << std::endl;
+
+//        MSP_Toroidal_Membrane<3> msp_toroidal_membrane (input_file);
+//        msp_toroidal_membrane.run ();
+//      }
     }
   catch (std::exception &exc)
     {

@@ -42,3 +42,7 @@ ADD_CUSTOM_TARGET(clean_vtu
   COMMAND ${CMAKE_COMMAND} -E remove *.vtu *.pvtu *.pvd
   COMMENT "runclean invoked"
 )
+
+#Enable testing and descent into tests/ subdirectory:
+ENABLE_TESTING()
+ADD_SUBDIRECTORY(tests)

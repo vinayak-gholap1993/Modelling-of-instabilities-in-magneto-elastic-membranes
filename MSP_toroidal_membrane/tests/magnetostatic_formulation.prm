@@ -18,7 +18,7 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = ./mesh/2d_toroidal_membrane.inp
+  set Mesh file                   = ../mesh/new_2d_toroidal_membrane.inp
 
   # Major radius of the torus
   set Torus major radius          = 0.5
@@ -49,7 +49,7 @@ subsection Refinement
   set Initial global refinements  = 0
 
   # Maximum number of refinement cycles
-  set Maximum cycles              = 2
+  set Maximum cycles              = 4
 
   # Maximum number of refinement levels
   set Maximum h-level             = 20
@@ -58,7 +58,7 @@ subsection Refinement
   set Refinement fraction         = 0.25
 
   # Fraction of cells to coarsen
-  set Coarsening fraction         = 0.03
+  set Coarsening fraction         = 0.00
   
   # Force adaptive refinement at manifolds
   set Force manifold_refinement  = true

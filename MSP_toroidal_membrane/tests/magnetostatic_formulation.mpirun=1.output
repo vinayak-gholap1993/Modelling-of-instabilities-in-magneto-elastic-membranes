@@ -1,0 +1,36 @@
+Running with 1 MPI processes
+=================
+Running in 2-d...
+=================
+Cycle 0:
+   Number of active cells:       3512 (on 3 levels)
+   Number of degrees of freedom: 3651
+   Iterations: 53  Residual: 9.09824e-13
+   Computing errors
+   Outputting results
+
+Total energy: 0.000219785
+Cycle 1:
+   Number of active cells:       6662 (on 4 levels)
+   Number of degrees of freedom: 6989
+   Iterations: 51  Residual: 7.42789e-13
+   Computing errors
+   Outputting results
+
+Total energy: 0.000216016
+Cycle 2:
+   Number of active cells:       14306 (on 5 levels)
+   Number of degrees of freedom: 14963
+   Iterations: 52  Residual: 8.33601e-13
+   Computing errors
+   Outputting results
+
+Total energy: 0.000213857
+Cycle 3:
+   Number of active cells:       32192 (on 6 levels)
+   Number of degrees of freedom: 33542
+   Iterations: 55  Residual: 8.35253e-13
+   Computing errors
+   Outputting results
+
+Total energy: 0.000212823
