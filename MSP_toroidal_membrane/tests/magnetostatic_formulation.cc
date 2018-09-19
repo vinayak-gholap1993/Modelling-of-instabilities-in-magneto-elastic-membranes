@@ -1,7 +1,7 @@
 #include <deal.II/base/logstream.h>
 #include <deal.II/base/parameter_handler.h>
 #include <fstream>
-#include "../MSP_toroidal_membrane.cc"
+#include "../src/MSP_toroidal_membrane.cc"
 
 using namespace dealii;
 
