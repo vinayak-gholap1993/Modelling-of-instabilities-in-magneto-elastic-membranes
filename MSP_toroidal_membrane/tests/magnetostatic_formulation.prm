@@ -18,7 +18,7 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = ../mesh/new_2d_toroidal_membrane.inp
+  set Mesh file                   = /mesh/new_2d_toroidal_membrane.inp
 
   # Major radius of the torus
   set Torus major radius          = 0.5

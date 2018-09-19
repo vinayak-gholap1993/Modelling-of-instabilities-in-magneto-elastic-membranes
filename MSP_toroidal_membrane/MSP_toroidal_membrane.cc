@@ -178,7 +178,7 @@ namespace Parameters
   {
     prm.enter_subsection("Geometry");
     {
-      prm.declare_entry("Mesh file", "../../../../mesh/new_2d_toroidal_membrane.inp",
+      prm.declare_entry("Mesh file", "../mesh/new_2d_toroidal_membrane.inp",
                         Patterns::Anything(),
                         "Mesh file for the toroidal geometry");
 
@@ -1571,6 +1571,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
   GridIn<dim> gridin;
   gridin.attach_triangulation(triangulation);
   std::ifstream input (parameters.mesh_file);
+//  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file));
   gridin.read_abaqus(input);
 
   // Set boundary IDs
