@@ -36,7 +36,8 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   hp_dof_handler (triangulation),
   function_material_coefficients (geometry,
                                  parameters.mu_r_air,
-                                 parameters.mu_r_membrane)
+                                 parameters.mu_r_membrane),
+  dofs_per_block(n_blocks)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
 
@@ -136,7 +137,6 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     hp_dof_handler.distribute_dofs (fe_collection);
    // When using parallel::shared::Triangulation no need to do this
 //    DoFRenumbering::subdomain_wise (hp_dof_handler);
-
     locally_owned_dofs.clear();
     locally_relevant_dofs.clear();
     all_locally_owned_dofs = DoFTools::locally_owned_dofs_per_subdomain (hp_dof_handler);
@@ -171,10 +171,19 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
         n_locally_owned_dofs_per_processor[i] = all_locally_owned_dofs[i].n_elements();
     }
 
-    TrilinosWrappers::SparsityPattern sp (locally_owned_dofs,
-                                          locally_owned_dofs,
-                                          locally_relevant_dofs,
-                                          mpi_communicator);
+    std::vector<unsigned int> block_component (n_components, phi_dof); // magnetic scalar potential
+    DoFTools::count_dofs_per_block(hp_dof_handler, dofs_per_block, block_component);
+    const unsigned int n_phi = dofs_per_block[0];
+
+    partitioning.clear();
+    relevant_patitioning.clear();
+    partitioning.push_back(locally_owned_dofs.get_view(0,n_phi));
+    relevant_patitioning.push_back(locally_relevant_dofs.get_view(0,n_phi));
+
+    TrilinosWrappers::BlockSparsityPattern sp (partitioning,
+                                               partitioning,
+                                               relevant_patitioning,
+                                               mpi_communicator);
     DoFTools::make_sparsity_pattern (hp_dof_handler,
                                      sp,
                                      constraints,
@@ -189,11 +198,13 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                                                         locally_relevant_dofs);
                                                         */
     system_matrix.reinit (sp);
-    system_rhs.reinit(locally_owned_dofs,
+    /*system_rhs.reinit(locally_owned_dofs,
                       mpi_communicator);
     solution.reinit(locally_owned_dofs,
                     locally_relevant_dofs,
-                    mpi_communicator);
+                    mpi_communicator);*/
+    system_rhs.reinit(partitioning, mpi_communicator);
+    solution.reinit(partitioning, relevant_patitioning, mpi_communicator);
   }
 }
 
@@ -283,8 +294,8 @@ void MSP_Toroidal_Membrane<dim>::solve ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Solve linear system");
 
-  TrilinosWrappers::MPI::Vector distributed_solution(locally_owned_dofs,
-                                                     mpi_communicator);
+  TrilinosWrappers::MPI::BlockVector distributed_solution(partitioning,
+                                                          mpi_communicator);
 //  distributed_solution = solution;
 
   SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.m(),
@@ -305,7 +316,7 @@ void MSP_Toroidal_Membrane<dim>::solve ()
           TrilinosWrappers::PreconditionJacobi::AdditionalData
           additional_data (parameters.preconditioner_relaxation);
 
-          ptr_prec->initialize(system_matrix,
+          ptr_prec->initialize(system_matrix.block(0,0),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
@@ -317,7 +328,7 @@ void MSP_Toroidal_Membrane<dim>::solve ()
           TrilinosWrappers::PreconditionSSOR::AdditionalData
           additional_data (parameters.preconditioner_relaxation);
 
-          ptr_prec->initialize(system_matrix,
+          ptr_prec->initialize(system_matrix.block(0,0),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
@@ -349,22 +360,22 @@ void MSP_Toroidal_Membrane<dim>::solve ()
             additional_data.higher_order_elements
               = Utilities::MPI::max(hoe, mpi_communicator);
           }
-          ptr_prec->initialize(system_matrix,
+          ptr_prec->initialize(system_matrix.block(0,0),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
 
-      solver.solve (system_matrix,
-                    distributed_solution,
-                    system_rhs,
+      solver.solve (system_matrix.block(0,0),
+                    distributed_solution.block(0),
+                    system_rhs.block(0),
                     *preconditioner);
     }
   else // Direct
     {
       TrilinosWrappers::SolverDirect solver (solver_control);
-      solver.solve (system_matrix,
-                    distributed_solution,
-                    system_rhs);
+      solver.solve (system_matrix.block(0,0),
+                    distributed_solution.block(0),
+                    system_rhs.block(0));
     }
 
   constraints.distribute (distributed_solution);
@@ -395,7 +406,7 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
 
   TrilinosWrappers::MPI::Vector distributed_solution(locally_owned_dofs,
                                                      mpi_communicator);
-  distributed_solution = solution;
+  distributed_solution = solution.block(0);
   const Vector<double> localised_solution (distributed_solution);
 
   // --- Kelly Error estimator ---
@@ -819,8 +830,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
   GridIn<dim> gridin;
   gridin.attach_triangulation(triangulation);
-  std::ifstream input (parameters.mesh_file);
-//  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file));
+  std::ifstream input (parameters.mesh_file); // Use for production code
+//  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file)); // Use for testing the code with ctest
   gridin.read_abaqus(input);
 
   // Set boundary IDs
@@ -952,8 +963,8 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
                                     update_quadrature_points |
                                     update_JxW_values);
 
-    TrilinosWrappers::MPI::Vector distributed_solution(locally_relevant_dofs,
-                                                       mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector distributed_solution(relevant_patitioning,
+                                                            mpi_communicator);
     distributed_solution = solution;
 
     std::vector<Tensor<1, dim> > fe_solution_gradient;
@@ -974,8 +985,7 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
                 const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
                 fe_solution_gradient.resize(n_q_points);
-                fe_values.get_function_gradients (distributed_solution, fe_solution_gradient);
-
+                fe_values.get_function_gradients (distributed_solution.block(0), fe_solution_gradient);
                 std::vector<double>    coefficient_values (n_q_points);
                 function_material_coefficients.value_list (fe_values.get_quadrature_points(),
                                                            coefficient_values);

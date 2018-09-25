@@ -54,6 +54,10 @@
 #include <deal.II/lac/trilinos_vector.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_solver.h>
+// For block system:
+#include <deal.II/lac/trilinos_block_sparse_matrix.h>
+#include <deal.II/lac/trilinos_parallel_block_vector.h>
+#include <deal.II/lac/block_sparsity_pattern.h>
 
 #include <deal.II/distributed/shared_tria.h>
 
@@ -744,15 +748,27 @@ private:
   ConstraintMatrix      constraints;
   ConstraintMatrix      hanging_node_constraints;
 
-  TrilinosWrappers::SparseMatrix system_matrix;
-  TrilinosWrappers::MPI::Vector  system_rhs;
-  TrilinosWrappers::MPI::Vector  solution;
+  TrilinosWrappers::BlockSparseMatrix system_matrix;
+  TrilinosWrappers::MPI::BlockVector  system_rhs;
+  TrilinosWrappers::MPI::BlockVector  solution;
 
   Vector<float>        estimated_error_per_cell; // For Kelly error estimator
 
   Coefficient<dim>     function_material_coefficients;
 
-  mutable ConvergenceTable     convergence_table;
+  mutable ConvergenceTable     convergence_table;  
+
+  std::vector<IndexSet> partitioning, relevant_patitioning;
+  static const unsigned int n_blocks = 1;
+  static const unsigned int phi_component = 0;
+  static const unsigned int n_components = 1;
+
+  enum
+  {
+      phi_dof = 0
+  };
+
+  std::vector<types::global_dof_index> dofs_per_block;
 };
 
 
