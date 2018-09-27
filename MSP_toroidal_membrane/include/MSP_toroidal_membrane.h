@@ -758,14 +758,14 @@ private:
 
   mutable ConvergenceTable     convergence_table;  
 
-  std::vector<IndexSet> partitioning, relevant_patitioning;
+  std::vector<IndexSet> locally_owned_partitioning, locally_relevant_partitioning;
   static const unsigned int n_blocks = 1;
   static const unsigned int phi_component = 0;
   static const unsigned int n_components = 1;
 
   enum
   {
-      phi_dof = 0
+      phi_block = 0
   };
 
   std::vector<types::global_dof_index> dofs_per_block;

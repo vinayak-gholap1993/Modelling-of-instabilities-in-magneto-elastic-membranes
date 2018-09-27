@@ -171,18 +171,18 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
         n_locally_owned_dofs_per_processor[i] = all_locally_owned_dofs[i].n_elements();
     }
 
-    std::vector<unsigned int> block_component (n_components, phi_dof); // magnetic scalar potential
+    std::vector<unsigned int> block_component (n_components, phi_block); // magnetic scalar potential
     DoFTools::count_dofs_per_block(hp_dof_handler, dofs_per_block, block_component);
     const unsigned int n_phi = dofs_per_block[0];
 
-    partitioning.clear();
-    relevant_patitioning.clear();
-    partitioning.push_back(locally_owned_dofs.get_view(0,n_phi));
-    relevant_patitioning.push_back(locally_relevant_dofs.get_view(0,n_phi));
+    locally_owned_partitioning.clear();
+    locally_relevant_partitioning.clear();
+    locally_owned_partitioning.push_back(locally_owned_dofs.get_view(0,n_phi));
+    locally_relevant_partitioning.push_back(locally_relevant_dofs.get_view(0,n_phi));
 
-    TrilinosWrappers::BlockSparsityPattern sp (partitioning,
-                                               partitioning,
-                                               relevant_patitioning,
+    TrilinosWrappers::BlockSparsityPattern sp (locally_owned_partitioning,
+                                               locally_owned_partitioning,
+                                               locally_relevant_partitioning,
                                                mpi_communicator);
     DoFTools::make_sparsity_pattern (hp_dof_handler,
                                      sp,
@@ -203,8 +203,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     solution.reinit(locally_owned_dofs,
                     locally_relevant_dofs,
                     mpi_communicator);*/
-    system_rhs.reinit(partitioning, mpi_communicator);
-    solution.reinit(partitioning, relevant_patitioning, mpi_communicator);
+    system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
+    solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
   }
 }
 
@@ -294,7 +294,7 @@ void MSP_Toroidal_Membrane<dim>::solve ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Solve linear system");
 
-  TrilinosWrappers::MPI::BlockVector distributed_solution(partitioning,
+  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
                                                           mpi_communicator);
 //  distributed_solution = solution;
 
@@ -366,16 +366,16 @@ void MSP_Toroidal_Membrane<dim>::solve ()
         }
 
       solver.solve (system_matrix.block(0,0),
-                    distributed_solution.block(0),
-                    system_rhs.block(0),
+                    distributed_solution.block(phi_block),
+                    system_rhs.block(phi_block),
                     *preconditioner);
     }
   else // Direct
     {
       TrilinosWrappers::SolverDirect solver (solver_control);
       solver.solve (system_matrix.block(0,0),
-                    distributed_solution.block(0),
-                    system_rhs.block(0));
+                    distributed_solution.block(phi_block),
+                    system_rhs.block(phi_block));
     }
 
   constraints.distribute (distributed_solution);
@@ -406,7 +406,7 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
 
   TrilinosWrappers::MPI::Vector distributed_solution(locally_owned_dofs,
                                                      mpi_communicator);
-  distributed_solution = solution.block(0);
+  distributed_solution = solution.block(phi_block);
   const Vector<double> localised_solution (distributed_solution);
 
   // --- Kelly Error estimator ---
@@ -963,7 +963,7 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
                                     update_quadrature_points |
                                     update_JxW_values);
 
-    TrilinosWrappers::MPI::BlockVector distributed_solution(relevant_patitioning,
+    TrilinosWrappers::MPI::BlockVector distributed_solution(locally_relevant_partitioning,
                                                             mpi_communicator);
     distributed_solution = solution;
 
@@ -985,7 +985,7 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
                 const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
                 fe_solution_gradient.resize(n_q_points);
-                fe_values.get_function_gradients (distributed_solution.block(0), fe_solution_gradient);
+                fe_values.get_function_gradients (distributed_solution.block(phi_block), fe_solution_gradient);
                 std::vector<double>    coefficient_values (n_q_points);
                 function_material_coefficients.value_list (fe_values.get_quadrature_points(),
                                                            coefficient_values);
