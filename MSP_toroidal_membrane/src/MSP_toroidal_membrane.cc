@@ -37,6 +37,8 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   function_material_coefficients (geometry,
                                  parameters.mu_r_air,
                                  parameters.mu_r_membrane),
+  phi_fe(phi_component),
+  u_fe(u_componenent),
   dofs_per_block(n_blocks)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
@@ -47,7 +49,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
       degree_collection.push_back(degree); // Polynomial degree
 //      fe_collection.push_back(FE_Q<dim>(degree));
       fe_collection.push_back(FESystem<dim>(FE_Q<dim>(degree), 1, // scalar fe for magnetic potential
-                                            FE_Q<dim>(degree), 3)); // vector fe for displacement
+                                            FE_Q<dim>(degree), dim)); // vector fe for displacement
       mapping_collection.push_back(MappingQGeneric<dim>(degree));
       qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
     }
@@ -135,10 +137,16 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
 //    GridTools::partition_triangulation (n_mpi_processes,
 //                                        triangulation);
 
+    std::vector<unsigned int> block_component (n_components, phi_block); // magnetic scalar potential
+    block_component[u_componenent] = u_block; // displacement
     // Distribute DoFs
     hp_dof_handler.distribute_dofs (fe_collection);
    // When using parallel::shared::Triangulation no need to do this
 //    DoFRenumbering::subdomain_wise (hp_dof_handler);
+    DoFRenumbering::Cuthill_McKee (hp_dof_handler);
+    DoFRenumbering::component_wise(hp_dof_handler, block_component);
+    DoFTools::count_dofs_per_block(hp_dof_handler, dofs_per_block, block_component);
+
     locally_owned_dofs.clear();
     locally_relevant_dofs.clear();
     all_locally_owned_dofs = DoFTools::locally_owned_dofs_per_subdomain (hp_dof_handler);
@@ -173,14 +181,14 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
         n_locally_owned_dofs_per_processor[i] = all_locally_owned_dofs[i].n_elements();
     }
 
-    std::vector<unsigned int> block_component (n_components, phi_block); // magnetic scalar potential
-    DoFTools::count_dofs_per_block(hp_dof_handler, dofs_per_block, block_component);
     const unsigned int n_phi = dofs_per_block[0];
-
+    const unsigned int n_u = dofs_per_block[1];
     locally_owned_partitioning.clear();
     locally_relevant_partitioning.clear();
     locally_owned_partitioning.push_back(locally_owned_dofs.get_view(0,n_phi));
+    locally_owned_partitioning.push_back(locally_owned_dofs.get_view(n_phi, n_phi + n_u));
     locally_relevant_partitioning.push_back(locally_relevant_dofs.get_view(0,n_phi));
+    locally_relevant_partitioning.push_back(locally_relevant_dofs.get_view(n_phi, n_phi + n_u));
 
     TrilinosWrappers::BlockSparsityPattern sp (locally_owned_partitioning,
                                                locally_owned_partitioning,
@@ -209,7 +217,6 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
   }
 }
-
 
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
 
@@ -262,10 +269,10 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
               for (unsigned int j=0; j<=i; ++j)
-                cell_matrix(i,j) += fe_values.shape_grad(i,q_index) *
+                cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
                                     mu_r_mu_0*
                                     coord_transformation_scaling *
-                                    fe_values.shape_grad(j,q_index) *
+                                    fe_values[phi_fe].gradient(j,q_index) *
                                     fe_values.JxW(q_index);
             }
         }
@@ -406,10 +413,10 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
       EE_qf_collection_face_QGauss.push_back(QGauss<dim-1> (degree + 2));
     }
 
-  TrilinosWrappers::MPI::Vector distributed_solution(locally_owned_dofs,
-                                                     mpi_communicator);
-  distributed_solution = solution.block(phi_block);
-  const Vector<double> localised_solution (distributed_solution);
+  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
+                                                          mpi_communicator);
+  distributed_solution = solution;
+  const BlockVector<double> localised_solution(distributed_solution);
 
   // --- Kelly Error estimator ---
   estimated_error_per_cell.reinit(triangulation.n_active_cells());
@@ -419,7 +426,8 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
                                       typename FunctionMap<dim>::type(),
                                       localised_solution,
                                       estimated_error_per_cell,
-                                      ComponentMask());
+                                      fe_collection.component_mask(phi_fe));
+//                                      ComponentMask());
 //                                      ,
 //                                      /*coefficients = */ 0,
 //                                      /*n_threads = */ numbers::invalid_unsigned_int,
@@ -576,6 +584,24 @@ public:
             else
                 computed_quantities[p][d] = 0;
         }
+      }
+  }
+
+  virtual void
+  evaluate_vector_field(const DataPostprocessorInputs::Vector<dim> &input_data,
+                        std::vector<Vector<double> > &computed_quantities) const
+  {
+      const unsigned int n_quadrature_points = input_data.solution_values.size();
+      Assert(input_data.solution_gradients.size() == n_quadrature_points,
+             ExcInternalError());
+      Assert(computed_quantities.size() == n_quadrature_points,
+             ExcInternalError());
+      Assert(input_data.solution_values[0].size() == dim + 1, ExcInternalError());
+      for (unsigned int q = 0; q < n_quadrature_points; ++q)
+      {
+          computed_quantities[q](0) = 0; // to be filled for gradients of magnetic scalar potential
+          for (unsigned int d = 1; d < dim+1; ++d)
+              computed_quantities[q](d) = 0; // to be filled for gradients of displacement vector
       }
   }
 
@@ -987,7 +1013,7 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
                 const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
                 fe_solution_gradient.resize(n_q_points);
-                fe_values.get_function_gradients (distributed_solution.block(phi_block), fe_solution_gradient);
+                fe_values[phi_fe].get_function_gradients (distributed_solution, fe_solution_gradient);
                 std::vector<double>    coefficient_values (n_q_points);
                 function_material_coefficients.value_list (fe_values.get_quadrature_points(),
                                                            coefficient_values);
@@ -1055,7 +1081,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       assemble_system ();
       solve ();
       compute_error ();
-      output_results (cycle);
+//      output_results (cycle);
       postprocess_energy();
     }
 }
