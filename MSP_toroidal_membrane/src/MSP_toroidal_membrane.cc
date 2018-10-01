@@ -45,7 +45,9 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
        degree <= parameters.poly_degree_max; ++degree)
     {
       degree_collection.push_back(degree); // Polynomial degree
-      fe_collection.push_back(FE_Q<dim>(degree));
+//      fe_collection.push_back(FE_Q<dim>(degree));
+      fe_collection.push_back(FESystem<dim>(FE_Q<dim>(degree), 1, // scalar fe for magnetic potential
+                                            FE_Q<dim>(degree), 3)); // vector fe for displacement
       mapping_collection.push_back(MappingQGeneric<dim>(degree));
       qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
     }
