@@ -9,6 +9,9 @@
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/path_search.h>
+#include <deal.II/base/tensor.h>
+#include <deal.II/base/symmetric_tensor.h>
+#include <deal.II/base/quadrature_point_data.h>
 
 #include <deal.II/dofs/dof_renumbering.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -62,6 +65,8 @@
 #include <deal.II/lac/block_vector.h>
 
 #include <deal.II/distributed/shared_tria.h>
+#include <deal.II/physics/elasticity/kinematics.h>
+#include <deal.II/physics/elasticity/standard_tensors.h>
 
 #include <fstream>
 #include <iostream>
@@ -312,6 +317,8 @@ namespace Parameters
   {
     double mu_r_air;
     double mu_r_membrane;
+    double mu;
+    double nu;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -327,6 +334,12 @@ namespace Parameters
       prm.declare_entry("Membrane relative permeability", "1.0",
                         Patterns::Double(1e-9),
                         "Relative permeability of the toroidal membrane");
+      prm.declare_entry("Shear modulus", "0.0",
+                        Patterns::Double(),
+                        "Shear modulus (Lame 2nd parameter)");
+      prm.declare_entry("Poisson's ratio", "0.4999",
+                        Patterns::Double(-1.0,0.5),
+                        "Poisson's ratio");
     }
     prm.leave_subsection();
   }
@@ -337,6 +350,8 @@ namespace Parameters
     {
       mu_r_air = 1.0;
       mu_r_membrane = prm.get_double("Membrane relative permeability");
+      mu = prm.get_double("Shear modulus");
+      nu = prm.get_double("Poisson's ratio");
     }
     prm.leave_subsection();
   }
@@ -690,6 +705,83 @@ private:
   const bool _use_AMR;
 };
 
+// Neo-Hookean nonlinear constitutive material model
+template <int dim>
+class Material_Neo_Hookean_Two_Field
+{
+public:
+    Material_Neo_Hookean_Two_Field(const double mu, // Lame 2nd parameter: shear modulus
+                                   const double nu) // Poisson ratio
+        :
+          kappa((2.0 * mu * (1.0 + nu)) / (3.0 * (1.0 - 2.0 * nu))),
+          c_1(0.5 * mu),
+          lambda(kappa - ((2.0 * mu) / 3.0)),
+          det_F(1.0)
+    {
+        Assert(kappa > 0.0, ExcInternalError());
+    }
+
+    ~Material_Neo_Hookean_Two_Field(){}
+
+    void update_material_data(const Tensor<2, dim> &F)
+    {
+        det_F = determinant(F);
+
+        Assert(det_F > 0.0, ExcInternalError());
+    }
+
+    double get_det_F() const
+    {
+        return det_F;
+    }
+
+private:
+    const double kappa; // bulk modulus
+    const double c_1; // material constant
+    const double lambda; // Lame 1st parameter
+    double det_F;
+};
+
+// Quadrature point history class
+template <int dim>
+class PointHistory
+{
+  public:
+    PointHistory()
+        :
+          F_inv(Physics::Elasticity::StandardTensors<dim>::I)
+    {}
+
+    virtual ~PointHistory(){}
+
+    void setup_lqp (const Parameters::AllParameters &parameters_)
+    {
+        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim> >(parameters_.mu,
+                                                                          parameters_.nu);
+        update_values(Tensor<2, dim>());
+    }
+
+    void update_values(const Tensor<2, dim> &Grad_u_n)
+    {
+        const Tensor<2, dim> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
+        material->update_material_data(F);
+        F_inv = invert(F);
+    }
+
+    double get_det_F() const
+    {
+        return material->get_det_F();
+    }
+
+    const Tensor<2, dim> &get_F_inv() const
+    {
+        return F_inv;
+    }
+
+private:
+    std::shared_ptr<Material_Neo_Hookean_Two_Field<dim> > material;
+    Tensor<2, dim> F_inv;
+};
 
 // @sect3{The <code>MSP_Toroidal_Membrane</code> class template}
 
@@ -705,6 +797,7 @@ public:
 private:
   void set_initial_fe_indices ();
   void setup_system ();
+  void setup_quadrature_point_history();
   void make_constraints (ConstraintMatrix &constraints);
   void assemble_system ();
   void solve ();
@@ -722,6 +815,9 @@ private:
   mutable TimerOutput computing_timer;
 
   Parameters::AllParameters parameters;
+
+  CellDataStorage<typename Triangulation<dim>::cell_iterator,
+                  PointHistory<dim> > quadrature_point_history;
 
   const Geometry<dim>      geometry;
   const types::manifold_id manifold_id_inner_radius;

@@ -215,7 +215,48 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                     mpi_communicator);*/
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
+//    setup_quadrature_point_history();
   }
+}
+
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
+{
+    pcout << "Setting up quadrature point data..." << std::endl;
+
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_cell,
+                                    update_values |
+                                    update_gradients |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
+    for (; cell!=endc; ++cell)
+      if (cell->is_locally_owned())
+      {
+        hp_fe_values.reinit(cell);
+        const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+        const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+        quadrature_point_history.initialize(cell, n_q_points);
+      }
+
+    for (; cell!=endc; ++cell)
+      if (cell->is_locally_owned())
+      {
+          hp_fe_values.reinit(cell);
+          const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+          const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+          const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+                  quadrature_point_history.get_data(cell);
+          Assert(lqph.size() == n_q_points, ExcInternalError());
+
+          for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+              lqph[q_point]->setup_lqp(parameters);
+      }
 }
 
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
