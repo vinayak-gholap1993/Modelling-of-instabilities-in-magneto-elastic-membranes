@@ -87,4 +87,10 @@ end
 subsection Material properties
   # Relative permeability of the toroidal membrane
   set Membrane relative permeability = 6.0
+
+  # Shear modulus
+  set Shear modulus = 0.03
+
+  # Poisson's ratio
+  set Poisson's ratio = 0.4
 end
