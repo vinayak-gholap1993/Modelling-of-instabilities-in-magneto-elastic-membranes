@@ -259,6 +259,64 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
       }
 }
 
+template <int dim>
+void
+MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta)
+{
+    TimerOutput::Scope timer_scope (computing_timer, "Update QPH data");
+    pcout << "Update QPH data" << std::endl;
+
+    const TrilinosWrappers::MPI::BlockVector solution_total(get_total_solution(solution_delta));
+    std::vector<Tensor<2, dim> > solution_grads_u_total;
+    std::vector<double> solution_values_phi_total;
+
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_cell,
+                                    update_values |
+                                    update_gradients |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
+    for (; cell!=endc; ++cell)
+        if(cell->is_locally_owned())
+        {
+            hp_fe_values.reinit(cell);
+            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+            const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+
+            solution_grads_u_total.clear();
+            solution_values_phi_total.clear();
+            solution_grads_u_total.resize(n_q_points);
+            solution_values_phi_total.resize(n_q_points);
+
+            const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+                    quadrature_point_history.get_data(cell);
+            Assert(lqph.size() == n_q_points, ExcInternalError());
+
+            fe_values[u_fe].get_function_gradients(solution_total,
+                                                   solution_grads_u_total);
+            fe_values[phi_fe].get_function_values(solution_total,
+                                                  solution_values_phi_total);
+
+            for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                lqph[q_point]->update_values(solution_grads_u_total[q_point]);
+        }
+}
+
+// Return total solution known by this MPI process
+template <int dim>
+TrilinosWrappers::MPI::BlockVector
+MSP_Toroidal_Membrane<dim>::get_total_solution(const TrilinosWrappers::MPI::BlockVector &solution_delta) const
+{
+    TrilinosWrappers::MPI::BlockVector solution_total(solution);
+    solution_total += solution_delta;
+    return solution_total;
+}
+
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
 
 template <int dim>

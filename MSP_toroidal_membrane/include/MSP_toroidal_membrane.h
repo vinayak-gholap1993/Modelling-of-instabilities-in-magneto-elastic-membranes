@@ -334,10 +334,10 @@ namespace Parameters
       prm.declare_entry("Membrane relative permeability", "1.0",
                         Patterns::Double(1e-9),
                         "Relative permeability of the toroidal membrane");
-      prm.declare_entry("Shear modulus", "0.0",
+      prm.declare_entry("Shear modulus", "0.03",
                         Patterns::Double(),
                         "Shear modulus (Lame 2nd parameter)");
-      prm.declare_entry("Poisson's ratio", "0.4999",
+      prm.declare_entry("Poisson's ratio", "0.45",
                         Patterns::Double(-1.0,0.5),
                         "Poisson's ratio");
     }
@@ -798,6 +798,7 @@ private:
   void set_initial_fe_indices ();
   void setup_system ();
   void setup_quadrature_point_history();
+  void update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_constraints (ConstraintMatrix &constraints);
   void assemble_system ();
   void solve ();
@@ -807,6 +808,8 @@ private:
   void compute_error();
   void output_results (const unsigned int cycle) const;
   void postprocess_energy ();
+  TrilinosWrappers::MPI::BlockVector
+  get_total_solution(const TrilinosWrappers::MPI::BlockVector &solution_delta) const;
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
