@@ -706,6 +706,20 @@ private:
 };
 
 // Neo-Hookean nonlinear constitutive material model
+/*
+ * Used strain energy function here:
+ * Psi(C) = Psi = mu * [C : I - I : I - 2 * ln(J)] / 2 + lambda * (ln(J))^2 / 2     // Elasticity contribution
+ *                - mu_0 * mu_r * [J * C_inv : outer_product(H, H)]                 // Magnetic contribution
+ *
+ * Parameters: mu: shear modulus,
+ *             mu_0: free space permeability
+ *             mu_r: relative permeability of the magneto-elastic membrane material
+ *             C: right Cauchy-Green deformation tensor
+ *             I: second order Identity tensor
+ *             J: Jacobian := det(F) with F: Deformation gradient
+ *             lambda: Lame 1st parameter
+ *             H: appied magnetic field
+ * */
 template <int dim>
 class Material_Neo_Hookean_Two_Field
 {
@@ -748,9 +762,9 @@ public:
     // Get the 4th order material elasticity tensor
     SymmetricTensor<4, dim> get_4th_order_material_elasticity(const Tensor<2, dim> &F) const
     {
-        const Tensor<2, dim> C = transpose(F) * F;
-        const Tensor<2, dim> C_inv = invert(C);
-        const Tensor<4, dim> C_inv_C_inv = outer_product(C_inv, C_inv);
+        const SymmetricTensor<2, dim> C = SymmetricTensor<2, dim>(transpose(F) * F);
+        const SymmetricTensor<2, dim> C_inv = invert(C);
+        const SymmetricTensor<4, dim> C_inv_C_inv = outer_product(C_inv, C_inv);
 
         return ( (lambda * C_inv_C_inv) -
                  ((4.0 - 2.0 * lambda * std::log(det_F)) * Physics::Elasticity::StandardTensors<dim>::dC_inv_dC(F)) );
