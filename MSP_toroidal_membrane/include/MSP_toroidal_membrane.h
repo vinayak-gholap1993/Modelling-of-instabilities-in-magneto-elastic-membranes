@@ -825,7 +825,7 @@ class PointHistory
         return second_Piola_Kirchoff_stress;
     }
 
-    const SymmetricTensor<4, dim> &get__4th_order_material_elasticity() const
+    const SymmetricTensor<4, dim> &get_4th_order_material_elasticity() const
     {
         return fourth_order_material_elasticity;
     }

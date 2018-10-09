@@ -324,6 +324,9 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Assembly");
 
+  system_matrix = 0.0;
+  system_rhs = 0.0;
+
   hp::FEValues<dim> hp_fe_values (mapping_collection,
                                   fe_collection,
                                   qf_collection_cell,
@@ -353,8 +356,37 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
       function_material_coefficients.value_list (fe_values.get_quadrature_points(),
                                                  coefficient_values);
+
+      const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+              quadrature_point_history.get_data(cell);
+      Assert(lqph.size() == n_q_points, ExcInternalError());
+
+      std::vector<std::vector<Tensor<2, dim> > > grad_Nx;
+      std::vector<std::vector<SymmetricTensor<2, dim> > > symm_grad_Nx;
+
+      for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
+      {
+          const Tensor<2, dim> F_inv = lqph[q_index]->get_F_inv();
+
+          for(unsigned int k = 0; k < n_dofs_per_cell; ++k)
+          {
+              const unsigned int k_group = fe_values.get_fe().system_to_base_index(k).first.first;
+
+              if(k_group == u_block)
+              {
+                  grad_Nx[q_index][k] = fe_values[u_fe].gradient(k, q_index) * F_inv; // need to check if I need F or F_inv
+                  symm_grad_Nx[q_index][k] = symmetrize(grad_Nx[q_index][k]);
+              }
+              else
+                  Assert(k_group <= u_block, ExcInternalError());
+          }
+      }
+
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
+          const Tensor<2, dim> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
+          const SymmetricTensor<4, dim> C = lqph[q_index]->get_4th_order_material_elasticity();
+
           const double mu_r_mu_0 = coefficient_values[q_index];
           // Get the x co-ord to the quadrature point
           const double radial_distance = quadrature_points[q_index][0];
@@ -367,12 +399,41 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
+              const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
+              const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
+
               for (unsigned int j=0; j<=i; ++j)
-                cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
-                                    mu_r_mu_0*
-                                    coord_transformation_scaling *
-                                    fe_values[phi_fe].gradient(j,q_index) *
-                                    fe_values.JxW(q_index);
+              {
+                  const unsigned int component_j = fe_values.get_fe().system_to_component_index(j).first;
+                  const unsigned int j_group = fe_values.get_fe().system_to_base_index(j).first.first;
+
+                  // K_uu contribution: comprising of material and geometrical stress contribution
+                  if((i_group == j_group) && (i_group == u_block))
+                  {
+                      // material contribution
+                      cell_matrix(i,j) += symm_grad_Nx[q_index][i] * C
+                                          * symm_grad_Nx[q_index][j] * fe_values.JxW(q_index);
+
+                      // Add geometrical stress contribution to local matrix diagonals only
+                      if(component_i == component_j)
+                          cell_matrix(i,j) += grad_Nx[q_index][i][component_i] * S
+                                              * grad_Nx[q_index][j][component_j] * fe_values.JxW(q_index);
+
+                  }
+
+                  // Purely magnetic contributions K_phiphi
+                  else if((i_group == j_group) && (i_group == phi_block))
+                  {
+                      cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
+                                          mu_r_mu_0*
+                                          coord_transformation_scaling *
+                                          fe_values[phi_fe].gradient(j,q_index) *
+                                          fe_values.JxW(q_index);
+                  }
+                  else
+                      Assert((i_group <= u_block) && (j_group <= u_block),
+                             ExcInternalError());
+              }
             }
         }
 
