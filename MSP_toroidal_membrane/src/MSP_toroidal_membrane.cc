@@ -215,7 +215,7 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                     mpi_communicator);*/
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
-//    setup_quadrature_point_history();
+    setup_quadrature_point_history();
   }
 }
 
@@ -303,7 +303,8 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                                                   solution_values_phi_total);
 
             for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-                lqph[q_point]->update_values(solution_grads_u_total[q_point]);
+                lqph[q_point]->update_values(solution_grads_u_total[q_point],
+                                             solution_values_phi_total[q_point]);
         }
 }
 
@@ -361,12 +362,13 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               quadrature_point_history.get_data(cell);
       Assert(lqph.size() == n_q_points, ExcInternalError());
 
-      std::vector<std::vector<Tensor<2, dim> > > grad_Nx;
-      std::vector<std::vector<SymmetricTensor<2, dim> > > symm_grad_Nx;
+      std::vector<std::vector<Tensor<2, dim> > > Grad_Nx;
+      std::vector<std::vector<SymmetricTensor<2, dim> > > dE;
 
       for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
       {
           const Tensor<2, dim> F_inv = lqph[q_index]->get_F_inv();
+          Tensor<2, dim> F = invert(F_inv);
 
           for(unsigned int k = 0; k < n_dofs_per_cell; ++k)
           {
@@ -374,8 +376,9 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
               if(k_group == u_block)
               {
-                  grad_Nx[q_index][k] = fe_values[u_fe].gradient(k, q_index) * F_inv; // need to check if I need F or F_inv
-                  symm_grad_Nx[q_index][k] = symmetrize(grad_Nx[q_index][k]);
+                  Grad_Nx[q_index][k] = fe_values[u_fe].gradient(k, q_index);
+                  Tensor<2, dim> temp = transpose(F) * Grad_Nx[q_index][k];
+                  dE[q_index][k] = symmetrize(temp); // variation or increment of Green-Lagrange strain
               }
               else
                   Assert(k_group <= u_block, ExcInternalError());
@@ -397,6 +400,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                                         :
                                                           1.0);
 
+          // Assemble system matrix aka tangent matrix
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
               const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
@@ -411,14 +415,22 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   if((i_group == j_group) && (i_group == u_block))
                   {
                       // material contribution
-                      cell_matrix(i,j) += symm_grad_Nx[q_index][i] * C
-                                          * symm_grad_Nx[q_index][j] * fe_values.JxW(q_index);
+                      // dE: variation or increment of Green-Lagrange strain
+                      // C: 4th order material elasticity tensor
+                      cell_matrix(i,j) += dE[q_index][i] * C
+                                          * dE[q_index][j] * fe_values.JxW(q_index);
 
                       // Add geometrical stress contribution to local matrix diagonals only
                       if(component_i == component_j)
-                          cell_matrix(i,j) += grad_Nx[q_index][i][component_i] * S
-                                              * grad_Nx[q_index][j][component_j] * fe_values.JxW(q_index);
+                      {
+                          // DdE: Linearisation of increment of Green-Lagrange strain tensor
+                          // S: second Piola-Kirchoff stress tensor
+                          const SymmetricTensor<2, dim, double> DdE_ij = symmetrize(
+                                                                     transpose(Grad_Nx[q_index][i]) *
+                                                                     Grad_Nx[q_index][j]);
 
+                          cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                      }
                   }
 
                   // Purely magnetic contributions K_phiphi
@@ -435,6 +447,20 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                              ExcInternalError());
               }
             }
+
+          // Assemble RHS vector
+          for (unsigned int i=0; i<n_dofs_per_cell; ++i)
+          {
+              const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
+
+              // RHS is negative residual term
+              if (i_group == u_block)
+                  cell_rhs(i) -= scalar_product(S, dE[q_index][i]) * fe_values.JxW(q_index);
+              else if (i_group == phi_block)
+                  cell_rhs(i) -= 0.0;
+              else
+                  Assert(i_group <= u_block, ExcInternalError());
+          }
         }
 
       // Finally, we need to copy the lower half of the local matrix into the

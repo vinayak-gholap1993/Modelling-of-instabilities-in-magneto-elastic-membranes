@@ -732,16 +732,19 @@ public:
           kappa((2.0 * mu * (1.0 + nu)) / (3.0 * (1.0 - 2.0 * nu))),
           c_1(0.5 * mu),
           lambda(kappa - ((2.0 * mu) / 3.0)),
-          det_F(1.0)
+          det_F(1.0),
+          phi(0.0)
     {
         Assert(kappa > 0.0, ExcInternalError());
     }
 
     ~Material_Neo_Hookean_Two_Field(){}
 
-    void update_material_data(const Tensor<2, dim> &F)
+    void update_material_data(const Tensor<2, dim> &F,
+                              const double phi_in)
     {
         det_F = determinant(F);
+        phi = phi_in;
 
         Assert(det_F > 0.0, ExcInternalError());
     }
@@ -771,6 +774,11 @@ public:
 
     }
 
+    double get_phi() const
+    {
+        return phi;
+    }
+
 private:
     const double mu_; // shear modulus
     const double nu_; // Poisson ratio
@@ -778,6 +786,7 @@ private:
     const double c_1; // material constant
     const double lambda; // Lame 1st parameter
     double det_F;
+    double phi; // scalar magnetic potential
 };
 
 // Quadrature point history class
@@ -798,13 +807,14 @@ class PointHistory
     {
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim> >(parameters_.mu,
                                                                           parameters_.nu);
-        update_values(Tensor<2, dim>());
+        update_values(Tensor<2, dim>(), 0.0);
     }
 
-    void update_values(const Tensor<2, dim> &Grad_u_n)
+    void update_values(const Tensor<2, dim> &Grad_u_n,
+                       const double phi)
     {
         const Tensor<2, dim> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
-        material->update_material_data(F);
+        material->update_material_data(F, phi);
         F_inv = invert(F);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
         fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F);
@@ -828,6 +838,11 @@ class PointHistory
     const SymmetricTensor<4, dim> &get_4th_order_material_elasticity() const
     {
         return fourth_order_material_elasticity;
+    }
+
+    double get_phi() const
+    {
+        return material->get_phi();
     }
 
 private:
