@@ -918,6 +918,7 @@ private:
   void make_constraints (ConstraintMatrix &constraints);
   void assemble_system ();
   void solve ();
+  void solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_grid ();
   void make_grid_manifold_ids ();
   void refine_grid ();

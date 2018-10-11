@@ -582,6 +582,85 @@ void MSP_Toroidal_Membrane<dim>::solve ()
       << std::endl;
 }
 
+// Newton-Raphson scheme to solve nonlinear system of equation iteratively
+template <int dim>
+void
+MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta)
+{
+    TrilinosWrappers::MPI::BlockVector newton_update(locally_owned_partitioning,
+                                                     mpi_communicator);
+
+    error_residual.reset();
+    error_residual_0.reset();
+    error_residual_norm.reset();
+    error_update.reset();
+    error_update_0.reset();
+    error_update_norm.reset();
+
+    unsigned int newton_iteration = 0;
+    for(; newton_iteration < parameters.max_iterations_NR; ++newton_iteration)
+    {
+        pcout << "  " << newton_iteration << "  " <<std::flush;
+
+        // since we use NR scheme to solve the fully nonlinear problem
+        // data stored in tangent matrix and RHS vector is not reusable so clear
+        system_matrix = 0.0;
+        system_rhs = 0.0;
+
+        assemble_system();
+        get_error_residual(error_residual);
+
+        if (newton_iteration == 0)
+            error_residual_0 = error_residual;
+
+        // find the normalized error in residual and check for convergence
+        error_residual_norm = error_residual;
+        error_residual_norm.normalize(error_residual_0);
+
+        if (newton_iteration > 0 && error_residual_norm.u <= parameters.tol_f
+                && error_update_norm.u <= parameters.tol_u)
+        {
+            pcout << " CONVERGED!" << std::endl;
+
+            break;
+        }
+
+        // impose the DBC for displacement
+        make_constraints(constraints
+                         /* newton_iteration */); // need to update the function for
+        // constraining displacement dofs separately and the scalar magnetic potential separately
+        constraints.close();
+//        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
+
+        // Solve linear system
+        solve(/*newton_update*/);
+
+        get_error_update(newton_update, error_update);
+        if (newton_iteration == 0)
+            error_update_0 = error_update;
+
+        // Find the normalized error in newton update
+        error_update_norm = error_update;
+        error_update_norm.normalize(error_update_0);
+
+        // update the solution with current solution increment
+        solution_delta += newton_update;
+        // update qph related to this new displacement and stress state
+        update_qph_incremental(solution_delta);
+
+        pcout << std::fixed << std::setprecision(3) << std::scientific
+              << error_residual_norm.norm << "  "
+              << error_residual_norm.u << " "
+              << error_residual_norm.phi << "   "
+              << error_update_norm.norm << "    "
+              << error_update_norm.u << "   "
+              << error_update_norm.phi << " "
+              << std::endl;
+    }
+    // if more NR iterations performed than max allowed
+    AssertThrow (newton_iteration < parameters.max_iterations_NR,
+                 ExcMessage("No convergence in nonlinear solver!"));
+}
 
 // @sect4{MSP_Toroidal_Membrane::refine_grid}
 
