@@ -1231,6 +1231,39 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
     pcout << "Total energy: " << Energy << std::endl;
 }
 
+// To determine the true error in residual for the problem
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::get_error_residual(Errors &error_residual)
+{
+    TrilinosWrappers::MPI::BlockVector error_res(locally_owned_partitioning,
+                                                 mpi_communicator);
+
+    for(unsigned int i = 0; i < hp_dof_handler.n_locally_owned_dofs(); ++i)
+        if(!constraints.is_constrained(i)) // get error in residual only for unconstrained DoFs
+            error_res(i) = system_rhs(i);
+
+    error_residual.norm = error_res.l2_norm();
+    error_residual.u = error_res.block(u_block).l2_norm();
+    error_residual.phi = error_res.block(phi_block).l2_norm();
+}
+
+// To determine the true error in Newton update for the problem
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::get_error_update(const TrilinosWrappers::MPI::BlockVector &newton_update,
+                                                  Errors &error_update)
+{
+    TrilinosWrappers::MPI::BlockVector error_ud(locally_owned_partitioning,
+                                                mpi_communicator);
+
+    for(unsigned int i = 0; i < hp_dof_handler.n_locally_owned_dofs(); ++i)
+        if(!constraints.is_constrained(i))
+            error_ud(i) = newton_update(i);
+
+    error_update.norm = error_ud.l2_norm();
+    error_update.u = error_ud.block(u_block).l2_norm();
+    error_update.phi = error_ud.block(phi_block).l2_norm();
+}
+
 // @sect4{MSP_Toroidal_Membrane::run}
 
 template <int dim>

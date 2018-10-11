@@ -416,6 +416,50 @@ namespace Parameters
     prm.leave_subsection();
   }
 
+  // Nonlinear solver parameters like max. Newton-Raphson iterations and tolerances for RHS and solution
+  struct NonlinearSolver
+  {
+      unsigned int max_iterations_NR;
+      double tol_f;
+      double tol_u;
+
+      static void
+      declare_parameters(ParameterHandler &prm);
+
+      void
+      parse_parameters(ParameterHandler &prm);
+  };
+
+  void NonlinearSolver::declare_parameters(ParameterHandler &prm)
+  {
+      prm.enter_subsection("Nonlinear solver");
+      {
+          prm.declare_entry("Max iterations Newton-Raphson", "10",
+                            Patterns::Integer(0),
+                            "Number of Newton-Raphson iterations allowed");
+
+          prm.declare_entry("Tolerance force", "1.0e-9",
+                            Patterns::Double(0.0),
+                            "Force residual tolerance");
+
+          prm.declare_entry("Tolerance displacement", "1.0e-6",
+                            Patterns::Double(0.0),
+                            "Displacement error tolerance");
+      }
+      prm.leave_subsection();
+  }
+
+  void NonlinearSolver::parse_parameters(ParameterHandler &prm)
+  {
+      prm.enter_subsection("Nonlinear solver");
+      {
+        max_iterations_NR = prm.get_integer("Max iterations Newton-Raphson");
+        tol_f = prm.get_double("Tolerance force");
+        tol_u = prm.get_double("Tolerance displacement");
+      }
+      prm.leave_subsection();
+  }
+
 // @sect4{All parameters}
 
 // Finally we consolidate all of the above structures into a single container
@@ -426,7 +470,8 @@ namespace Parameters
     public Geometry,
     public Refinement,
     public Materials,
-    public LinearSolver
+    public LinearSolver,
+    public NonlinearSolver
 
   {
     AllParameters(const std::string &input_file);
@@ -475,6 +520,7 @@ namespace Parameters
     Refinement::declare_parameters(prm);
     Materials::declare_parameters(prm);
     LinearSolver::declare_parameters(prm);
+    NonlinearSolver::declare_parameters(prm);
   }
 
   void AllParameters::parse_parameters(ParameterHandler &prm)
@@ -485,6 +531,7 @@ namespace Parameters
     Refinement::parse_parameters(prm);
     Materials::parse_parameters(prm);
     LinearSolver::parse_parameters(prm);
+    NonlinearSolver::parse_parameters(prm);
   }
 }
 
@@ -943,6 +990,44 @@ private:
   };
 
   std::vector<types::global_dof_index> dofs_per_block;
+
+  // A data structure to hold a number of variables to store norms and update norms
+  struct Errors
+  {
+      Errors()
+          :
+            norm(1.0), u(1.0), phi(1.0)
+      {}
+      void reset()
+      {
+          norm = 1.0;
+          u = 1.0;
+          phi = 1.0;
+      }
+
+      void normalize(const Errors &rhs)
+      {
+          if (rhs.norm != 0.0)
+              norm /= rhs.norm;
+          if (rhs.u != 0.0)
+              u /= rhs.u;
+          if (rhs.phi != 0.0)
+              phi /= rhs.phi;
+      }
+
+      double norm, u, phi;
+  };
+
+  Errors error_residual, error_residual_0, error_residual_norm,
+         error_update, error_update_0, error_update_norm;
+
+  // Functions to calculate the errors
+  void
+  get_error_residual(Errors &error_residual);
+
+  void
+  get_error_update(const TrilinosWrappers::MPI::BlockVector &newton_update,
+                   Errors &error_update);
 };
 
 
