@@ -780,14 +780,15 @@ public:
           c_1(0.5 * mu),
           lambda(kappa - ((2.0 * mu) / 3.0)),
           det_F(1.0),
-          phi(0.0)
+          phi(0.0),
+          dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);})
     {
         Assert(kappa > 0.0, ExcInternalError());
     }
 
     ~Material_Neo_Hookean_Two_Field(){}
 
-    void update_material_data(const Tensor<2, dim> &F,
+    void update_material_data(const Tensor<2, dim_Tensor> &F,
                               const double phi_in)
     {
         det_F = determinant(F);
@@ -802,22 +803,23 @@ public:
     }
 
     // Get 2nd Piola-Kirchoff stress tensor
-    SymmetricTensor<2, dim> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim> &F) const
+    SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
-        return (mu_ * Physics::Elasticity::StandardTensors<dim>::I -
+        return (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I -
                 ((4.0 - (2.0 * lambda * std::log(det_F))) *
-                (Physics::Elasticity::StandardTensors<dim>::ddet_F_dC(F)))/det_F);
+                (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)))/det_F);
     }
 
     // Get the 4th order material elasticity tensor
-    SymmetricTensor<4, dim> get_4th_order_material_elasticity(const Tensor<2, dim> &F) const
+    SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F) const
     {
-        const SymmetricTensor<2, dim> C = SymmetricTensor<2, dim>(transpose(F) * F);
-        const SymmetricTensor<2, dim> C_inv = invert(C);
-        const SymmetricTensor<4, dim> C_inv_C_inv = outer_product(C_inv, C_inv);
+        const SymmetricTensor<2, dim_Tensor> C = SymmetricTensor<2, dim_Tensor>(transpose(F) * F);
+        const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
+        const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
         return ( (lambda * C_inv_C_inv) -
-                 ((4.0 - 2.0 * lambda * std::log(det_F)) * Physics::Elasticity::StandardTensors<dim>::dC_inv_dC(F)) );
+                 ((4.0 - 2.0 * lambda * std::log(det_F)) *
+                  Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
     }
 
@@ -834,6 +836,7 @@ private:
     const double lambda; // Lame 1st parameter
     double det_F;
     double phi; // scalar magnetic potential
+    const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
 };
 
 // Quadrature point history class
@@ -843,9 +846,10 @@ class PointHistory
   public:
     PointHistory()
         :
-          F_inv(Physics::Elasticity::StandardTensors<dim>::I),
-          second_Piola_Kirchoff_stress(SymmetricTensor<2, dim>()),
-          fourth_order_material_elasticity(SymmetricTensor<4, dim>())
+          dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);}),
+          F_inv(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
+          second_Piola_Kirchoff_stress(SymmetricTensor<2, dim_Tensor>()),
+          fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>())
     {}
 
     virtual ~PointHistory(){}
@@ -854,13 +858,13 @@ class PointHistory
     {
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim> >(parameters_.mu,
                                                                           parameters_.nu);
-        update_values(Tensor<2, dim>(), 0.0);
+        update_values(Tensor<2, dim_Tensor>(), 0.0);
     }
 
-    void update_values(const Tensor<2, dim> &Grad_u_n,
+    void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
                        const double phi)
     {
-        const Tensor<2, dim> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
+        const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         material->update_material_data(F, phi);
         F_inv = invert(F);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
@@ -872,17 +876,17 @@ class PointHistory
         return material->get_det_F();
     }
 
-    const Tensor<2, dim> &get_F_inv() const
+    const Tensor<2, dim_Tensor> &get_F_inv() const
     {
         return F_inv;
     }
 
-    const SymmetricTensor<2, dim> &get_second_Piola_Kirchoff_stress() const
+    const SymmetricTensor<2, dim_Tensor> &get_second_Piola_Kirchoff_stress() const
     {
         return second_Piola_Kirchoff_stress;
     }
 
-    const SymmetricTensor<4, dim> &get_4th_order_material_elasticity() const
+    const SymmetricTensor<4, dim_Tensor> &get_4th_order_material_elasticity() const
     {
         return fourth_order_material_elasticity;
     }
@@ -894,9 +898,12 @@ class PointHistory
 
 private:
     std::shared_ptr<Material_Neo_Hookean_Two_Field<dim> > material;
-    Tensor<2, dim> F_inv;
-    SymmetricTensor<2, dim> second_Piola_Kirchoff_stress;
-    SymmetricTensor<4, dim> fourth_order_material_elasticity;
+    const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
+    // if dim == 3 ? dim : dim+1, for axisymmetric formulation we need tensors of dimension 3*3 even though
+    // we have our displacement solution of 2*1 dimensions i.e. u_x and u_y
+    Tensor<2, dim_Tensor> F_inv;
+    SymmetricTensor<2, dim_Tensor> second_Piola_Kirchoff_stress;
+    SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
 };
 
 // @sect3{The <code>MSP_Toroidal_Membrane</code> class template}
@@ -983,6 +990,7 @@ private:
   static const unsigned int n_components = dim + 1;
   const FEValuesExtractors::Scalar phi_fe;
   const FEValuesExtractors::Vector u_fe;
+  const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
 
   enum
   {

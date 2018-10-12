@@ -39,6 +39,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
                                  parameters.mu_r_membrane),
   phi_fe(phi_component),
   u_fe(u_componenent),
+  dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);}),
   dofs_per_block(n_blocks)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
@@ -137,8 +138,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
 //    GridTools::partition_triangulation (n_mpi_processes,
 //                                        triangulation);
 
-    std::vector<unsigned int> block_component (n_components, phi_block); // magnetic scalar potential
-    block_component[u_componenent] = u_block; // displacement
+    std::vector<unsigned int> block_component (n_components, u_block); // displacement
+    block_component[phi_component] = phi_block; // magnetic scalar potential
     // Distribute DoFs
     hp_dof_handler.distribute_dofs (fe_collection);
    // When using parallel::shared::Triangulation no need to do this
@@ -302,6 +303,8 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             fe_values[phi_fe].get_function_values(solution_total,
                                                   solution_values_phi_total);
 
+            // need to apply transformation here before sending the soln grads u total
+            // to transform 2*2 tensor to 3*3 since it is used to calculate F
             for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
                 lqph[q_point]->update_values(solution_grads_u_total[q_point],
                                              solution_values_phi_total[q_point]);
@@ -363,12 +366,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       Assert(lqph.size() == n_q_points, ExcInternalError());
 
       std::vector<std::vector<Tensor<2, dim> > > Grad_Nx;
-      std::vector<std::vector<SymmetricTensor<2, dim> > > dE;
+      std::vector<std::vector<SymmetricTensor<2, dim_Tensor> > > dE;
 
       for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
       {
-          const Tensor<2, dim> F_inv = lqph[q_index]->get_F_inv();
-          Tensor<2, dim> F = invert(F_inv);
+          const Tensor<2, dim_Tensor> F_inv = lqph[q_index]->get_F_inv();
+          Tensor<2, dim_Tensor> F = invert(F_inv);
 
           for(unsigned int k = 0; k < n_dofs_per_cell; ++k)
           {
@@ -377,7 +380,9 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               if(k_group == u_block)
               {
                   Grad_Nx[q_index][k] = fe_values[u_fe].gradient(k, q_index);
-                  Tensor<2, dim> temp = transpose(F) * Grad_Nx[q_index][k];
+                  // Need to apply some transformation here
+                  // Grad_Nx is 2*2 dim tensor but F is 3*3 dim tensor
+                  Tensor<2, dim_Tensor> temp = transpose(F) * Grad_Nx[q_index][k];
                   dE[q_index][k] = symmetrize(temp); // variation or increment of Green-Lagrange strain
               }
               else
@@ -387,8 +392,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
-          const Tensor<2, dim> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
-          const SymmetricTensor<4, dim> C = lqph[q_index]->get_4th_order_material_elasticity();
+          const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
+          const SymmetricTensor<4, dim_Tensor> C = lqph[q_index]->get_4th_order_material_elasticity();
 
           const double mu_r_mu_0 = coefficient_values[q_index];
           // Get the x co-ord to the quadrature point
@@ -425,7 +430,11 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       {
                           // DdE: Linearisation of increment of Green-Lagrange strain tensor
                           // S: second Piola-Kirchoff stress tensor
-                          const SymmetricTensor<2, dim, double> DdE_ij = symmetrize(
+
+                          // Need to apply some transformation here
+                          // to get the resulting DdE tensor of 3*3 dim from
+                          // grad of shape functions which are 2*2 tensor for axisymmetric formulation
+                          const SymmetricTensor<2, dim_Tensor, double> DdE_ij = symmetrize(
                                                                      transpose(Grad_Nx[q_index][i]) *
                                                                      Grad_Nx[q_index][j]);
 
