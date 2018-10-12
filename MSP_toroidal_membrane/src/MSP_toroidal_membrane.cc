@@ -494,7 +494,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 // @sect4{MSP_Toroidal_Membrane::solve}
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::solve ()
+void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newton_update)
 {
   TimerOutput::Scope timer_scope (computing_timer, "Solve linear system");
 
@@ -642,7 +642,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 //        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
 
         // Solve linear system
-        solve(/*newton_update*/);
+        solve(newton_update);
 
         get_error_update(newton_update, error_update);
         if (newton_iteration == 0)
@@ -1130,126 +1130,156 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Make grid");
 
-  GridIn<dim> gridin;
-  gridin.attach_triangulation(triangulation);
-  std::ifstream input (parameters.mesh_file); // Use for production code
-//  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file)); // Use for testing the code with ctest
-  gridin.read_abaqus(input);
+  // Make rectangular beam for finite strain elasticity problem test
+  if(parameters.geometry_shape == "Beam")
+  {
+      std::vector<unsigned int> repetitions;
+      repetitions.push_back(8); // 8 blocks in x direction
+      if(dim >= 2)
+          repetitions.push_back(4); // 4 blocks in y direction
+      if(dim >= 3)
+          repetitions.push_back(1); // 1 block in z direction
 
-  // Set boundary IDs
-/*  typename Triangulation<dim>::active_cell_iterator
-  cell = triangulation.begin_active(),
-  endc = triangulation.end();
-  for (; cell!=endc; ++cell)
-    {
-      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                                repetitions,
+                                                (dim == 3 ? Point<dim>(0.0, 0.0, 0.0) : Point<dim>(0.0, 0.0)),
+                                                (dim == 3 ? Point<dim>(2.0, 1.0, 0.25) : Point<dim>(2.0, 1.0)),
+                                                true); // set colorize for boundary ids
+
+      // Rescale the geometry before attaching manifolds
+      GridTools::scale(parameters.grid_scale, triangulation);
+
+      triangulation.refine_global (parameters.n_global_refinements);
+  }
+
+  // For our geometry of interest for coupled problem
+  // use the torus membrane geometry read in from the mesh file
+  else if(parameters.geometry_shape == "Toroidal_tube")
+  {
+      GridIn<dim> gridin;
+      gridin.attach_triangulation(triangulation);
+      std::ifstream input (parameters.mesh_file); // Use for production code
+    //  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file)); // Use for testing the code with ctest
+      gridin.read_abaqus(input);
+
+      // Set boundary IDs
+    /*  typename Triangulation<dim>::active_cell_iterator
+      cell = triangulation.begin_active(),
+      endc = triangulation.end();
+      for (; cell!=endc; ++cell)
         {
-          if (cell->face(face)->at_boundary())
+          for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
             {
-              const Point<dim> &centre = cell->face(face)->center();
-              if (centre[0] > 0.0 && // Not on the y-axis...
-                  centre[0] < geometry.get_membrane_minor_radius_centre()[0] && // ... but to the left of the toroid...
-                  centre[1] < geometry.get_torus_minor_radius_outer() && // ...and contained within the height of the toroid
-                  centre[1] > -geometry.get_torus_minor_radius_outer())
+              if (cell->face(face)->at_boundary())
                 {
-                  cell->face(face)->set_boundary_id(boundary_id_magnet);
+                  const Point<dim> &centre = cell->face(face)->center();
+                  if (centre[0] > 0.0 && // Not on the y-axis...
+                      centre[0] < geometry.get_membrane_minor_radius_centre()[0] && // ... but to the left of the toroid...
+                      centre[1] < geometry.get_torus_minor_radius_outer() && // ...and contained within the height of the toroid
+                      centre[1] > -geometry.get_torus_minor_radius_outer())
+                    {
+                      cell->face(face)->set_boundary_id(boundary_id_magnet);
+                    }
                 }
             }
         }
-    }
-*/
+    */
 
-  // Attach manifold to the cells within the permanent magnet region
-  if(dim == 3)
-  {
-      CylindricalManifold<dim>   manifold_cylindrical(1);
-      for (const auto &cell : triangulation.active_cell_iterators())
+      // Attach manifold to the cells within the permanent magnet region
+      if(dim == 3)
       {
-          // For a block of cells at center within a torous region of rectangular cross section
-          const auto cell_center = cell->center();
-          if(std::hypot(cell_center[0], cell_center[2]) >= 0.17 && // inner (min) radial distance
-             std::hypot(cell_center[0], cell_center[2]) <= 0.27 && // outer (max) radial distance
-             std::abs(cell_center[1]) <= 0.06) // max axial height
+          CylindricalManifold<dim>   manifold_cylindrical(1);
+          for (const auto &cell : triangulation.active_cell_iterators())
           {
-              cell->set_all_manifold_ids(manifold_id_magnet);
+              // For a block of cells at center within a torous region of rectangular cross section
+              const auto cell_center = cell->center();
+              if(std::hypot(cell_center[0], cell_center[2]) >= 0.17 && // inner (min) radial distance
+                 std::hypot(cell_center[0], cell_center[2]) <= 0.27 && // outer (max) radial distance
+                 std::abs(cell_center[1]) <= 0.06) // max axial height
+              {
+                  cell->set_all_manifold_ids(manifold_id_magnet);
+              }
+              if(std::hypot(cell_center[0], cell_center[2]) < 0.17 &&
+                 std::abs(cell_center[1]) <= 0.06)
+              {
+                  cell->set_all_manifold_ids(5);
+              }
           }
-          if(std::hypot(cell_center[0], cell_center[2]) < 0.17 &&
-             std::abs(cell_center[1]) <= 0.06)
-          {
-              cell->set_all_manifold_ids(5);
-          }
+          triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
+
+          manifold_magnet.initialize(triangulation);
+          triangulation.set_manifold(5, manifold_magnet);
       }
-      triangulation.set_manifold(manifold_id_magnet, manifold_cylindrical);
 
-      manifold_magnet.initialize(triangulation);
-      triangulation.set_manifold(5, manifold_magnet);
-  }
+      // Refine adaptively the permanent magnet region for given
+      // input parameters of box lenghts
+      for(unsigned int cycle = 0; cycle < 2; ++cycle)
+      {
+          typename Triangulation<dim>::active_cell_iterator
+                  cell = triangulation.begin_active(),
+                  endc = triangulation.end();
+          for (; cell!=endc; ++cell)
+          {
+              for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+              {
+                  if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
+                      std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
+                      (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
+                  {
+                      cell->set_refine_flag();
+                  }
+                  continue;
+              }
+          }
+          triangulation.execute_coarsening_and_refinement();
+      }
 
-  // Refine adaptively the permanent magnet region for given
-  // input parameters of box lenghts
-  for(unsigned int cycle = 0; cycle < 2; ++cycle)
-  {
+      // Set material id to bar magnet for the constrained cells
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
               endc = triangulation.end();
       for (; cell!=endc; ++cell)
       {
+          unsigned int vertex_count = 0;
           for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
           {
-              if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
-                  std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
-                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
-              {
-                  cell->set_refine_flag();
-              }
-              continue;
+              if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
+                  std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
+                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
+                  (dim == 3 ?
+                   std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) < (0.98 * parameters.bounding_box_r) //radial distance with tolerance of 2%
+                   :
+                   true))
+                  vertex_count++;
           }
-      }
-      triangulation.execute_coarsening_and_refinement();
-  }
 
-  // Set material id to bar magnet for the constrained cells
-  typename Triangulation<dim>::active_cell_iterator
-          cell = triangulation.begin_active(),
-          endc = triangulation.end();
-  for (; cell!=endc; ++cell)
-  {
-      unsigned int vertex_count = 0;
-      for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
+          if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
+              cell->set_material_id(material_id_bar_magnet);
+      }
+
+      // Rescale the geometry before attaching manifolds
+      GridTools::scale(parameters.grid_scale, triangulation);
+
+      make_grid_manifold_ids();
+
+      if(dim == 2) // Use Spherical Manifold for torous membrane
       {
-          if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
-              std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-              (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
-              (dim == 3 ?
-               std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) < (0.98 * parameters.bounding_box_r) //radial distance with tolerance of 2%
-               :
-               true))
-              vertex_count++;
+          triangulation.set_manifold (manifold_id_outer_radius, manifold_outer_radius);
+          triangulation.set_manifold (manifold_id_inner_radius, manifold_inner_radius);
+      }
+      if(dim == 3) // Use Torus Manifold for torus membrane
+      {
+          TorusManifold<dim> manifold_torus_outer_radius (geometry.get_membrane_minor_radius_centre()[0],
+                                                          geometry.get_torus_minor_radius_outer());
+    //      triangulation.set_manifold(manifold_id_outer_radius, manifold_torus_outer_radius);
       }
 
-      if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
-          cell->set_material_id(material_id_bar_magnet);
+      triangulation.refine_global (parameters.n_global_refinements);
+
   }
 
-  // Rescale the geometry before attaching manifolds
-  GridTools::scale(parameters.grid_scale, triangulation);
-
-  make_grid_manifold_ids();
-
-  if(dim == 2) // Use Spherical Manifold for torous membrane
-  {
-      triangulation.set_manifold (manifold_id_outer_radius, manifold_outer_radius);
-      triangulation.set_manifold (manifold_id_inner_radius, manifold_inner_radius);
-  }
-  if(dim == 3) // Use Torus Manifold for torus membrane
-  {
-      TorusManifold<dim> manifold_torus_outer_radius (geometry.get_membrane_minor_radius_centre()[0],
-                                                      geometry.get_torus_minor_radius_outer());
-//      triangulation.set_manifold(manifold_id_outer_radius, manifold_torus_outer_radius);
-  }
-
-  triangulation.refine_global (parameters.n_global_refinements);
-
+  else
+      AssertThrow(false, ExcInternalError());
 }
 
 template <int dim>
@@ -1385,11 +1415,24 @@ void MSP_Toroidal_Membrane<dim>::run ()
             << hp_dof_handler.n_dofs()
             << std::endl;
 
-      assemble_system ();
-      solve ();
+      // before starting the simulation output the grid
+//      output_results(cycle);
+      // Declare the incremental solution update
+      TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
+                                                        mpi_communicator);
+      // Can add a loop over load domain here later
+      // currently single load step taken
+      solution_delta = 0.0;
+      solve_nonlinear_system(solution_delta);
+      // update the total solution for current load step
+      solution += solution_delta;
+//      output_results(cycle);
+
+//      assemble_system ();
+//      solve ();
       compute_error ();
 //      output_results (cycle);
-      postprocess_energy();
+//      postprocess_energy();
     }
 }
 

@@ -180,6 +180,7 @@ namespace Parameters
     double      grid_scale;
     double      bounding_box_r;
     double      bounding_box_z;
+    std::string geometry_shape;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -219,6 +220,10 @@ namespace Parameters
       prm.declare_entry("Magnet bounding box axial length", "0.10",
                         Patterns::Double(0.0),
                         "Permanent magnet region axial (z) length");
+
+      prm.declare_entry("Geometry shape for the problem", "Toroidal_tube",
+                        Patterns::Selection("Toroidal_tube | Beam"),
+                        "Geometry selection for problem");
     }
     prm.leave_subsection();
   }
@@ -234,6 +239,7 @@ namespace Parameters
       grid_scale = prm.get_double("Grid scale");
       bounding_box_r = prm.get_double("Magnet bounding box radial length");
       bounding_box_z = prm.get_double("Magnet bounding box axial length");
+      geometry_shape = prm.get("Geometry shape for the problem");
     }
     prm.leave_subsection();
   }
@@ -924,7 +930,7 @@ private:
   void update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_constraints (ConstraintMatrix &constraints);
   void assemble_system ();
-  void solve ();
+  void solve (TrilinosWrappers::MPI::BlockVector &newton_update);
   void solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_grid ();
   void make_grid_manifold_ids ();

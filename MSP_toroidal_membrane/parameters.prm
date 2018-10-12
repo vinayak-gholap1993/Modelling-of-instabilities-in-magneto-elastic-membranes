@@ -37,6 +37,9 @@ subsection Geometry
 
   # Permanent magnet region axial (z) length
   set Magnet bounding box axial length = 0.051
+
+  # Geometry selection for problem: Toroidal_tube | Beam
+  set Geometry shape for the problem = Toroidal_tube
 end
 
 
