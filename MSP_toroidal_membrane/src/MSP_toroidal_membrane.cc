@@ -39,7 +39,6 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
                                  parameters.mu_r_membrane),
   phi_fe(phi_component),
   u_fe(u_componenent),
-  dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);}),
   dofs_per_block(n_blocks)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
@@ -251,7 +250,7 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
           hp_fe_values.reinit(cell);
           const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
           const unsigned int  &n_q_points = fe_values.n_quadrature_points;
-          const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+          const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
                   quadrature_point_history.get_data(cell);
           Assert(lqph.size() == n_q_points, ExcInternalError());
 
@@ -294,7 +293,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             solution_grads_u_total.resize(n_q_points);
             solution_values_phi_total.resize(n_q_points);
 
-            const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+            const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
                     quadrature_point_history.get_data(cell);
             Assert(lqph.size() == n_q_points, ExcInternalError());
 
@@ -361,7 +360,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       function_material_coefficients.value_list (fe_values.get_quadrature_points(),
                                                  coefficient_values);
 
-      const std::vector<std::shared_ptr<PointHistory<dim> > > lqph =
+      const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
               quadrature_point_history.get_data(cell);
       Assert(lqph.size() == n_q_points, ExcInternalError());
 
@@ -498,11 +497,23 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 {
   TimerOutput::Scope timer_scope (computing_timer, "Solve linear system");
 
-  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
-                                                          mpi_communicator);
+//  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
+//                                                          mpi_communicator);
 //  distributed_solution = solution;
 
-  SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.m(),
+  // Block to solve for: either displacement block or magnetic scalar potential block
+  // will have to change for a coupled problem in future
+  unsigned int solution_block;
+  if(parameters.problem_type == "Purely magnetic")
+      solution_block = phi_block;
+  else if (parameters.problem_type == "Purely elastic")
+      solution_block = u_block;
+  else
+      Assert(false, ExcMessage("Coupled linear solver not implemented!"));
+
+  // Need to update for considered block we are solving? Eg. system_matrix.block(u_block,  u_block).m()
+  // and similar way for linear solver tolerance?
+  SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(solution_block, solution_block).m(),
                                 parameters.lin_slvr_tol);
   if (parameters.lin_slvr_type == "Iterative")
     {
@@ -520,7 +531,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           TrilinosWrappers::PreconditionJacobi::AdditionalData
           additional_data (parameters.preconditioner_relaxation);
 
-          ptr_prec->initialize(system_matrix.block(0,0),
+          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
@@ -532,7 +543,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           TrilinosWrappers::PreconditionSSOR::AdditionalData
           additional_data (parameters.preconditioner_relaxation);
 
-          ptr_prec->initialize(system_matrix.block(0,0),
+          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
@@ -564,26 +575,26 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
             additional_data.higher_order_elements
               = Utilities::MPI::max(hoe, mpi_communicator);
           }
-          ptr_prec->initialize(system_matrix.block(0,0),
+          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
                                additional_data);
           preconditioner.reset(ptr_prec);
         }
 
-      solver.solve (system_matrix.block(0,0),
-                    distributed_solution.block(phi_block),
-                    system_rhs.block(phi_block),
+      solver.solve (system_matrix.block(solution_block,solution_block),
+                    newton_update.block(solution_block),
+                    system_rhs.block(solution_block),
                     *preconditioner);
     }
   else // Direct
     {
       TrilinosWrappers::SolverDirect solver (solver_control);
-      solver.solve (system_matrix.block(0,0),
-                    distributed_solution.block(phi_block),
-                    system_rhs.block(phi_block));
+      solver.solve (system_matrix.block(solution_block,solution_block),
+                    newton_update.block(solution_block),
+                    system_rhs.block(solution_block));
     }
 
-  constraints.distribute (distributed_solution);
-  solution = distributed_solution;
+  constraints.distribute (newton_update);
+//  solution = distributed_solution;
 
   pcout
       << "   Iterations: " << solver_control.last_step()

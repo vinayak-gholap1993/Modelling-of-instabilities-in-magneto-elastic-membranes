@@ -109,3 +109,8 @@ subsection Nonlinear solver
   # Force residual tolerance
   set Tolerance force = 1.0e-9
 end
+
+subsection Problem type
+  # The problem type to solve: Purely magnetic | Purely elastic | Coupled magnetoelastic
+  set Problem type = Purely elastic
+end

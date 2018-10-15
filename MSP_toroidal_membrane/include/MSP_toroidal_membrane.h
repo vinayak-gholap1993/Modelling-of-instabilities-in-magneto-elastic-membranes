@@ -81,6 +81,42 @@ using namespace dealii;
 // ParameterHandler object to read in the choices at run-time.
 namespace Parameters
 {
+// User input for the problem type to solve for
+// Can be purely magnetic problem for magnetic scalar potential
+// Can be purely elastic problem for vector valued displacement in finite strain elasticity
+// Can be a coupled problem involving magnetic field and vector valued displacement to be solved for
+// as a mixed problem
+  struct ProblemType
+  {
+      std::string problem_type;
+
+      static void
+      declare_parameters(ParameterHandler &prm);
+
+      void
+      parse_parameters(ParameterHandler &prm);
+  };
+
+  void ProblemType::declare_parameters(ParameterHandler &prm)
+  {
+      prm.enter_subsection("Problem type");
+      {
+          prm.declare_entry("Problem type", "Purely magnetic",
+                            Patterns::Selection("Purely magnetic | Purely elastic | Coupled magnetoelastic"),
+                            "The problem type to solve");
+      }
+      prm.leave_subsection();
+  }
+
+  void ProblemType::parse_parameters(ParameterHandler &prm)
+  {
+      prm.enter_subsection("Problem type");
+      {
+          problem_type = prm.get("Problem type");
+      }
+      prm.leave_subsection();
+  }
+
 // @sect4{Boundary conditions}
 
   struct BoundaryConditions
@@ -471,6 +507,7 @@ namespace Parameters
 // Finally we consolidate all of the above structures into a single container
 // that holds all of our run-time selections.
   struct AllParameters :
+    public ProblemType,
     public BoundaryConditions,
     public FESystem,
     public Geometry,
@@ -520,6 +557,7 @@ namespace Parameters
 
   void AllParameters::declare_parameters(ParameterHandler &prm)
   {
+    ProblemType::declare_parameters(prm);
     BoundaryConditions::declare_parameters(prm);
     FESystem::declare_parameters(prm);
     Geometry::declare_parameters(prm);
@@ -531,6 +569,7 @@ namespace Parameters
 
   void AllParameters::parse_parameters(ParameterHandler &prm)
   {
+    ProblemType::parse_parameters(prm);
     BoundaryConditions::parse_parameters(prm);
     FESystem::parse_parameters(prm);
     Geometry::parse_parameters(prm);
@@ -773,7 +812,7 @@ private:
  *             lambda: Lame 1st parameter
  *             H: appied magnetic field
  * */
-template <int dim>
+template <int dim, int dim_Tensor>
 class Material_Neo_Hookean_Two_Field
 {
 public:
@@ -786,8 +825,7 @@ public:
           c_1(0.5 * mu),
           lambda(kappa - ((2.0 * mu) / 3.0)),
           det_F(1.0),
-          phi(0.0),
-          dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);})
+          phi(0.0)
     {
         Assert(kappa > 0.0, ExcInternalError());
     }
@@ -842,17 +880,15 @@ private:
     const double lambda; // Lame 1st parameter
     double det_F;
     double phi; // scalar magnetic potential
-    const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
 };
 
 // Quadrature point history class
-template <int dim>
+template <int dim, int dim_Tensor>
 class PointHistory
 {
   public:
     PointHistory()
         :
-          dim_Tensor([dim]()->int {return (dim == 3 ? dim : dim+1);}),
           F_inv(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
           second_Piola_Kirchoff_stress(SymmetricTensor<2, dim_Tensor>()),
           fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>())
@@ -862,7 +898,7 @@ class PointHistory
 
     void setup_lqp (const Parameters::AllParameters &parameters_)
     {
-        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim> >(parameters_.mu,
+        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(parameters_.mu,
                                                                           parameters_.nu);
         update_values(Tensor<2, dim_Tensor>(), 0.0);
     }
@@ -903,10 +939,7 @@ class PointHistory
     }
 
 private:
-    std::shared_ptr<Material_Neo_Hookean_Two_Field<dim> > material;
-    const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
-    // if dim == 3 ? dim : dim+1, for axisymmetric formulation we need tensors of dimension 3*3 even though
-    // we have our displacement solution of 2*1 dimensions i.e. u_x and u_y
+    std::shared_ptr<Material_Neo_Hookean_Two_Field<dim,dim_Tensor> > material;
     Tensor<2, dim_Tensor> F_inv;
     SymmetricTensor<2, dim_Tensor> second_Piola_Kirchoff_stress;
     SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
@@ -949,8 +982,10 @@ private:
 
   Parameters::AllParameters parameters;
 
+  // irrespective of 3D or axisymmetric problem dim_Tensor value will always be 3
+  static const int dim_Tensor = 3; // dimensions for the kinematics and kinetics tensors
   CellDataStorage<typename Triangulation<dim>::cell_iterator,
-                  PointHistory<dim> > quadrature_point_history;
+                  PointHistory<dim, dim_Tensor> > quadrature_point_history;
 
   const Geometry<dim>      geometry;
   const types::manifold_id manifold_id_inner_radius;
@@ -996,7 +1031,6 @@ private:
   static const unsigned int n_components = dim + 1;
   const FEValuesExtractors::Scalar phi_fe;
   const FEValuesExtractors::Vector u_fe;
-  const int dim_Tensor; // dimensions for the kinematics and kinetics tensors
 
   enum
   {
