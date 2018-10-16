@@ -90,39 +90,154 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 }
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints)
+void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints, const int &itr_nr)
 {
-  // Assume a homogeneous magnetic field is generated at
-  // an infinite distance from the particle
-//  VectorTools::interpolate_boundary_values (hp_dof_handler,
-//                                            boundary_id_magnet,
-//                                            LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length),
-//                                            constraints);
+    // All dirichlet constraints need to be specified only at 0th NR iteration
+    // constraints are different at different NR iterations
+    constraints.clear();
+    const bool apply_dirichlet_bc = (itr_nr == 0); // need to apply inhomogeneous DBC
 
-    std::map< types::global_dof_index, Point<dim> > support_points;
-    DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
-    LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
+    // Scalar extractor for components of vector displacement field
+    const FEValuesExtractors::Scalar x_displacement(0);
+    const FEValuesExtractors::Scalar y_displacement(1);
 
-    for(auto it : support_points)
+    // applying inhomogeneous DBC at the 0th NR iteration
+    if(apply_dirichlet_bc)
     {
-        const auto dof_index = it.first;
-        const auto supp_point = it.second;
+        // applying inhomogeneous DBC for the scalar magnetic potential field
+        std::map< types::global_dof_index, Point<dim> > support_points;
+        DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
+        LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
 
-        // Check for the support point if inside the permanent magnet region:
-        // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
-        // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
-        if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
-            std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
-            (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
-            (dim == 3 ?
-             std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
-             : true))
+        for(auto it : support_points)
         {
-//            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
-            const double potential_value = linear_scalar_potential.value(supp_point);
-//            pcout << "Potential value: " << potential_value << std::endl;
-            constraints.add_line(dof_index);
-            constraints.set_inhomogeneity(dof_index, potential_value);
+            const auto dof_index = it.first;
+            const auto supp_point = it.second;
+
+            // Check for the support point if inside the permanent magnet region:
+            // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
+            // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
+            if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
+                std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
+                (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
+                (dim == 3 ?
+                 std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
+                 : true))
+            {
+    //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
+                const double potential_value = linear_scalar_potential.value(supp_point);
+    //            pcout << "Potential value: " << potential_value << std::endl;
+                constraints.add_line(dof_index);
+                constraints.set_inhomogeneity(dof_index, potential_value);
+            }
+        }
+
+        // applying the inhomogeneous DBC for the vector valued displacement field
+        {
+            // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+            const int boundary_id = 0;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(dim),
+                                                     constraints,
+                                                     fe_collection.component_mask(u_fe));
+        }
+        {
+            // zero DBC on right boundary (face = 1) i.e. u_x = 0
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(1),
+                                                     constraints,
+                                                     fe_collection.component_mask(x_displacement));
+        }
+        {
+            // inhomogeneous DBC on right boundary (face = 1) i.e. u_y != 0
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ConstantFunction<dim>(-0.1), // considering a strain of 10%
+                                                     constraints,
+                                                     fe_collection.component_mask(y_displacement));
+        }
+        if(dim == 3)
+        {
+            // zero DBC on right boundary (face = 1) i.e. u_z = 0
+            const FEValuesExtractors::Scalar z_displacement(2);
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(1),
+                                                     constraints,
+                                                     fe_collection.component_mask(z_displacement));
+        }
+    }
+    else // apply homogeneous DBC to the previously inhomogenoeus DBC constrained DoFs
+    {
+        // set homogeneous DBC for scalar magnetic potential field at itr_nr > 0
+        std::map< types::global_dof_index, Point<dim> > support_points;
+        DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
+        Functions::ZeroFunction<dim> zero_function(1);
+
+        for(auto it : support_points)
+        {
+            const auto dof_index = it.first;
+            const auto supp_point = it.second;
+
+            // Check for the support point if inside the permanent magnet region:
+            // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
+            // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
+            if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
+                std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
+                (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
+                (dim == 3 ?
+                 std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
+                 : true))
+            {
+                const double potential_value = zero_function.value(supp_point);
+                constraints.add_line(dof_index);
+                constraints.set_inhomogeneity(dof_index, potential_value);
+            }
+        }
+
+        // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
+        {
+            // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+            const int boundary_id = 0;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(dim), // all dim components of displ
+                                                     constraints,
+                                                     fe_collection.component_mask(u_fe));
+        }
+        {
+            // zero DBC on right boundary (face = 1) i.e. u_x = 0
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(1),
+                                                     constraints,
+                                                     fe_collection.component_mask(x_displacement));
+        }
+        {
+            // set homogeneous DBC on right boundary (face = 1) i.e. u_y = 0 for itr_nr > 0
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(1),
+                                                     constraints,
+                                                     fe_collection.component_mask(y_displacement));
+        }
+        if(dim == 3)
+        {
+            // zero DBC on right boundary (face = 1) i.e. u_z = 0
+            const FEValuesExtractors::Scalar z_displacement(2);
+            const int boundary_id = 1;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(1),
+                                                     constraints,
+                                                     fe_collection.component_mask(z_displacement));
         }
     }
 }
@@ -160,15 +275,22 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
 
     constraints.clear ();
     hanging_node_constraints.clear();
-//    constraints.reinit(locally_relevant_dofs); // make_hanging_node_constraints needs locally owned and ghost cells. Cannot do it with normal triangulation with subdomain is indicator of locally owned cells
+    // make_hanging_node_constraints needs locally owned and ghost cells. Cannot do it with
+    // normal triangulation with subdomain is indicator of locally owned cells
+//    constraints.reinit(locally_relevant_dofs);
+
+    // for now just setup the hanging node constraints for current ref cycle
     DoFTools::make_hanging_node_constraints (hp_dof_handler,
                                              hanging_node_constraints);
-//    make_dirichlet_constraints(constraints);
-    make_constraints(constraints);
+
+    // Will have to setup the dirichlet constraints for vector valued solution field
+    // in the nonlinear solver part, i.e. for each adaptive ref cycle for each NR iter of
+    // the current load or time increment cycle
+//    make_constraints(constraints);
     hanging_node_constraints.close();
-    constraints.close ();
+//    constraints.close ();
     // merge both constraints matrices with dbc constraints dominating when conflict occurs on same dof
-    constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::left_object_wins);
+//    constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::left_object_wins);
   }
 
   {
@@ -646,10 +768,12 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         }
 
         // impose the DBC for displacement
-        make_constraints(constraints
-                         /* newton_iteration */); // need to update the function for
+        make_constraints(constraints, newton_iteration); // need to update the function for
         // constraining displacement dofs separately and the scalar magnetic potential separately
         constraints.close();
+
+        // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
+        constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 //        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
 
         // Solve linear system
