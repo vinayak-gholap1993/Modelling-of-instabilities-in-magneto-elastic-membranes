@@ -390,6 +390,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
 
     const TrilinosWrappers::MPI::BlockVector solution_total(get_total_solution(solution_delta));
     std::vector<Tensor<2, dim> > solution_grads_u_total;
+    std::vector<Tensor<1, dim> > solution_values_u_total;
     std::vector<double> solution_values_phi_total;
 
     hp::FEValues<dim> hp_fe_values (mapping_collection,
@@ -409,10 +410,13 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             hp_fe_values.reinit(cell);
             const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
             const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+            const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
 
             solution_grads_u_total.clear();
+            solution_values_u_total.clear();
             solution_values_phi_total.clear();
-            solution_grads_u_total.resize(n_q_points);
+            solution_grads_u_total.resize(n_q_points, Tensor<2, dim>());
+            solution_values_u_total.resize(n_q_points, Tensor<1, dim>());
             solution_values_phi_total.resize(n_q_points);
 
             const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
@@ -421,14 +425,55 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
 
             fe_values[u_fe].get_function_gradients(solution_total,
                                                    solution_grads_u_total);
+            fe_values[u_fe].get_function_values(solution_total,
+                                                solution_values_u_total);
             fe_values[phi_fe].get_function_values(solution_total,
                                                   solution_values_phi_total);
 
             // need to apply transformation here before sending the soln grads u total
             // to transform 2*2 tensor to 3*3 since it is used to calculate F
-            for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-                lqph[q_point]->update_values(solution_grads_u_total[q_point],
-                                             solution_values_phi_total[q_point]);
+
+            std::vector<Tensor<2, dim_Tensor> > solution_grads_u_total_transformed(n_q_points,
+                                                                                   Tensor<2, dim_Tensor>());
+            // if axisymmetric simulation, need this transformation of
+            // gradient of 2D shape functions to get dim 3 gradient of shape functions Tensor
+            // accounting for the circumferential strain i.e. hoop stress
+            if(dim == 2)
+            {
+                for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                {
+                    // Get the x co-ord to the quadrature point
+                    const double radial_distance = quadrature_points[q_point][0];
+
+                    // copy dim 2 tensor components into corresponding dim 3 tensor
+                    // leaving dim 3 Tensor components 0,2 = 1,2 = 2,0 = 2,1 = 0
+                    /*      dim 2 mapped to   dim 3 Tensor
+                     * | u_r,r  u_r,z | ->  | u_r,r  u_r,z   0    |
+                     * | u_z,r  u_z,z | ->  | u_z,r  u_z,z   0    |
+                     *                      | 0      0      u_r/R |
+                     * */
+                    for(unsigned int i = 0; i < dim; ++i)
+                        for(unsigned int j = 0; j < dim; ++j)
+                    {
+                        solution_grads_u_total_transformed[q_point][i][j] = solution_grads_u_total[q_point][i][j];
+                    }
+                    // u_theta,theta = u_r / R
+                    solution_grads_u_total_transformed[q_point][dim][dim] = solution_values_u_total[q_point][0] / radial_distance;
+                }
+
+                for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                    lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
+                                                 solution_values_phi_total[q_point]);
+            }
+            // for 3D simulation proceed normally
+  /*          else if(dim == 3)
+            {
+                for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                    lqph[q_point]->update_values(solution_grads_u_total[q_point],
+                                                 solution_values_phi_total[q_point]);
+            }*/
+            else
+                Assert(false, ExcInternalError());
         }
 }
 
@@ -486,8 +531,15 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               quadrature_point_history.get_data(cell);
       Assert(lqph.size() == n_q_points, ExcInternalError());
 
-      std::vector<std::vector<Tensor<2, dim> > > Grad_Nx;
-      std::vector<std::vector<SymmetricTensor<2, dim_Tensor> > > dE;
+      // shape function values for displacement component
+      std::vector<std::vector<Tensor<1, dim> > > Nx (n_q_points,
+                                                     std::vector<Tensor<1, dim> >(n_dofs_per_cell));
+      std::vector<std::vector<Tensor<2, dim> > > Grad_Nx(n_q_points,
+                                                         std::vector<Tensor<2, dim> >(n_dofs_per_cell));
+      std::vector<std::vector<Tensor<2, dim_Tensor> > > Grad_Nx_transformed(n_q_points,
+                                                                            std::vector<Tensor<2, dim_Tensor> >(n_dofs_per_cell));
+      std::vector<std::vector<SymmetricTensor<2, dim_Tensor> > > dE(n_q_points,
+                                                                    std::vector<SymmetricTensor<2, dim_Tensor> >(n_dofs_per_cell));
 
       for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
       {
@@ -500,11 +552,38 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
               if(k_group == u_block)
               {
+                  Nx[q_index][k] = fe_values[u_fe].value(k, q_index);
                   Grad_Nx[q_index][k] = fe_values[u_fe].gradient(k, q_index);
+
                   // Need to apply some transformation here
                   // Grad_Nx is 2*2 dim tensor but F is 3*3 dim tensor
-                  Tensor<2, dim_Tensor> temp = transpose(F) * Grad_Nx[q_index][k];
-                  dE[q_index][k] = symmetrize(temp); // variation or increment of Green-Lagrange strain
+                  if(dim == 2)
+                  {
+                      // copy dim 2 tensor components into corresponding dim 3 tensor
+                      // leaving dim 3 Tensor components 0,2 = 1,2 = 2,0 = 2,1 = 0
+                      /*      dim 2 mapped to   dim 3 Tensor
+                       * | u_r,r  u_r,z | ->  | u_r,r  u_r,z   0    |
+                       * | u_z,r  u_z,z | ->  | u_z,r  u_z,z   0    |
+                       *                      | 0      0      u_r/R |
+                       * */
+                      for(unsigned int i = 0; i < dim; ++i)
+                          for(unsigned int j = 0; j < dim; ++j)
+                              Grad_Nx_transformed[q_index][k][i][j] = Grad_Nx[q_index][k][i][j];
+
+                      const double radial_distance = quadrature_points[q_index][0];
+                      Grad_Nx_transformed[q_index][k][dim][dim] = Nx[q_index][k][0] /  radial_distance;
+
+                      Tensor<2, dim_Tensor> temp = transpose(F) * Grad_Nx_transformed[q_index][k];
+                      dE[q_index][k] = symmetrize(temp); // variation or increment of Green-Lagrange strain
+                  }
+                  // for 3D simulation proceed normally
+                /*  else if(dim == 3)
+                  {
+                      Tensor<2, dim_Tensor> temp = transpose(F) * Grad_Nx[q_index][k];
+                      dE[q_index][k] = symmetrize(temp); // variation or increment of Green-Lagrange strain
+                  }*/
+                  else
+                      Assert(false, ExcInternalError());
               }
               else
                   Assert(k_group <= u_block, ExcInternalError());
@@ -555,11 +634,25 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                           // Need to apply some transformation here
                           // to get the resulting DdE tensor of 3*3 dim from
                           // grad of shape functions which are 2*2 tensor for axisymmetric formulation
-                          const SymmetricTensor<2, dim_Tensor, double> DdE_ij = symmetrize(
-                                                                     transpose(Grad_Nx[q_index][i]) *
-                                                                     Grad_Nx[q_index][j]);
+                          if(dim == 2)
+                          {
+                              const SymmetricTensor<2, dim_Tensor, double> DdE_ij = symmetrize(
+                                                                         transpose(Grad_Nx_transformed[q_index][i]) *
+                                                                         Grad_Nx_transformed[q_index][j]);
 
-                          cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                          }
+                          // for 3D simulation proceed normally
+                         /* else if(dim == 3)
+                          {
+                              const SymmetricTensor<2, dim_Tensor, double> DdE_ij = symmetrize(
+                                                                         transpose(Grad_Nx[q_index][i]) *
+                                                                         Grad_Nx[q_index][j]);
+
+                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                          }*/
+                          else
+                              Assert(false, ExcInternalError());
                       }
                   }
 
