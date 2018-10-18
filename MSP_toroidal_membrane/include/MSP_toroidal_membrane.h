@@ -962,7 +962,7 @@ private:
   void setup_quadrature_point_history();
   void update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_constraints (ConstraintMatrix &constraints, const int &itr_nr);
-  void assemble_system ();
+  void assemble_system (TrilinosWrappers::MPI::BlockVector &solution_delta);
   void solve (TrilinosWrappers::MPI::BlockVector &newton_update);
   void solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_grid ();

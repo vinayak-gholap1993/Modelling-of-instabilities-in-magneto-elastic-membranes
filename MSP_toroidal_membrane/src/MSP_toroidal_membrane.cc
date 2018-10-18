@@ -138,7 +138,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 0;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(dim),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(u_fe));
         }
@@ -147,7 +147,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(1),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(x_displacement));
         }
@@ -156,7 +156,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ConstantFunction<dim>(-0.1), // considering a strain of 10%
+                                                     Functions::ConstantFunction<dim>(-0.1, n_components), // considering a strain of 10%
                                                      constraints,
                                                      fe_collection.component_mask(y_displacement));
         }
@@ -167,7 +167,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(1),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(z_displacement));
         }
@@ -206,7 +206,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 0;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(dim), // all dim components of displ
+                                                     Functions::ZeroFunction<dim>(n_components), // all dim components of displ
                                                      constraints,
                                                      fe_collection.component_mask(u_fe));
         }
@@ -215,7 +215,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(1),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(x_displacement));
         }
@@ -224,7 +224,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(1),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(y_displacement));
         }
@@ -235,7 +235,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ZeroFunction<dim>(1),
+                                                     Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(z_displacement));
         }
@@ -288,7 +288,7 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     // the current load or time increment cycle
 //    make_constraints(constraints);
     hanging_node_constraints.close();
-//    constraints.close ();
+    constraints.close ();
     // merge both constraints matrices with dbc constraints dominating when conflict occurs on same dof
 //    constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::left_object_wins);
   }
@@ -490,7 +490,7 @@ MSP_Toroidal_Membrane<dim>::get_total_solution(const TrilinosWrappers::MPI::Bloc
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::assemble_system ()
+void MSP_Toroidal_Membrane<dim>::assemble_system (TrilinosWrappers::MPI::BlockVector &solution_delta)
 {
   TimerOutput::Scope timer_scope (computing_timer, "Assembly");
 
@@ -697,7 +697,10 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                               cell_rhs,
                                               local_dof_indices,
                                               system_matrix,
-                                              system_rhs);
+                                              system_rhs,
+                                              true);
+      // set components of solution to inhomogeneous constrained values
+      constraints.distribute(solution_delta);
     }
 
   system_matrix.compress(VectorOperation::add);
@@ -842,7 +845,16 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         system_matrix = 0.0;
         system_rhs = 0.0;
 
-        assemble_system();
+        // impose the DBC for displacement
+        make_constraints(constraints, newton_iteration); // need to update the function for
+        // constraining displacement dofs separately and the scalar magnetic potential separately
+        constraints.close();
+
+        // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
+        constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
+//        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
+
+        assemble_system(solution_delta);
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
@@ -859,15 +871,6 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
             break;
         }
-
-        // impose the DBC for displacement
-        make_constraints(constraints, newton_iteration); // need to update the function for
-        // constraining displacement dofs separately and the scalar magnetic potential separately
-        constraints.close();
-
-        // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
-        constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
-//        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
 
         // Solve linear system
         solve(newton_update);
