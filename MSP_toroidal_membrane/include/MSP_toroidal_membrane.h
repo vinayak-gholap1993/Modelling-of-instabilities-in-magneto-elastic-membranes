@@ -898,8 +898,10 @@ class PointHistory
 
     void setup_lqp (const Parameters::AllParameters &parameters_)
     {
+        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(parameters_.mu,
                                                                           parameters_.nu);
+        Assert(material, ExcInternalError());
         update_values(Tensor<2, dim_Tensor>(), 0.0);
     }
 
@@ -907,8 +909,9 @@ class PointHistory
                        const double phi)
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
-        material->update_material_data(F, phi);
         F_inv = invert(F);
+        Assert(material, ExcInternalError());
+        material->update_material_data(F, phi);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
         fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F);
     }
@@ -962,7 +965,7 @@ private:
   void setup_quadrature_point_history();
   void update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_constraints (ConstraintMatrix &constraints, const int &itr_nr);
-  void assemble_system (TrilinosWrappers::MPI::BlockVector &solution_delta);
+  void assemble_system ();
   void solve (TrilinosWrappers::MPI::BlockVector &newton_update);
   void solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_grid ();

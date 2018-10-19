@@ -366,7 +366,7 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
         quadrature_point_history.initialize(cell, n_q_points);
       }
 
-    for (; cell!=endc; ++cell)
+    for (cell = hp_dof_handler.begin_active(); cell!=endc; ++cell)
       if (cell->is_locally_owned())
       {
           hp_fe_values.reinit(cell);
@@ -377,7 +377,10 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
           Assert(lqph.size() == n_q_points, ExcInternalError());
 
           for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+          {
+              Assert(lqph[q_point], ExcInternalError());
               lqph[q_point]->setup_lqp(parameters);
+          }
       }
 }
 
@@ -462,8 +465,11 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 }
 
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                {
+                    Assert(lqph[q_point], ExcInternalError());
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point]);
+                }
             }
             // for 3D simulation proceed normally
   /*          else if(dim == 3)
@@ -490,7 +496,7 @@ MSP_Toroidal_Membrane<dim>::get_total_solution(const TrilinosWrappers::MPI::Bloc
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::assemble_system (TrilinosWrappers::MPI::BlockVector &solution_delta)
+void MSP_Toroidal_Membrane<dim>::assemble_system ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Assembly");
 
@@ -543,6 +549,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system (TrilinosWrappers::MPI::BlockVe
 
       for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
       {
+          Assert(lqph[q_index], ExcInternalError());
           const Tensor<2, dim_Tensor> F_inv = lqph[q_index]->get_F_inv();
           Tensor<2, dim_Tensor> F = invert(F_inv);
 
@@ -592,6 +599,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system (TrilinosWrappers::MPI::BlockVe
 
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
+          Assert(lqph[q_index], ExcInternalError());
           const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
           const SymmetricTensor<4, dim_Tensor> C = lqph[q_index]->get_4th_order_material_elasticity();
 
@@ -699,8 +707,6 @@ void MSP_Toroidal_Membrane<dim>::assemble_system (TrilinosWrappers::MPI::BlockVe
                                               system_matrix,
                                               system_rhs,
                                               true);
-      // set components of solution to inhomogeneous constrained values
-      constraints.distribute(solution_delta);
     }
 
   system_matrix.compress(VectorOperation::add);
@@ -854,7 +860,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 //        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
 
-        assemble_system(solution_delta);
+        assemble_system();
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
