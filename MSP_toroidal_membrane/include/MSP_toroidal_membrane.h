@@ -836,6 +836,7 @@ public:
                               const double phi_in)
     {
         det_F = determinant(F);
+//        std::cout << "det F: " << det_F << std::endl;
         phi = phi_in;
 
         Assert(det_F > 0.0, ExcInternalError());
@@ -850,7 +851,7 @@ public:
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
         return (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I -
-                ((4.0 - (2.0 * lambda * std::log(det_F))) *
+                ((4.0 * mu_ - (2.0 * lambda * std::log(det_F))) *
                 (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)))/det_F);
     }
 
@@ -862,7 +863,7 @@ public:
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
         return ( (lambda * C_inv_C_inv) -
-                 ((4.0 - 2.0 * lambda * std::log(det_F)) *
+                 ((4.0 * mu_ - 2.0 * lambda * std::log(det_F)) *
                   Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
     }
@@ -898,7 +899,7 @@ class PointHistory
 
     void setup_lqp (const Parameters::AllParameters &parameters_)
     {
-        Assert(!material, ExcInternalError());
+//        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(parameters_.mu,
                                                                           parameters_.nu);
         Assert(material, ExcInternalError());
@@ -976,6 +977,8 @@ private:
   void postprocess_energy ();
   TrilinosWrappers::MPI::BlockVector
   get_total_solution(const TrilinosWrappers::MPI::BlockVector &solution_delta) const;
+  void print_convergence_header();
+  void print_convergence_footer();
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;

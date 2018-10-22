@@ -821,8 +821,8 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 //  solution = distributed_solution;
 
   pcout
-      << "   Iterations: " << solver_control.last_step()
-      << "  Residual: " << solver_control.last_value()
+      << "  Linear solver iterations: " << solver_control.last_step()
+      << "\tLinear solver residual: " << solver_control.last_value()
       << std::endl;
 }
 
@@ -841,10 +841,12 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
     error_update_0.reset();
     error_update_norm.reset();
 
+    print_convergence_header();
+
     unsigned int newton_iteration = 0;
     for(; newton_iteration < parameters.max_iterations_NR; ++newton_iteration)
     {
-        pcout << "  " << newton_iteration << "  " <<std::flush;
+        pcout << "  Newton iteration:  " << newton_iteration << "  " <<std::endl;
 
         // since we use NR scheme to solve the fully nonlinear problem
         // data stored in tangent matrix and RHS vector is not reusable so clear
@@ -874,7 +876,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
                 && error_update_norm.u <= parameters.tol_u)
         {
             pcout << " CONVERGED!" << std::endl;
-
+            print_convergence_footer();
             break;
         }
 
@@ -896,16 +898,47 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
         pcout << std::fixed << std::setprecision(3) << std::scientific
               << error_residual_norm.norm << "  "
-              << error_residual_norm.u << " "
-              << error_residual_norm.phi << "   "
-              << error_update_norm.norm << "    "
-              << error_update_norm.u << "   "
-              << error_update_norm.phi << " "
-              << std::endl;
+              << error_residual_norm.u << "  "
+              << error_residual_norm.phi << "  "
+              << error_update_norm.norm << "  "
+              << error_update_norm.u << "  "
+              << error_update_norm.phi << "\n" << std::endl;
     }
     // if more NR iterations performed than max allowed
     AssertThrow (newton_iteration < parameters.max_iterations_NR,
                  ExcMessage("No convergence in nonlinear solver!"));
+}
+
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::print_convergence_header()
+{
+    static const unsigned int l_width = 155;
+
+    for(unsigned int i = 0; i < l_width; ++i)
+        pcout << "-";
+    pcout << std::endl;
+
+    pcout << "RES_NORM  "
+          << "RES_U  RES_PHI  NU_NORM  "
+          << "NU_U  NU_PHI  " << std::endl;
+
+    for(unsigned int i = 0; i < l_width; ++i)
+        pcout << "-";
+    pcout << std::endl;
+}
+
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::print_convergence_footer()
+{
+    static const unsigned int l_width = 155;
+
+    for(unsigned int i = 0; i < l_width; ++i)
+        pcout << "-";
+    pcout << std::endl;
+
+    pcout << "Relative errors:" << std::endl
+          << "Displacement:\t" << error_update.u / error_update_0.u << std::endl
+          << "Force:\t\t" << error_residual.u / error_residual_0.u << std::endl;
 }
 
 // @sect4{MSP_Toroidal_Membrane::refine_grid}
@@ -1057,7 +1090,10 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
     }
 }
 
-
+// Class to output gradients of magnetic scalar potential from the solution vector
+// i.e. magnetic field h
+// Input: solution block corresponding to magnetic scalar potential (scalar field)
+// Output: gradient of magnetic scalar potential (vector field)
 template <int dim>
 class MagneticFieldPostprocessor : public DataPostprocessorVector<dim>
 {
@@ -1098,29 +1134,41 @@ public:
       }
   }
 
-  virtual void
-  evaluate_vector_field(const DataPostprocessorInputs::Vector<dim> &input_data,
-                        std::vector<Vector<double> > &computed_quantities) const
-  {
-      const unsigned int n_quadrature_points = input_data.solution_values.size();
-      Assert(input_data.solution_gradients.size() == n_quadrature_points,
-             ExcInternalError());
-      Assert(computed_quantities.size() == n_quadrature_points,
-             ExcInternalError());
-      Assert(input_data.solution_values[0].size() == dim + 1, ExcInternalError());
-      for (unsigned int q = 0; q < n_quadrature_points; ++q)
-      {
-          computed_quantities[q](0) = 0; // to be filled for gradients of magnetic scalar potential
-          for (unsigned int d = 1; d < dim+1; ++d)
-              computed_quantities[q](d) = 0; // to be filled for gradients of displacement vector
-      }
-  }
-
 private:
   const unsigned int material_id;
 };
 
+// Class to output displacements from the solution vector
+// Input: solution block corresponding to displacement field (vector field)
+// Output: displacement (vector field)
+template<int dim>
+class DisplacementFieldPostprocessor : public DataPostprocessorVector<dim>
+{
+public:
+    DisplacementFieldPostprocessor()
+        : DataPostprocessorVector<dim> ("displacement", update_values)
+    {}
 
+    virtual ~DisplacementFieldPostprocessor() {}
+
+    virtual void
+    evaluate_vector_field (const DataPostprocessorInputs::Vector<dim> &input_data,
+                           std::vector<Vector<double> >               &computed_quantities) const
+    {
+        const unsigned int n_quadrature_points = input_data.solution_values.size();
+        Assert(input_data.solution_gradients.size() == n_quadrature_points,
+               ExcInternalError());
+        Assert(computed_quantities.size() == n_quadrature_points,
+               ExcInternalError());
+        for(unsigned int q = 0; q < n_quadrature_points; ++q)
+        {
+            for(unsigned int d = 0; d < dim; ++d)
+            {
+                computed_quantities[q](d) = input_data.solution_values[q](d);
+            }
+        }
+    }
+};
 
 // @sect4{MSP_Toroidal_Membrane::output_results}
 
@@ -1171,18 +1219,37 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   TimerOutput::Scope timer_scope (computing_timer, "Output results");
   pcout << "   Outputting results" << std::endl;
 
-  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
-  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
-  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
+  std::vector<std::string> solution_names (1, "magnetic_scalar_potential");
+  solution_names.emplace_back("displacement");
+  if (dim >= 2)
+      solution_names.emplace_back("displacement");
+  if (dim == 3)
+      solution_names.emplace_back("displacement");
+
+  std::vector<DataComponentInterpretation::DataComponentInterpretation>
+  data_component_interpretation(1, DataComponentInterpretation::component_is_scalar);
+  data_component_interpretation.emplace_back(DataComponentInterpretation::component_is_part_of_vector);
+  if (dim >= 2)
+      data_component_interpretation.emplace_back(DataComponentInterpretation::component_is_part_of_vector);
+  if (dim == 3)
+      data_component_interpretation.emplace_back(DataComponentInterpretation::component_is_part_of_vector);
+
+//  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
+//  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
+//  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
+  DisplacementFieldPostprocessor<dim> displacements;
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
   data_out.attach_dof_handler (hp_dof_handler);
 
-  data_out.add_data_vector (solution, "solution");
-  data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
-  data_out.add_data_vector (solution, mag_field_bar_magnet);
+  data_out.add_data_vector (solution, displacements);
+ /* data_out.add_data_vector (hp_dof_handler,
+                            solution, solution_names,
+                            data_component_interpretation);*/
+//  data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
+  /*data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
-  data_out.add_data_vector (solution, mag_field_vacuum);
+  data_out.add_data_vector (solution, mag_field_vacuum);*/
 
   // --- Additional data ---
   // Material coefficients; polynomial order; material id
@@ -1653,7 +1720,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
             << std::endl;
 
       // before starting the simulation output the grid
-//      output_results(cycle);
+      output_results(cycle);
       // Declare the incremental solution update
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
                                                         mpi_communicator);
@@ -1663,12 +1730,9 @@ void MSP_Toroidal_Membrane<dim>::run ()
       solve_nonlinear_system(solution_delta);
       // update the total solution for current load step
       solution += solution_delta;
-//      output_results(cycle);
+      output_results(cycle);
 
-//      assemble_system ();
-//      solve ();
       compute_error ();
-//      output_results (cycle);
 //      postprocess_energy();
     }
 }
