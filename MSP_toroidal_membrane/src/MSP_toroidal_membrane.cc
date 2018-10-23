@@ -391,7 +391,10 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
     TimerOutput::Scope timer_scope (computing_timer, "Update QPH data");
     pcout << "Update QPH data" << std::endl;
 
-    const TrilinosWrappers::MPI::BlockVector solution_total(get_total_solution(solution_delta));
+    TrilinosWrappers::MPI::BlockVector solution_total(locally_owned_partitioning,
+                                                      locally_relevant_partitioning,
+                                                      mpi_communicator);
+    solution_total = get_total_solution(solution_delta);
     std::vector<Tensor<2, dim> > solution_grads_u_total;
     std::vector<Tensor<1, dim> > solution_values_u_total;
     std::vector<double> solution_values_phi_total;
@@ -721,9 +724,9 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 {
   TimerOutput::Scope timer_scope (computing_timer, "Solve linear system");
 
-//  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
-//                                                          mpi_communicator);
-//  distributed_solution = solution;
+  TrilinosWrappers::MPI::BlockVector distributed_solution(locally_owned_partitioning,
+                                                          mpi_communicator);
+  distributed_solution = newton_update;
 
   // Block to solve for: either displacement block or magnetic scalar potential block
   // will have to change for a coupled problem in future
@@ -805,7 +808,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
         }
 
       solver.solve (system_matrix.block(solution_block,solution_block),
-                    newton_update.block(solution_block),
+                    distributed_solution.block(solution_block),
                     system_rhs.block(solution_block),
                     *preconditioner);
     }
@@ -813,12 +816,12 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
     {
       TrilinosWrappers::SolverDirect solver (solver_control);
       solver.solve (system_matrix.block(solution_block,solution_block),
-                    newton_update.block(solution_block),
+                    distributed_solution.block(solution_block),
                     system_rhs.block(solution_block));
     }
 
-  constraints.distribute (newton_update);
-//  solution = distributed_solution;
+  constraints.distribute (distributed_solution);
+  newton_update = distributed_solution;
 
   pcout
       << "  Linear solver iterations: " << solver_control.last_step()
@@ -832,6 +835,7 @@ void
 MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta)
 {
     TrilinosWrappers::MPI::BlockVector newton_update(locally_owned_partitioning,
+                                                     locally_relevant_partitioning,
                                                      mpi_communicator);
 
     error_residual.reset();
@@ -970,7 +974,7 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
                                       typename FunctionMap<dim>::type(),
                                       localised_solution,
                                       estimated_error_per_cell,
-                                      fe_collection.component_mask(phi_fe));
+                                      fe_collection.component_mask(u_fe));
 //                                      ComponentMask());
 //                                      ,
 //                                      /*coefficients = */ 0,
@@ -1659,10 +1663,8 @@ void MSP_Toroidal_Membrane<dim>::get_error_residual(Errors &error_residual)
 {
     TrilinosWrappers::MPI::BlockVector error_res(locally_owned_partitioning,
                                                  mpi_communicator);
-
-    for(unsigned int i = 0; i < hp_dof_handler.n_locally_owned_dofs(); ++i)
-        if(!constraints.is_constrained(i)) // get error in residual only for unconstrained DoFs
-            error_res(i) = system_rhs(i);
+    error_res = system_rhs;
+    constraints.set_zero(error_res);
 
     error_residual.norm = error_res.l2_norm();
     error_residual.u = error_res.block(u_block).l2_norm();
@@ -1676,10 +1678,8 @@ void MSP_Toroidal_Membrane<dim>::get_error_update(const TrilinosWrappers::MPI::B
 {
     TrilinosWrappers::MPI::BlockVector error_ud(locally_owned_partitioning,
                                                 mpi_communicator);
-
-    for(unsigned int i = 0; i < hp_dof_handler.n_locally_owned_dofs(); ++i)
-        if(!constraints.is_constrained(i))
-            error_ud(i) = newton_update(i);
+    error_ud = newton_update;
+    constraints.set_zero(error_ud);
 
     error_update.norm = error_ud.l2_norm();
     error_update.u = error_ud.block(u_block).l2_norm();
@@ -1723,6 +1723,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       output_results(cycle);
       // Declare the incremental solution update
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
+                                                        locally_relevant_partitioning,
                                                         mpi_communicator);
       // Can add a loop over load domain here later
       // currently single load step taken
