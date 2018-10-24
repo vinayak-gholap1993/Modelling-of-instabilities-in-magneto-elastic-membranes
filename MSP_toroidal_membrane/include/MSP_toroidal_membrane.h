@@ -81,6 +81,44 @@ using namespace dealii;
 // ParameterHandler object to read in the choices at run-time.
 namespace Parameters
 {
+// User input parameters for the load stepping
+struct LoadStep
+{
+  double total_load;
+  double delta_load;
+
+  static void
+  declare_parameters(ParameterHandler &prm);
+
+  void
+  parse_parameters(ParameterHandler &prm);
+};
+
+void LoadStep::declare_parameters(ParameterHandler &prm)
+{
+    prm.enter_subsection("Load step");
+    {
+        prm.declare_entry("Total load", "-0.1",
+                          Patterns::Double(),
+                          "Final load value at the end of all load steps");
+
+        prm.declare_entry("Load step size", "-0.05",
+                          Patterns::Double(),
+                          "Load step size for each load increment cylce");
+    }
+    prm.leave_subsection();
+}
+
+void LoadStep::parse_parameters(ParameterHandler &prm)
+{
+    prm.enter_subsection("Load step");
+    {
+        total_load = prm.get_double("Total load");
+        delta_load = prm.get_double("Load step size");
+    }
+    prm.leave_subsection();
+}
+
 // User input for the problem type to solve for
 // Can be purely magnetic problem for magnetic scalar potential
 // Can be purely elastic problem for vector valued displacement in finite strain elasticity
@@ -507,6 +545,7 @@ namespace Parameters
 // Finally we consolidate all of the above structures into a single container
 // that holds all of our run-time selections.
   struct AllParameters :
+    public LoadStep,
     public ProblemType,
     public BoundaryConditions,
     public FESystem,
@@ -557,6 +596,7 @@ namespace Parameters
 
   void AllParameters::declare_parameters(ParameterHandler &prm)
   {
+    LoadStep::declare_parameters(prm);
     ProblemType::declare_parameters(prm);
     BoundaryConditions::declare_parameters(prm);
     FESystem::declare_parameters(prm);
@@ -569,6 +609,7 @@ namespace Parameters
 
   void AllParameters::parse_parameters(ParameterHandler &prm)
   {
+    LoadStep::parse_parameters(prm);
     ProblemType::parse_parameters(prm);
     BoundaryConditions::parse_parameters(prm);
     FESystem::parse_parameters(prm);
@@ -949,6 +990,61 @@ private:
     SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
 };
 
+// Class to store load step data
+// For now we assume a constant load increment step size
+class LoadStep
+{
+public:
+    LoadStep(const double total_load,
+             const double delta_load)
+        :
+          loadstep(0),
+          current_load(0.0),
+          total_load(total_load),
+          delta_load(delta_load)
+    {}
+
+    virtual ~LoadStep() {}
+
+    double current() const
+    {
+        return current_load;
+    }
+
+    double final() const
+    {
+        return total_load;
+    }
+
+    double get_delta_load() const
+    {
+        return delta_load;
+    }
+
+    unsigned int get_loadstep() const
+    {
+        return loadstep;
+    }
+
+    void increment()
+    {
+        current_load += delta_load;
+        ++loadstep;
+    }
+
+    void reset()
+    {
+        loadstep = 0;
+        current_load = 0.0;
+    }
+
+private:
+    unsigned int loadstep;
+    double current_load;
+    const double total_load;
+    const double delta_load;
+};
+
 // @sect3{The <code>MSP_Toroidal_Membrane</code> class template}
 
 template <int dim>
@@ -973,7 +1069,8 @@ private:
   void make_grid_manifold_ids ();
   void refine_grid ();
   void compute_error();
-  void output_results (const unsigned int cycle) const;
+  void output_results (const unsigned int cycle,
+                       const unsigned int load_step_number) const;
   void postprocess_energy ();
   TrilinosWrappers::MPI::BlockVector
   get_total_solution(const TrilinosWrappers::MPI::BlockVector &solution_delta) const;
@@ -1083,6 +1180,10 @@ private:
   void
   get_error_update(const TrilinosWrappers::MPI::BlockVector &newton_update,
                    Errors &error_update);
+
+  // Inputs: Total load at the end of load steps &
+  //         Load increments in each step
+  LoadStep loadstep;
 };
 
 

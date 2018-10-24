@@ -114,3 +114,11 @@ subsection Problem type
   # The problem type to solve: Purely magnetic | Purely elastic | Coupled magnetoelastic
   set Problem type = Purely elastic
 end
+
+subsection Load step
+  # Final load value at the end of all load steps
+  set Total load = -0.1
+
+  # Load step size for each load increment cylce
+  set Load step size = -0.05
+end

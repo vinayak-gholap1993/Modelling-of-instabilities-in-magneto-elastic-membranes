@@ -39,7 +39,9 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
                                  parameters.mu_r_membrane),
   phi_fe(phi_component),
   u_fe(u_componenent),
-  dofs_per_block(n_blocks)
+  dofs_per_block(n_blocks),
+  loadstep(parameters.total_load,
+           parameters.delta_load)
 {
   AssertThrow(parameters.poly_degree_max >= parameters.poly_degree_min, ExcInternalError());
 
@@ -156,7 +158,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
-                                                     Functions::ConstantFunction<dim>(-0.1, n_components), // considering a strain of 10%
+                                                     Functions::ConstantFunction<dim>(loadstep.get_delta_load(),
+                                                                                      n_components),
                                                      constraints,
                                                      fe_collection.component_mask(y_displacement));
         }
@@ -318,7 +321,7 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                                                mpi_communicator);
     DoFTools::make_sparsity_pattern (hp_dof_handler,
                                      sp,
-                                     constraints,
+                                     hanging_node_constraints,
                                      /* keep constrained dofs */ false,
                                      Utilities::MPI::this_mpi_process(mpi_communicator)); //keep constrained dofs as we need undocndensed matrices as well
 
@@ -834,6 +837,9 @@ template <int dim>
 void
 MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta)
 {
+    pcout << "Load step: " << loadstep.get_loadstep() << " "
+          << " Load value: " << loadstep.current() << std::endl;
+
     TrilinosWrappers::MPI::BlockVector newton_update(locally_owned_partitioning,
                                                      locally_relevant_partitioning,
                                                      mpi_communicator);
@@ -974,8 +980,8 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
                                       typename FunctionMap<dim>::type(),
                                       localised_solution,
                                       estimated_error_per_cell,
-                                      fe_collection.component_mask(u_fe));
-//                                      ComponentMask());
+//                                      fe_collection.component_mask(phi_fe));
+                                      ComponentMask());
 //                                      ,
 //                                      /*coefficients = */ 0,
 //                                      /*n_threads = */ numbers::invalid_unsigned_int,
@@ -1096,8 +1102,8 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
 
 // Class to output gradients of magnetic scalar potential from the solution vector
 // i.e. magnetic field h
-// Input: solution block corresponding to magnetic scalar potential (scalar field)
-// Output: gradient of magnetic scalar potential (vector field)
+// Input: vector valued solution
+// Output: gradient of magnetic scalar potential (vector field) and 0 for displacement field gradients
 template <int dim>
 class MagneticFieldPostprocessor : public DataPostprocessorVector<dim>
 {
@@ -1110,7 +1116,7 @@ public:
   virtual ~MagneticFieldPostprocessor() {}
 
   virtual void
-  evaluate_scalar_field (const DataPostprocessorInputs::Scalar<dim> &input_data,
+  evaluate_vector_field (const DataPostprocessorInputs::Vector<dim> &input_data,
                          std::vector<Vector<double> >               &computed_quantities) const
   {
     // ensure that there really are as many output slots
@@ -1118,6 +1124,8 @@ public:
     // gradients:
     AssertDimension (input_data.solution_gradients.size(),
                      computed_quantities.size());
+    Assert(input_data.solution_values[0].size() == dim+1,
+            ExcInternalError());
     // then loop over all of these inputs:
     for (unsigned int p=0; p<input_data.solution_gradients.size(); ++p)
       {
@@ -1131,7 +1139,10 @@ public:
         {
             auto current_cell = input_data.template get_cell<hp::DoFHandler<dim> >();
             if(current_cell->material_id() == material_id)
-                computed_quantities[p][d] = -input_data.solution_gradients[p][d];
+                // evaluate only the 0th component of FE field
+                // i.e. magnetic scalar potential
+                // to compute the magnetic field
+                computed_quantities[p][d] = -input_data.solution_gradients[p][0][d];
             else
                 computed_quantities[p][d] = 0;
         }
@@ -1164,8 +1175,11 @@ public:
                ExcInternalError());
         Assert(computed_quantities.size() == n_quadrature_points,
                ExcInternalError());
+        Assert(input_data.solution_values[0].size() == dim+1,
+                ExcInternalError());
         for(unsigned int q = 0; q < n_quadrature_points; ++q)
         {
+            AssertDimension (computed_quantities[q].size(), dim);
             for(unsigned int d = 0; d < dim; ++d)
             {
                 computed_quantities[q](d) = input_data.solution_values[q](d);
@@ -1218,7 +1232,8 @@ private:
 };
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
+void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
+                                                 const unsigned int load_step_number) const
 {
   TimerOutput::Scope timer_scope (computing_timer, "Output results");
   pcout << "   Outputting results" << std::endl;
@@ -1238,9 +1253,9 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   if (dim == 3)
       data_component_interpretation.emplace_back(DataComponentInterpretation::component_is_part_of_vector);
 
-//  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
-//  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
-//  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
+  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
+  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
+  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
   DisplacementFieldPostprocessor<dim> displacements;
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
@@ -1251,9 +1266,9 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
                             solution, solution_names,
                             data_component_interpretation);*/
 //  data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
-  /*data_out.add_data_vector (solution, mag_field_bar_magnet);
+  data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
-  data_out.add_data_vector (solution, mag_field_vacuum);*/
+  data_out.add_data_vector (solution, mag_field_vacuum);
 
   // --- Additional data ---
   // Material coefficients; polynomial order; material id
@@ -1315,6 +1330,7 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
   {
     static std::string get_filename_vtu (unsigned int process,
                                          unsigned int cycle,
+                                         unsigned int load_step_number,
                                          const unsigned int n_digits = 4)
     {
       std::ostringstream filename_vtu;
@@ -1325,11 +1341,14 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
           << Utilities::int_to_string (process, n_digits)
           << "."
           << Utilities::int_to_string(cycle, n_digits)
+          << "."
+          << Utilities::int_to_string (load_step_number, n_digits)
           << ".vtu";
       return filename_vtu.str();
     }
 
     static std::string get_filename_pvtu (unsigned int timestep,
+                                          unsigned int load_step_number,
                                           const unsigned int n_digits = 4)
     {
       std::ostringstream filename_vtu;
@@ -1338,6 +1357,8 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
           << (std::to_string(dim) + "d")
           << "."
           << Utilities::int_to_string(timestep, n_digits)
+          << "."
+          << Utilities::int_to_string(load_step_number, n_digits)
           << ".pvtu";
       return filename_vtu.str();
     }
@@ -1353,7 +1374,7 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
     }
   };
 
-  const std::string filename_vtu = Filename::get_filename_vtu(this_mpi_process, cycle);
+  const std::string filename_vtu = Filename::get_filename_vtu(this_mpi_process, cycle, load_step_number);
   std::ofstream output(filename_vtu.c_str());
   data_out.write_vtu(output);
 
@@ -1366,10 +1387,10 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle) const
       std::vector<std::string> parallel_filenames_vtu;
       for (unsigned int p=0; p < n_mpi_processes; ++p)
         {
-          parallel_filenames_vtu.push_back(Filename::get_filename_vtu(p, cycle));
+          parallel_filenames_vtu.push_back(Filename::get_filename_vtu(p, cycle, load_step_number));
         }
 
-      const std::string filename_pvtu (Filename::get_filename_pvtu(cycle));
+      const std::string filename_pvtu (Filename::get_filename_pvtu(cycle, load_step_number));
       std::ofstream pvtu_master(filename_pvtu.c_str());
       data_out.write_pvtu_record(pvtu_master,
                                  parallel_filenames_vtu);
@@ -1720,20 +1741,26 @@ void MSP_Toroidal_Membrane<dim>::run ()
             << std::endl;
 
       // before starting the simulation output the grid
-      output_results(cycle);
+      output_results(cycle, loadstep.get_loadstep());
+      loadstep.increment();
       // Declare the incremental solution update
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
       // Can add a loop over load domain here later
       // currently single load step taken
-      solution_delta = 0.0;
-      solve_nonlinear_system(solution_delta);
-      // update the total solution for current load step
-      solution += solution_delta;
-      output_results(cycle);
-
+      while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+      {
+          solution_delta = 0.0;
+          solve_nonlinear_system(solution_delta);
+          // update the total solution for current load step
+          solution += solution_delta;
+          output_results(cycle, loadstep.get_loadstep());
+          loadstep.increment();
+      }
       compute_error ();
+      // clear laodstep internal data for new adaptive refinement cycle
+      loadstep.reset();
 //      postprocess_energy();
     }
 }
