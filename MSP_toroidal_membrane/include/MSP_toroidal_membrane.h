@@ -160,6 +160,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
   struct BoundaryConditions
   {
     double potential_difference_per_unit_length;
+    std::string mechanical_boundary_condition_type; // for deformation of the body by mechanical load
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -177,6 +178,10 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         Patterns::Double(1e-9),
                         "Potential difference along the faux permanent magnet");
 
+      prm.declare_entry("Mechanical boundary condition type", "Inhomogeneous Dirichlet",
+                        Patterns::Selection("Inhomogeneous Dirichlet | Traction"),
+                        "Type of boundary condition to deform body by mechanical load");
+
     }
     prm.leave_subsection();
   }
@@ -186,6 +191,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     prm.enter_subsection("Boundary conditions");
     {
       potential_difference_per_unit_length = prm.get_double("Potential difference per unit length");
+      mechanical_boundary_condition_type = prm.get("Mechanical boundary condition type");
     }
     prm.leave_subsection();
   }
@@ -1110,6 +1116,7 @@ private:
   hp::MappingCollection<dim> mapping_collection;
   hp::DoFHandler<dim>        hp_dof_handler;
   hp::QCollection<dim>       qf_collection_cell;
+  hp::QCollection<dim-1>     qf_collection_face;
 
   std::vector<IndexSet> all_locally_owned_dofs;
   IndexSet              locally_owned_dofs;

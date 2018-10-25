@@ -54,6 +54,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
                                             FE_Q<dim>(degree), dim)); // vector fe for displacement
       mapping_collection.push_back(MappingQGeneric<dim>(degree));
       qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
+      qf_collection_face.push_back(QGauss<dim-1> (degree + 1));
     }
 }
 
@@ -144,6 +145,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                      constraints,
                                                      fe_collection.component_mask(u_fe));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
             // zero DBC on right boundary (face = 1) i.e. u_x = 0
             const int boundary_id = 1;
@@ -153,6 +155,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                      constraints,
                                                      fe_collection.component_mask(x_displacement));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
             // inhomogeneous DBC on right boundary (face = 1) i.e. u_y != 0
             const int boundary_id = 1;
@@ -213,6 +216,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                      constraints,
                                                      fe_collection.component_mask(u_fe));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
             // zero DBC on right boundary (face = 1) i.e. u_x = 0
             const int boundary_id = 1;
@@ -222,6 +226,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                      constraints,
                                                      fe_collection.component_mask(x_displacement));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
             // set homogeneous DBC on right boundary (face = 1) i.e. u_y = 0 for itr_nr > 0
             const int boundary_id = 1;
@@ -516,6 +521,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                   update_gradients |
                                   update_quadrature_points |
                                   update_JxW_values);
+  hp::FEFaceValues<dim> hp_fe_face_values (mapping_collection,
+                                           fe_collection,
+                                           qf_collection_face,
+                                           update_values |
+                                           update_normal_vectors |
+                                           update_JxW_values);
 
   typename hp::DoFHandler<dim>::active_cell_iterator
   cell = hp_dof_handler.begin_active(),
@@ -686,6 +697,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
             }
 
           // Assemble RHS vector
+          // Contributions from the internal forces
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
           {
               const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
@@ -698,6 +710,44 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               else
                   Assert(i_group <= u_block, ExcInternalError());
           }
+
+          // Assemble Neumann type Traction contribution
+          if (parameters.mechanical_boundary_condition_type == "Traction")
+              for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+                  if (cell->face(face)->at_boundary() == true
+                      &&
+                      cell->face(face)->boundary_id() == 6)
+                  {
+                      hp_fe_face_values.reinit(cell, face);
+                      const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
+                      const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+
+                      for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
+                      {
+                          // Traction in reference configuration in terms of a total
+                          // vertical force of 1N
+                          const double load_ramp = (loadstep.current() / loadstep.final());
+                          const double magnitude = (1.0 / (1.0 * parameters.grid_scale)) * load_ramp; // Total force / Area
+                          Tensor<1, dim> dir; // traction direction is irrespective of body deformation
+                          dir[1] = -1.0; // -y; downward force direction
+                          const Tensor<1, dim> traction = magnitude * dir;
+
+                          for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+                          {
+                              const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
+
+                              if (i_group == u_block)
+                              {
+                                  const unsigned int component_i =
+                                          fe_face_values.get_fe().system_to_component_index(i).first;
+                                  const double Ni = fe_face_values.shape_value(i, f_q_point);
+                                  const double JxW = fe_face_values.JxW(f_q_point);
+
+                                  cell_rhs(i) += (Ni * traction[component_i]) * JxW;
+                              }
+                          }
+                      }
+                  }
         }
 
       // Finally, we need to copy the lower half of the local matrix into the
@@ -1479,6 +1529,35 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       GridTools::scale(parameters.grid_scale, triangulation);
 
       triangulation.refine_global (parameters.n_global_refinements);
+
+      // Setting boundary id 6 for Neumann type Traction boundary condition
+      // Traction applied on right half of top surface (+y in 2D)
+      if (parameters.mechanical_boundary_condition_type == "Traction")
+      {
+            typename Triangulation<dim>::active_cell_iterator
+            cell = triangulation.begin_active(),
+            endc = triangulation.end();
+            for (; cell!=endc; ++cell)
+                for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+                {
+                    if (cell->face(face)->at_boundary() == true)
+                    {
+                        if (dim == 2)
+                        {
+                            if (cell->face(face)->center()[1] == 1.0 * parameters.grid_scale // beam of height 1 unit
+                                &&
+                                cell->face(face)->center()[0] > 1.0 * parameters.grid_scale) // right half of the top +y edge
+                                cell->face(face)->set_boundary_id(6); // 0-3 are already used id's
+                        }
+                        else if (dim == 3)
+                        {
+                            AssertThrow(false, ExcNotImplemented());
+                        }
+                        else
+                            Assert(false, ExcInternalError());
+                    }
+                }
+      }
   }
 
   // For our geometry of interest for coupled problem
