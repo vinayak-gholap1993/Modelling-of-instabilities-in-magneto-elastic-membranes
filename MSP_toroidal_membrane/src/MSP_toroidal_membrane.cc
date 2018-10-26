@@ -648,7 +648,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       // dE: variation or increment of Green-Lagrange strain
                       // C: 4th order material elasticity tensor
                       cell_matrix(i,j) += dE[q_index][i] * C
-                                          * dE[q_index][j] * fe_values.JxW(q_index);
+                                          * dE[q_index][j] * fe_values.JxW(q_index)
+                                          * coord_transformation_scaling;
 
                       // Add geometrical stress contribution to local matrix diagonals only
                       if(component_i == component_j)
@@ -665,7 +666,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                                                          transpose(Grad_Nx_transformed[q_index][i]) *
                                                                          Grad_Nx_transformed[q_index][j]);
 
-                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index)
+                                                  * coord_transformation_scaling;
                           }
                           // for 3D simulation proceed normally
                          /* else if(dim == 3)
@@ -674,7 +676,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                                                          transpose(Grad_Nx[q_index][i]) *
                                                                          Grad_Nx[q_index][j]);
 
-                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index);
+                              cell_matrix(i,j) += scalar_product(DdE_ij, S) * fe_values.JxW(q_index)
+                                                  * coord_transformation_scaling;
                           }*/
                           else
                               Assert(false, ExcInternalError());
@@ -704,51 +707,56 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
               // RHS is negative residual term
               if (i_group == u_block)
-                  cell_rhs(i) -= scalar_product(S, dE[q_index][i]) * fe_values.JxW(q_index);
+                  cell_rhs(i) -= scalar_product(S, dE[q_index][i]) * fe_values.JxW(q_index)
+                                 * coord_transformation_scaling;
               else if (i_group == phi_block)
                   cell_rhs(i) -= 0.0;
               else
                   Assert(i_group <= u_block, ExcInternalError());
           }
+      }
 
-          // Assemble Neumann type Traction contribution
-          if (parameters.mechanical_boundary_condition_type == "Traction")
-              for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
-                  if (cell->face(face)->at_boundary() == true
-                      &&
-                      cell->face(face)->boundary_id() == 6)
+      // Assemble Neumann type Traction contribution
+      if (parameters.mechanical_boundary_condition_type == "Traction")
+          for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+              if (cell->face(face)->at_boundary() == true
+                  &&
+                  cell->face(face)->boundary_id() == 6)
+              {
+                  hp_fe_face_values.reinit(cell, face);
+                  const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
+                  const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+
+                  for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
                   {
-                      hp_fe_face_values.reinit(cell, face);
-                      const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
-                      const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+                      // Traction in reference configuration in terms of a total
+                      // vertical force of 1N
+                      const double load_ramp = (loadstep.current() / loadstep.final());
+                      const double magnitude = (-0.01 / (1.0 * parameters.grid_scale)) * load_ramp; // Total force / Area
+                      Tensor<1, dim> dir; // traction direction is irrespective of body deformation
+                      dir[1] = -1.0; // -y; downward force direction
+                      const Tensor<1, dim> traction = magnitude * dir;
 
-                      for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
+
+                      for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
                       {
-                          // Traction in reference configuration in terms of a total
-                          // vertical force of 1N
-                          const double load_ramp = (loadstep.current() / loadstep.final());
-                          const double magnitude = (1.0 / (1.0 * parameters.grid_scale)) * load_ramp; // Total force / Area
-                          Tensor<1, dim> dir; // traction direction is irrespective of body deformation
-                          dir[1] = -1.0; // -y; downward force direction
-                          const Tensor<1, dim> traction = magnitude * dir;
+                          const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
 
-                          for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+                          if (i_group == u_block)
                           {
-                              const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
-
-                              if (i_group == u_block)
+                              const unsigned int component_i =
+                                      fe_face_values.get_fe().system_to_component_index(i).first;
+                              if ((component_i - 1) < dim)
                               {
-                                  const unsigned int component_i =
-                                          fe_face_values.get_fe().system_to_component_index(i).first;
                                   const double Ni = fe_face_values.shape_value(i, f_q_point);
                                   const double JxW = fe_face_values.JxW(f_q_point);
 
-                                  cell_rhs(i) += (Ni * traction[component_i]) * JxW;
+                                  cell_rhs(i) += (Ni * traction[component_i-1]) * JxW;
                               }
                           }
                       }
                   }
-        }
+              }
 
       // Finally, we need to copy the lower half of the local matrix into the
       // upper half:
