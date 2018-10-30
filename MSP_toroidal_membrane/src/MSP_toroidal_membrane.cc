@@ -526,6 +526,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                            qf_collection_face,
                                            update_values |
                                            update_normal_vectors |
+                                           update_quadrature_points |
                                            update_JxW_values);
 
   typename hp::DoFHandler<dim>::active_cell_iterator
@@ -726,17 +727,24 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   hp_fe_face_values.reinit(cell, face);
                   const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
                   const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+                  const std::vector<Point<dim> > &quadrature_points_face = fe_face_values.get_quadrature_points();
 
                   for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
                   {
-                      // Traction in reference configuration in terms of a total
-                      // vertical force of 1N
+                      // Traction in reference configuration
                       const double load_ramp = (loadstep.current() / loadstep.final());
-                      const double magnitude = (-0.01 / (1.0 * parameters.grid_scale)) * load_ramp; // Total force / Area
+                      const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
                       Tensor<1, dim> dir; // traction direction is irrespective of body deformation
                       dir[1] = -1.0; // -y; downward force direction
                       const Tensor<1, dim> traction = magnitude * dir;
 
+                      const double radial_distance = quadrature_points_face[f_q_point][0];
+                      // If dim == 2, assembly using axisymmetric formulation
+                      const double coord_transformation_scaling = ( dim == 2
+                                                                    ?
+                                                                      2.0 * dealii::numbers::PI * radial_distance
+                                                                    :
+                                                                      1.0);
 
                       for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
                       {
@@ -751,7 +759,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                   const double Ni = fe_face_values.shape_value(i, f_q_point);
                                   const double JxW = fe_face_values.JxW(f_q_point);
 
-                                  cell_rhs(i) += (Ni * traction[component_i-1]) * JxW;
+                                  cell_rhs(i) += (Ni * traction[component_i-1]) * JxW
+                                                  * coord_transformation_scaling;
                               }
                           }
                       }

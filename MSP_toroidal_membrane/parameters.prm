@@ -8,6 +8,9 @@ subsection Boundary conditions
   # Type of boundary condition to deform body by mechanical load:
   # Inhomogeneous Dirichlet | Traction
   set Mechanical boundary condition type = Traction
+
+  # Traction force per unit area
+  set Prescribed traction load = 1.0e-6
 end
 
 

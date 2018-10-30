@@ -161,6 +161,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
   {
     double potential_difference_per_unit_length;
     std::string mechanical_boundary_condition_type; // for deformation of the body by mechanical load
+    double prescribed_traction_load; // for Traction B.C.
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -182,6 +183,10 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         Patterns::Selection("Inhomogeneous Dirichlet | Traction"),
                         "Type of boundary condition to deform body by mechanical load");
 
+      prm.declare_entry("Prescribed traction load", "1.0e-3",
+                        Patterns::Double(),
+                        "Traction force per unit area");
+
     }
     prm.leave_subsection();
   }
@@ -192,6 +197,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     {
       potential_difference_per_unit_length = prm.get_double("Potential difference per unit length");
       mechanical_boundary_condition_type = prm.get("Mechanical boundary condition type");
+      prescribed_traction_load = prm.get_double("Prescribed traction load");
     }
     prm.leave_subsection();
   }
