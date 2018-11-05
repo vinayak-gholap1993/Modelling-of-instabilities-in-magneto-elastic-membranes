@@ -45,7 +45,7 @@ subsection Geometry
   # Permanent magnet region axial (z) length
   set Magnet bounding box axial length = 0.051
 
-  # Geometry selection for problem: Toroidal_tube | Beam
+  # Geometry selection for problem: Toroidal_tube | Beam | Patch test
   set Geometry shape for the problem = Toroidal_tube
 end
 

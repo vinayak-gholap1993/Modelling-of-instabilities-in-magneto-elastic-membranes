@@ -308,7 +308,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         "Permanent magnet region axial (z) length");
 
       prm.declare_entry("Geometry shape for the problem", "Toroidal_tube",
-                        Patterns::Selection("Toroidal_tube | Beam"),
+                        Patterns::Selection("Toroidal_tube | Beam | Patch test"),
                         "Geometry selection for problem");
     }
     prm.leave_subsection();
@@ -904,7 +904,7 @@ public:
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
         return (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I -
-                ((4.0 * mu_ - (2.0 * lambda * std::log(det_F))) *
+                (( (2.0 * mu_ / det_F) - (2.0 * lambda * std::log(det_F))) *
                 (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)))/det_F);
     }
 
@@ -915,8 +915,8 @@ public:
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
-        return ( (lambda * C_inv_C_inv) -
-                 ((4.0 * mu_ - 2.0 * lambda * std::log(det_F)) *
+        return ( (lambda * det_F * (1.0 + std::log(det_F)) * C_inv_C_inv) +
+                 (2.0 * (lambda * std::log(det_F) * det_F - mu_) *
                   Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
     }
@@ -968,6 +968,7 @@ class PointHistory
         material->update_material_data(F, phi);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
         fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F);
+//        std::cout << "F: " << F << "\n" << "S: " << second_Piola_Kirchoff_stress << std::endl;
     }
 
     double get_det_F() const
@@ -1152,6 +1153,14 @@ private:
   {
       phi_block = 0,
       u_block = 1
+  };
+
+  enum
+  {
+      potential_component = 0,
+      displacement_r_component = 1,
+      displacement_z_component = 2,
+      displacement_theta_component = 3
   };
 
   std::vector<types::global_dof_index> dofs_per_block;

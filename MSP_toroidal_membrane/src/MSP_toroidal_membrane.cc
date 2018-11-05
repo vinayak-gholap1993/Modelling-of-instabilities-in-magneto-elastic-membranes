@@ -101,14 +101,71 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     const bool apply_dirichlet_bc = (itr_nr == 0); // need to apply inhomogeneous DBC
 
     // Scalar extractor for components of vector displacement field
-    const FEValuesExtractors::Scalar x_displacement(0);
-    const FEValuesExtractors::Scalar y_displacement(1);
+    const FEValuesExtractors::Scalar x_displacement(displacement_r_component);
+    const FEValuesExtractors::Scalar y_displacement(displacement_z_component);
 
     // applying inhomogeneous DBC at the 0th NR iteration
     if(apply_dirichlet_bc)
     {
         // applying inhomogeneous DBC for the scalar magnetic potential field
-        std::map< types::global_dof_index, Point<dim> > support_points;
+        // New implementation
+        LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
+        hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                        fe_collection,
+                                        qf_collection_cell,
+                                        update_values |
+                                        update_JxW_values);
+        typename hp::DoFHandler<dim>::active_cell_iterator
+        cell = hp_dof_handler.begin_active(),
+        endc = hp_dof_handler.end();
+        for (; cell!=endc; ++cell)
+          if (cell->is_locally_owned())
+          {
+            hp_fe_values.reinit(cell);
+            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+            const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+            const std::vector<Point<dim> > &unit_support_points = fe_values.get_fe().get_unit_support_points();
+            std::vector<types::global_dof_index> dof_indices(n_dofs_per_cell);
+            cell->get_dof_indices(dof_indices);
+
+            Assert(unit_support_points.size() == n_dofs_per_cell,
+                   ExcInternalError());
+            for (unsigned int i=0; i<n_dofs_per_cell; ++i)
+            {
+                const unsigned int dof_index = dof_indices[i];
+                const unsigned int component = fe_values.get_fe().system_to_component_index(i).first;
+                const unsigned int group = fe_values.get_fe().system_to_base_index(i).first.first;
+
+                // Make sure only the 0th component of the FE system is
+                // set inhomogeneous DBC, i.e. phi block dofs
+                if (component == potential_component && group == phi_block)
+                {
+                    const Mapping<dim> &mapping = mapping_collection[cell->active_fe_index()];
+                    const Point<dim> support_point_real = mapping.transform_unit_to_real_cell(cell,
+                                                                                              unit_support_points[i]);
+                    if( std::abs(support_point_real[0]) <= parameters.bounding_box_r * parameters.grid_scale
+                            && // X coord of support point less than magnet radius...
+                        std::abs(support_point_real[1]) <= parameters.bounding_box_z * parameters.grid_scale
+                            && // Y coord of support point less than magnet height
+                        (dim == 3 ? std::abs(support_point_real[2]) <= parameters.bounding_box_r * parameters.grid_scale : true)
+                            && // Z coord
+                        (dim == 3 ?
+                         std::hypot(support_point_real[0], support_point_real[2]) <
+                         (0.98 * parameters.bounding_box_r * parameters.grid_scale) // radial distance on XZ plane with tol of 2%
+                         : true))
+                    {
+                        //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
+                                    const double potential_value = linear_scalar_potential.value(support_point_real);
+                        //            pcout << "Potential value: " << potential_value << std::endl;
+                                    constraints.add_line(dof_index);
+                                    constraints.set_inhomogeneity(dof_index, potential_value);
+                    }
+                }
+            }
+          }
+
+        // Old implementation, possibly incorrect for vector valued problems
+  /*      std::map< types::global_dof_index, Point<dim> > support_points;
         DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
         LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
 
@@ -133,7 +190,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 constraints.add_line(dof_index);
                 constraints.set_inhomogeneity(dof_index, potential_value);
             }
-        }
+        }*/
 
         // applying the inhomogeneous DBC for the vector valued displacement field
         {
@@ -169,7 +226,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         if(dim == 3)
         {
             // zero DBC on right boundary (face = 1) i.e. u_z = 0
-            const FEValuesExtractors::Scalar z_displacement(2);
+            const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
@@ -181,7 +238,65 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     else // apply homogeneous DBC to the previously inhomogenoeus DBC constrained DoFs
     {
         // set homogeneous DBC for scalar magnetic potential field at itr_nr > 0
-        std::map< types::global_dof_index, Point<dim> > support_points;
+        // New implementation
+        Functions::ZeroFunction<dim> zero_function(1);
+        hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                        fe_collection,
+                                        qf_collection_cell,
+                                        update_values |
+                                        update_JxW_values);
+        typename hp::DoFHandler<dim>::active_cell_iterator
+        cell = hp_dof_handler.begin_active(),
+        endc = hp_dof_handler.end();
+        for (; cell!=endc; ++cell)
+          if (cell->is_locally_owned())
+          {
+            hp_fe_values.reinit(cell);
+            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+            const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+            const std::vector<Point<dim> > &unit_support_points = fe_values.get_fe().get_unit_support_points();
+            std::vector<types::global_dof_index> dof_indices(n_dofs_per_cell);
+            cell->get_dof_indices(dof_indices);
+
+            Assert(unit_support_points.size() == n_dofs_per_cell,
+                   ExcInternalError());
+            for (unsigned int i=0; i<n_dofs_per_cell; ++i)
+            {
+                const unsigned int dof_index = dof_indices[i];
+                const unsigned int component = fe_values.get_fe().system_to_component_index(i).first;
+                const unsigned int group = fe_values.get_fe().system_to_base_index(i).first.first;
+
+                // Make sure only the 0th component of the FE system is
+                // set inhomogeneous DBC, i.e. phi block dofs
+                if (component == potential_component && group == phi_block)
+                {
+                    const Mapping<dim> &mapping = mapping_collection[cell->active_fe_index()];
+                    const Point<dim> support_point_real = mapping.transform_unit_to_real_cell(cell,
+                                                                                              unit_support_points[i]);
+                    if( std::abs(support_point_real[0]) <= parameters.bounding_box_r * parameters.grid_scale
+                            && // X coord of support point less than magnet radius...
+                        std::abs(support_point_real[1]) <= parameters.bounding_box_z * parameters.grid_scale
+                            && // Y coord of support point less than magnet height
+                        (dim == 3 ? std::abs(support_point_real[2]) <= parameters.bounding_box_r * parameters.grid_scale : true)
+                            && // Z coord
+                        (dim == 3 ?
+                         std::hypot(support_point_real[0], support_point_real[2]) <
+                         (0.98 * parameters.bounding_box_r * parameters.grid_scale) // radial distance on XZ plane with tol of 2%
+                         : true))
+                    {
+                        //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
+                                    const double potential_value = zero_function.value(support_point_real);
+                        //            pcout << "Potential value: " << potential_value << std::endl;
+                                    constraints.add_line(dof_index);
+                                    constraints.set_inhomogeneity(dof_index, potential_value);
+                    }
+                }
+            }
+          }
+
+        // Old implementation, possibly incorrect for vector valued problems
+        // set homogeneous DBC for scalar magnetic potential field at itr_nr > 0
+ /*       std::map< types::global_dof_index, Point<dim> > support_points;
         DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
         Functions::ZeroFunction<dim> zero_function(1);
 
@@ -204,7 +319,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 constraints.add_line(dof_index);
                 constraints.set_inhomogeneity(dof_index, potential_value);
             }
-        }
+        }*/
 
         // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
         {
@@ -239,7 +354,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         if(dim == 3)
         {
             // zero DBC on right boundary (face = 1) i.e. u_z = 0
-            const FEValuesExtractors::Scalar z_displacement(2);
+            const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
@@ -478,6 +593,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
                 {
                     Assert(lqph[q_point], ExcInternalError());
+//                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point]);
                 }
@@ -1575,6 +1691,26 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                     }
                 }
       }
+  }
+
+  // Cube geometry for patch test with colorized boundaries
+  else if(parameters.geometry_shape == "Patch test")
+  {
+      std::vector<unsigned int> repetitions;
+      repetitions.push_back(3); // 3 blocks in x direction
+      if(dim >= 2)
+          repetitions.push_back(3); // 3 blocks in y direction
+      if(dim >= 3)
+          repetitions.push_back(1); // 1 block in z direction
+
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                                repetitions,
+                                                (dim == 3 ? Point<dim>(0.0, 0.0, 0.0) : Point<dim>(0.0, 0.0)),
+                                                (dim == 3 ? Point<dim>(1.0, 1.0, 0.25) : Point<dim>(1.0, 1.0)),
+                                                true);
+
+      GridTools::scale(parameters.grid_scale, triangulation);
+      triangulation.refine_global(parameters.n_global_refinements);
   }
 
   // For our geometry of interest for coupled problem
