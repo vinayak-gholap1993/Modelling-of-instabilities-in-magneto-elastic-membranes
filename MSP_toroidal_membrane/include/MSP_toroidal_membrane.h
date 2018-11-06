@@ -903,9 +903,9 @@ public:
     // Get 2nd Piola-Kirchoff stress tensor
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
-        return (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I -
-                (( (2.0 * mu_ / det_F) - (2.0 * lambda * std::log(det_F))) *
-                (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)))/det_F);
+        return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
+                ( (2.0 / det_F) * (mu_ - lambda * std::log(det_F) ) *
+                (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)) ));
     }
 
     // Get the 4th order material elasticity tensor
@@ -915,9 +915,9 @@ public:
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
-        return ( (lambda * det_F * (1.0 + std::log(det_F)) * C_inv_C_inv) +
-                 (2.0 * (lambda * std::log(det_F) * det_F - mu_) *
-                  Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
+        return ( (lambda * C_inv_C_inv) +
+                 (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
+                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
     }
 
@@ -1144,7 +1144,7 @@ private:
   std::vector<IndexSet> locally_owned_partitioning, locally_relevant_partitioning;
   static const unsigned int n_blocks = 2;
   static const unsigned int phi_component = 0;
-  static const unsigned int u_componenent = 1;
+  static const unsigned int first_u_component = 1;
   static const unsigned int n_components = dim + 1;
   const FEValuesExtractors::Scalar phi_fe;
   const FEValuesExtractors::Vector u_fe;

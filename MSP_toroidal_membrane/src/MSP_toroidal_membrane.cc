@@ -38,7 +38,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
                                  parameters.mu_r_air,
                                  parameters.mu_r_membrane),
   phi_fe(phi_component),
-  u_fe(u_componenent),
+  u_fe(first_u_component),
   dofs_per_block(n_blocks),
   loadstep(parameters.total_load,
            parameters.delta_load)
@@ -204,25 +204,37 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         }
         if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
-            // zero DBC on right boundary (face = 1) i.e. u_x = 0
-            const int boundary_id = 1;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(x_displacement));
-        }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // inhomogeneous DBC on right boundary (face = 1) i.e. u_y != 0
+            // inhomogeneous DBC on right boundary (face = 1) i.e. u_x != 0
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
                                                      Functions::ConstantFunction<dim>(loadstep.get_delta_load(),
                                                                                       n_components),
                                                      constraints,
+                                                     fe_collection.component_mask(x_displacement));
+        }
+        // below two constraints for non-volume preserving deformation
+        /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+        {
+            // zero DBC on lower boundary (face = 2) i.e. u_y = 0
+            const int boundary_id = 2;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
                                                      fe_collection.component_mask(y_displacement));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+        {
+            // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
+            const int boundary_id = 3;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(y_displacement));
+        }*/
+
         if(dim == 3)
         {
             // zero DBC on right boundary (face = 1) i.e. u_z = 0
@@ -333,7 +345,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         }
         if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
-            // zero DBC on right boundary (face = 1) i.e. u_x = 0
+            // set homogeneous DBC on right boundary (face = 1) i.e. u_x = 0 for itr_nr > 0
             const int boundary_id = 1;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
@@ -341,16 +353,28 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                      constraints,
                                                      fe_collection.component_mask(x_displacement));
         }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+        // below two constraints for non-volume preserving deformation
+        /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
         {
-            // set homogeneous DBC on right boundary (face = 1) i.e. u_y = 0 for itr_nr > 0
-            const int boundary_id = 1;
+            // zero DBC on lower boundary (face = 2) i.e. u_y = 0
+            const int boundary_id = 2;
             VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                      boundary_id,
                                                      Functions::ZeroFunction<dim>(n_components),
                                                      constraints,
                                                      fe_collection.component_mask(y_displacement));
         }
+        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+        {
+            // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
+            const int boundary_id = 3;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(y_displacement));
+        }*/
+
         if(dim == 3)
         {
             // zero DBC on right boundary (face = 1) i.e. u_z = 0
@@ -460,6 +484,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                     mpi_communicator);*/
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
+    estimated_error_per_cell.reinit(triangulation.n_active_cells());
+    estimated_error_per_cell = 0.0;
     setup_quadrature_point_history();
   }
 }
@@ -835,6 +861,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
       // Assemble Neumann type Traction contribution
       if (parameters.mechanical_boundary_condition_type == "Traction")
+      {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               if (cell->face(face)->at_boundary() == true
                   &&
@@ -882,6 +909,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       }
                   }
               }
+      }
 
       // Finally, we need to copy the lower half of the local matrix into the
       // upper half:
@@ -1156,7 +1184,6 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
   const BlockVector<double> localised_solution(distributed_solution);
 
   // --- Kelly Error estimator ---
-  estimated_error_per_cell.reinit(triangulation.n_active_cells());
   estimated_error_per_cell = 0.0;
   KellyErrorEstimator<dim>::estimate (hp_dof_handler,
                                       EE_qf_collection_face_QGauss,
@@ -1291,9 +1318,11 @@ template <int dim>
 class MagneticFieldPostprocessor : public DataPostprocessorVector<dim>
 {
 public:
-  MagneticFieldPostprocessor (const unsigned int material_id)
+  MagneticFieldPostprocessor (const unsigned int material_id,
+                              const unsigned int phi_component)
     : DataPostprocessorVector<dim> ("magnetic_field_"+std::to_string(material_id), update_gradients),
-      material_id(material_id)
+      material_id(material_id),
+      phi_component_(phi_component)
   {}
 
   virtual ~MagneticFieldPostprocessor() {}
@@ -1325,7 +1354,7 @@ public:
                 // evaluate only the 0th component of FE field
                 // i.e. magnetic scalar potential
                 // to compute the magnetic field
-                computed_quantities[p][d] = -input_data.solution_gradients[p][0][d];
+                computed_quantities[p][d] = -input_data.solution_gradients[p][phi_component_][d];
             else
                 computed_quantities[p][d] = 0;
         }
@@ -1334,6 +1363,7 @@ public:
 
 private:
   const unsigned int material_id;
+  const unsigned int phi_component_;
 };
 
 // Class to output displacements from the solution vector
@@ -1436,19 +1466,19 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   if (dim == 3)
       data_component_interpretation.emplace_back(DataComponentInterpretation::component_is_part_of_vector);
 
-  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet);
-  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid); // Material ID for Toroid tube as read in from Mesh file
-  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum); // Material ID for free space
-  DisplacementFieldPostprocessor<dim> displacements;
+  MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet, phi_component);
+  MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid, phi_component); // Material ID for Toroid tube as read in from Mesh file
+  MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum, phi_component); // Material ID for free space
+//  DisplacementFieldPostprocessor<dim> displacements;
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
   data_out.attach_dof_handler (hp_dof_handler);
 
-  data_out.add_data_vector (solution, displacements);
- /* data_out.add_data_vector (hp_dof_handler,
+//  data_out.add_data_vector (solution, displacements);
+  data_out.add_data_vector (hp_dof_handler,
                             solution, solution_names,
-                            data_component_interpretation);*/
-//  data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
+                            data_component_interpretation);
+  data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
   data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);
@@ -1987,10 +2017,11 @@ void MSP_Toroidal_Membrane<dim>::run ()
           solve_nonlinear_system(solution_delta);
           // update the total solution for current load step
           solution += solution_delta;
+          compute_error ();
           output_results(cycle, loadstep.get_loadstep());
           loadstep.increment();
       }
-      compute_error ();
+
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
 //      postprocess_energy();
