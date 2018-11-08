@@ -903,21 +903,22 @@ public:
     // Get 2nd Piola-Kirchoff stress tensor
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
+        const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
+        const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
-                ( (2.0 / det_F) * (mu_ - lambda * std::log(det_F) ) *
-                (Physics::Elasticity::StandardTensors<dim_Tensor>::ddet_F_dC(F)) ));
+                ( (mu_ - lambda * std::log(det_F) ) * C_inv ));
     }
 
     // Get the 4th order material elasticity tensor
     SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F) const
     {
-        const SymmetricTensor<2, dim_Tensor> C = SymmetricTensor<2, dim_Tensor>(transpose(F) * F);
+        const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
         return ( (lambda * C_inv_C_inv) +
-                 (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
-                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
+                 ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
+                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) ) );
 
     }
 

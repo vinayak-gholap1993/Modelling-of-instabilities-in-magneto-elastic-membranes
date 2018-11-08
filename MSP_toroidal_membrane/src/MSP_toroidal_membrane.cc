@@ -1741,6 +1741,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
       GridTools::scale(parameters.grid_scale, triangulation);
       triangulation.refine_global(parameters.n_global_refinements);
+
+      GridTools::distort_random(0.25, triangulation, /*keep boundary*/ true);
   }
 
   // For our geometry of interest for coupled problem
