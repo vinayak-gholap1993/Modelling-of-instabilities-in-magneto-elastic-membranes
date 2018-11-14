@@ -12,6 +12,7 @@
 #include <deal.II/base/tensor.h>
 #include <deal.II/base/symmetric_tensor.h>
 #include <deal.II/base/quadrature_point_data.h>
+#include <deal.II/base/bounding_box.h>
 
 #include <deal.II/dofs/dof_renumbering.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -411,6 +412,8 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     double mu_r_membrane;
     double mu;
     double nu;
+    double free_space_mu;
+    double free_space_nu;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -432,6 +435,12 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       prm.declare_entry("Poisson's ratio", "0.45",
                         Patterns::Double(-1.0,0.5),
                         "Poisson's ratio");
+      prm.declare_entry("Free space shear modulus", "0.0003",
+                        Patterns::Double(),
+                        "Shear modulus for free space material");
+      prm.declare_entry("Free space poisson's ratio", "0.45",
+                        Patterns::Double(-1.0,0.5),
+                        "Poisson's ratio for free space material");
     }
     prm.leave_subsection();
   }
@@ -444,6 +453,8 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       mu_r_membrane = prm.get_double("Membrane relative permeability");
       mu = prm.get_double("Shear modulus");
       nu = prm.get_double("Poisson's ratio");
+      free_space_mu = prm.get_double("Free space shear modulus");
+      free_space_nu = prm.get_double("Free space poisson's ratio");
     }
     prm.leave_subsection();
   }
@@ -951,11 +962,10 @@ class PointHistory
 
     virtual ~PointHistory(){}
 
-    void setup_lqp (const Parameters::AllParameters &parameters_)
+    void setup_lqp (const double mu, const double nu)
     {
 //        Assert(!material, ExcInternalError());
-        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(parameters_.mu,
-                                                                          parameters_.nu);
+        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
         Assert(material, ExcInternalError());
         update_values(Tensor<2, dim_Tensor>(), 0.0);
     }

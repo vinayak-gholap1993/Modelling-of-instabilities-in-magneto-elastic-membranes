@@ -85,7 +85,7 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 //        cell->set_active_fe_index(0); // 1 for p-refinement test
 
     // Setting of higher degree FE to cells in toroid membrane
-    if (cell->material_id() == 1)
+    if (cell->material_id() == material_id_toroid)
         cell->set_active_fe_index(0); // 1 for FE_Q(2) or 2 for FE_Q(3)
     else
         cell->set_active_fe_index(0);
@@ -107,144 +107,164 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     // applying inhomogeneous DBC at the 0th NR iteration
     if(apply_dirichlet_bc)
     {
-        // applying inhomogeneous DBC for the scalar magnetic potential field
-        // New implementation
-        LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
-        hp::FEValues<dim> hp_fe_values (mapping_collection,
-                                        fe_collection,
-                                        qf_collection_cell,
-                                        update_values |
-                                        update_JxW_values);
-        typename hp::DoFHandler<dim>::active_cell_iterator
-        cell = hp_dof_handler.begin_active(),
-        endc = hp_dof_handler.end();
-        for (; cell!=endc; ++cell)
-          if (cell->is_locally_owned())
-          {
-            hp_fe_values.reinit(cell);
-            const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
-            const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
-            const std::vector<Point<dim> > &unit_support_points = fe_values.get_fe().get_unit_support_points();
-            std::vector<types::global_dof_index> dof_indices(n_dofs_per_cell);
-            cell->get_dof_indices(dof_indices);
+        // apply magnetic potential field at 1st loadstep only
+        if (loadstep.get_loadstep() == 1)
+        {
+            // applying inhomogeneous DBC for the scalar magnetic potential field
+            // New implementation
+            LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
+            hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                            fe_collection,
+                                            qf_collection_cell,
+                                            update_values |
+                                            update_JxW_values);
+            typename hp::DoFHandler<dim>::active_cell_iterator
+            cell = hp_dof_handler.begin_active(),
+            endc = hp_dof_handler.end();
+            for (; cell!=endc; ++cell)
+              if (cell->is_locally_owned())
+              {
+                hp_fe_values.reinit(cell);
+                const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+                const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+                const std::vector<Point<dim> > &unit_support_points = fe_values.get_fe().get_unit_support_points();
+                std::vector<types::global_dof_index> dof_indices(n_dofs_per_cell);
+                cell->get_dof_indices(dof_indices);
 
-            Assert(unit_support_points.size() == n_dofs_per_cell,
-                   ExcInternalError());
-            for (unsigned int i=0; i<n_dofs_per_cell; ++i)
-            {
-                const unsigned int dof_index = dof_indices[i];
-                const unsigned int component = fe_values.get_fe().system_to_component_index(i).first;
-                const unsigned int group = fe_values.get_fe().system_to_base_index(i).first.first;
-
-                // Make sure only the 0th component of the FE system is
-                // set inhomogeneous DBC, i.e. phi block dofs
-                if (component == potential_component && group == phi_block)
+                Assert(unit_support_points.size() == n_dofs_per_cell,
+                       ExcInternalError());
+                for (unsigned int i=0; i<n_dofs_per_cell; ++i)
                 {
-                    const Mapping<dim> &mapping = mapping_collection[cell->active_fe_index()];
-                    const Point<dim> support_point_real = mapping.transform_unit_to_real_cell(cell,
-                                                                                              unit_support_points[i]);
-                    if( std::abs(support_point_real[0]) <= parameters.bounding_box_r * parameters.grid_scale
-                            && // X coord of support point less than magnet radius...
-                        std::abs(support_point_real[1]) <= parameters.bounding_box_z * parameters.grid_scale
-                            && // Y coord of support point less than magnet height
-                        (dim == 3 ? std::abs(support_point_real[2]) <= parameters.bounding_box_r * parameters.grid_scale : true)
-                            && // Z coord
-                        (dim == 3 ?
-                         std::hypot(support_point_real[0], support_point_real[2]) <
-                         (0.98 * parameters.bounding_box_r * parameters.grid_scale) // radial distance on XZ plane with tol of 2%
-                         : true))
+                    const unsigned int dof_index = dof_indices[i];
+                    const unsigned int component = fe_values.get_fe().system_to_component_index(i).first;
+                    const unsigned int group = fe_values.get_fe().system_to_base_index(i).first.first;
+
+                    // Make sure only the 0th component of the FE system is
+                    // set inhomogeneous DBC, i.e. phi block dofs
+                    if (component == potential_component && group == phi_block)
                     {
-                        //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
-                                    const double potential_value = linear_scalar_potential.value(support_point_real);
-                        //            pcout << "Potential value: " << potential_value << std::endl;
-                                    constraints.add_line(dof_index);
-                                    constraints.set_inhomogeneity(dof_index, potential_value);
+                        const Mapping<dim> &mapping = mapping_collection[cell->active_fe_index()];
+                        const Point<dim> support_point_real = mapping.transform_unit_to_real_cell(cell,
+                                                                                                  unit_support_points[i]);
+                        if( std::abs(support_point_real[0]) <= parameters.bounding_box_r * parameters.grid_scale
+                                && // X coord of support point less than magnet radius...
+                            std::abs(support_point_real[1]) <= parameters.bounding_box_z * parameters.grid_scale
+                                && // Y coord of support point less than magnet height
+                            (dim == 3 ? std::abs(support_point_real[2]) <= parameters.bounding_box_r * parameters.grid_scale : true)
+                                && // Z coord
+                            (dim == 3 ?
+                             std::hypot(support_point_real[0], support_point_real[2]) <
+                             (0.98 * parameters.bounding_box_r * parameters.grid_scale) // radial distance on XZ plane with tol of 2%
+                             : true))
+                        {
+                            //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
+                                        const double potential_value = linear_scalar_potential.value(support_point_real);
+                            //            pcout << "Potential value: " << potential_value << std::endl;
+                                        constraints.add_line(dof_index);
+                                        constraints.set_inhomogeneity(dof_index, potential_value);
+                        }
                     }
                 }
-            }
-          }
+              }
+        }
 
-        // Old implementation, possibly incorrect for vector valued problems
-  /*      std::map< types::global_dof_index, Point<dim> > support_points;
-        DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
-        LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
-
-        for(auto it : support_points)
+        if (parameters.geometry_shape == "Beam" ||
+            parameters.geometry_shape == "Patch test")
         {
-            const auto dof_index = it.first;
-            const auto supp_point = it.second;
-
-            // Check for the support point if inside the permanent magnet region:
-            // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
-            // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
-            if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
-                std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
-                (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
-                (dim == 3 ?
-                 std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
-                 : true))
+            // applying the inhomogeneous DBC for the vector valued displacement field
             {
-    //            pcout << "DoF index: " << dof_index << "    " << "point: " << supp_point << std::endl;
-                const double potential_value = linear_scalar_potential.value(supp_point);
-    //            pcout << "Potential value: " << potential_value << std::endl;
-                constraints.add_line(dof_index);
-                constraints.set_inhomogeneity(dof_index, potential_value);
+                // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
             }
-        }*/
+            if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // inhomogeneous DBC on right boundary (face = 1) i.e. u_x != 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ConstantFunction<dim>(loadstep.get_delta_load(),
+                                                                                          n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            // below two constraints for non-volume preserving deformation
+            /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // zero DBC on lower boundary (face = 2) i.e. u_y = 0
+                const int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }
+            if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
+                const int boundary_id = 3;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }*/
 
-        // applying the inhomogeneous DBC for the vector valued displacement field
-        {
-            // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
-            const int boundary_id = 0;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(u_fe));
+            if(dim == 3)
+            {
+                // zero DBC on right boundary (face = 1) i.e. u_z = 0
+                const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(z_displacement));
+            }
         }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // inhomogeneous DBC on right boundary (face = 1) i.e. u_x != 0
-            const int boundary_id = 1;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ConstantFunction<dim>(loadstep.get_delta_load(),
-                                                                                      n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(x_displacement));
-        }
-        // below two constraints for non-volume preserving deformation
-        /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // zero DBC on lower boundary (face = 2) i.e. u_y = 0
-            const int boundary_id = 2;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(y_displacement));
-        }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
-            const int boundary_id = 3;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(y_displacement));
-        }*/
 
-        if(dim == 3)
+        if (parameters.geometry_shape == "Toroidal_tube")
         {
-            // zero DBC on right boundary (face = 1) i.e. u_z = 0
-            const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
-            const int boundary_id = 1;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(z_displacement));
+            {
+                // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on bottom boundary (2nd face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on top boundary (3rd face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 3;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
         }
     }
     else // apply homogeneous DBC to the previously inhomogenoeus DBC constrained DoFs
@@ -306,85 +326,102 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             }
           }
 
-        // Old implementation, possibly incorrect for vector valued problems
-        // set homogeneous DBC for scalar magnetic potential field at itr_nr > 0
- /*       std::map< types::global_dof_index, Point<dim> > support_points;
-        DoFTools::map_dofs_to_support_points(mapping_collection, hp_dof_handler, support_points);
-        Functions::ZeroFunction<dim> zero_function(1);
-
-        for(auto it : support_points)
+        if (parameters.geometry_shape == "Beam" ||
+            parameters.geometry_shape == "Patch test")
         {
-            const auto dof_index = it.first;
-            const auto supp_point = it.second;
-
-            // Check for the support point if inside the permanent magnet region:
-            // In 2D axisymmetric we have x,y <=> r,z so need to compare 0th and 1st component of point
-            // In 3D we have x,y,z <=> r,z,theta so need to compare 0th and 1st component of point
-            if( std::abs(supp_point[0]) <= parameters.bounding_box_r && // X coord of support point less than magnet radius...
-                std::abs(supp_point[1]) <= parameters.bounding_box_z && // Y coord of support point less than magnet height
-                (dim == 3 ? std::abs(supp_point[2]) <= parameters.bounding_box_r : true) && // Z coord
-                (dim == 3 ?
-                 std::hypot(supp_point[0], supp_point[2]) < (0.98 * parameters.bounding_box_r) // radial distance on XZ plane with tol of 2%
-                 : true))
+            // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
             {
-                const double potential_value = zero_function.value(supp_point);
-                constraints.add_line(dof_index);
-                constraints.set_inhomogeneity(dof_index, potential_value);
+                // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components), // all dim components of displ
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
             }
-        }*/
+            if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // set homogeneous DBC on right boundary (face = 1) i.e. u_x = 0 for itr_nr > 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            // below two constraints for non-volume preserving deformation
+            /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // zero DBC on lower boundary (face = 2) i.e. u_y = 0
+                const int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }
+            if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
+            {
+                // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
+                const int boundary_id = 3;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }*/
 
-        // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
-        {
-            // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
-            const int boundary_id = 0;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components), // all dim components of displ
-                                                     constraints,
-                                                     fe_collection.component_mask(u_fe));
+            if(dim == 3)
+            {
+                // zero DBC on right boundary (face = 1) i.e. u_z = 0
+                const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(z_displacement));
+            }
         }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // set homogeneous DBC on right boundary (face = 1) i.e. u_x = 0 for itr_nr > 0
-            const int boundary_id = 1;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(x_displacement));
-        }
-        // below two constraints for non-volume preserving deformation
-        /*if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // zero DBC on lower boundary (face = 2) i.e. u_y = 0
-            const int boundary_id = 2;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(y_displacement));
-        }
-        if (parameters.mechanical_boundary_condition_type == "Inhomogeneous Dirichlet")
-        {
-            // zero DBC on upper/top boundary (face = 3) i.e. u_y = 0
-            const int boundary_id = 3;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(y_displacement));
-        }*/
 
-        if(dim == 3)
+        if (parameters.geometry_shape == "Toroidal_tube")
         {
-            // zero DBC on right boundary (face = 1) i.e. u_z = 0
-            const FEValuesExtractors::Scalar z_displacement(displacement_theta_component);
-            const int boundary_id = 1;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(z_displacement));
+            {
+                // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on bottom boundary (2nd face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
+            {
+                // zero DBC on top boundary (3rd face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 3;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
+            }
         }
     }
 }
@@ -525,10 +562,30 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
                   quadrature_point_history.get_data(cell);
           Assert(lqph.size() == n_q_points, ExcInternalError());
 
+          // setup the material parameters depending on
+          // the material and parse it to the PointHistory class function
+          double mu_ = parameters.mu;
+          double nu_ = parameters.nu;
+          if (parameters.geometry_shape == "Toroidal_tube")
+          {
+              if (cell->material_id() == material_id_toroid)
+              {
+                  // take tube material parameters as it is
+                  ;
+              }
+              else if (cell->material_id() == material_id_vacuum ||
+                       cell->material_id() == material_id_bar_magnet)
+              {
+                  // take the free space material parameters
+                  mu_ = parameters.free_space_mu;
+                  nu_ = parameters.free_space_nu;
+              }
+          }
+
           for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
           {
               Assert(lqph[q_point], ExcInternalError());
-              lqph[q_point]->setup_lqp(parameters);
+              lqph[q_point]->setup_lqp(mu_, nu_);
           }
       }
 }
@@ -860,7 +917,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       }
 
       // Assemble Neumann type Traction contribution
-      if (parameters.mechanical_boundary_condition_type == "Traction")
+      if (parameters.mechanical_boundary_condition_type == "Traction" &&
+          parameters.geometry_shape != "Toroidal_tube") // currently for beam or patch test models only
       {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               if (cell->face(face)->at_boundary() == true
@@ -1401,6 +1459,79 @@ public:
     }
 };
 
+template<int dim, int dim_Tensor>
+class StressPostProcessor : public DataPostprocessorScalar<dim>
+{
+public:
+    StressPostProcessor(const CellDataStorage<typename Triangulation<dim>::cell_iterator,
+                                              PointHistory<dim, dim_Tensor> > &quadrature_point_history,
+                        const hp::MappingCollection<dim> &mapping_collection,
+                        const hp::FECollection<dim> &fe_collection,
+                        const hp::QCollection<dim> &qf_collection_cell,
+                        const unsigned int i, const unsigned int j)
+        :
+          DataPostprocessorScalar<dim> ("S_"+std::to_string(i)+std::to_string(j), update_values),
+          quadrature_point_history_(quadrature_point_history),
+          mapping_collection_(mapping_collection),
+          fe_collection_(fe_collection),
+          qf_collection_cell_(qf_collection_cell),
+          i_(i),
+          j_(j)
+    {}
+
+    virtual ~StressPostProcessor() {}
+
+    virtual void
+    evaluate_vector_field(const DataPostprocessorInputs::Vector<dim> &input_data,
+                          std::vector<Vector<double> >               &computed_quantities) const
+    {
+        hp::FEValues<dim> hp_fe_values (mapping_collection_,
+                                        fe_collection_,
+                                        qf_collection_cell_,
+                                        update_values |
+                                        update_quadrature_points |
+                                        update_JxW_values);
+        const typename hp::DoFHandler<dim>::cell_iterator
+                current_cell = input_data.template get_cell<hp::DoFHandler<dim> >();
+        hp_fe_values.reinit(current_cell);
+        const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+        const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+        const unsigned int n_dofs_per_cell = fe_values.dofs_per_cell;
+
+        const std::vector<std::shared_ptr<const PointHistory<dim,dim_Tensor> > > lqph =
+                quadrature_point_history_.get_data(current_cell);
+        Assert(lqph.size() == n_q_points, ExcInternalError());
+
+        if (dim == 2)
+        {
+            for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+            {
+                Assert(lqph[q_point], ExcInternalError());
+                const SymmetricTensor<2, dim_Tensor> &S = lqph[q_point]->get_second_Piola_Kirchoff_stress();
+                const double S_component = S[i_][j_];
+                for (unsigned int k = 0; k < n_dofs_per_cell; ++k)
+                {
+                    const unsigned int k_group = fe_values.get_fe().system_to_base_index(k).first.first;
+                    if (k_group == 1) // proceed only for u_block
+                    {
+                        const double Nk = fe_values.shape_value(k, q_point);
+                        const double JxW = fe_values.JxW(q_point);
+                        computed_quantities[q_point](0) += Nk * S_component * JxW;
+                    }
+                }
+            }
+        }
+    }
+
+private:
+    CellDataStorage<typename Triangulation<dim>::cell_iterator,
+                    PointHistory<dim, dim_Tensor> > quadrature_point_history_;
+    const hp::MappingCollection<dim> mapping_collection_;
+    const hp::FECollection<dim> fe_collection_;
+    const hp::QCollection<dim> qf_collection_cell_;
+    const unsigned int i_, j_;
+};
+
 // @sect4{MSP_Toroidal_Membrane::output_results}
 
 template<int dim, class DH=DoFHandler<dim> >
@@ -1470,6 +1601,12 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid, phi_component); // Material ID for Toroid tube as read in from Mesh file
   MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum, phi_component); // Material ID for free space
 //  DisplacementFieldPostprocessor<dim> displacements;
+  StressPostProcessor<dim, dim_Tensor> stress_component_00(quadrature_point_history,
+                                                           mapping_collection, fe_collection,
+                                                           qf_collection_cell, 0, 0);
+  StressPostProcessor<dim, dim_Tensor> stress_component_22(quadrature_point_history,
+                                                           mapping_collection, fe_collection,
+                                                           qf_collection_cell, 2, 2);
   FilteredDataOut< dim,hp::DoFHandler<dim> > data_out (this_mpi_process);
 
   data_out.attach_dof_handler (hp_dof_handler);
@@ -1482,6 +1619,8 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);
+  data_out.add_data_vector (solution, stress_component_00);
+  data_out.add_data_vector (solution, stress_component_22);
 
   // --- Additional data ---
   // Material coefficients; polynomial order; material id
@@ -1654,7 +1793,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
     //      }
 //      }
 
-      if(cell->material_id() == 1)
+      if(cell->material_id() == material_id_toroid)
       {
           for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
           {
@@ -1869,6 +2008,40 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
 
       triangulation.refine_global (parameters.n_global_refinements);
 
+      // smallest bounding box that encloses the Triangulation object
+      BoundingBox<dim> bounding_box = GridTools::compute_bounding_box(triangulation);
+      // first: lower left corner point, second: upper right corner point
+      const std::pair<Point<dim, double>, Point<dim, double> > vertex_pair = bounding_box.get_boundary_points();
+
+      // set up bounadry id's
+      cell = triangulation.begin_active();
+      for (; cell!=endc; ++cell)
+          for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if (cell->face(face)->at_boundary() == true)
+              {
+                  if (dim == 2)
+                  {
+                      if (cell->face(face)->center()[0] == vertex_pair.first[0])
+                          cell->face(face)->set_boundary_id(0); // left boundary faces
+                      else if (cell->face(face)->center()[1] == vertex_pair.first[1])
+                          cell->face(face)->set_boundary_id(2); // lower boundary faces
+                      else if (cell->face(face)->center()[0] == vertex_pair.second[0])
+                          cell->face(face)->set_boundary_id(1); // right boundary faces
+                      else if (cell->face(face)->center()[1] == vertex_pair.second[1])
+                          cell->face(face)->set_boundary_id(3); // top boundary faces
+                      else
+                          AssertThrow(false, ExcInternalError());
+
+                  }
+                  else if (dim == 3)
+                  {
+                      AssertThrow(false, ExcNotImplemented());
+                  }
+                  else
+                      Assert(false, ExcInternalError());
+              }
+          }
   }
 
   else
@@ -1902,7 +2075,7 @@ void MSP_Toroidal_Membrane<dim>::postprocess_energy()
     {
         if (cell->is_locally_owned())
         {
-            if(cell->material_id() == 1)
+            if(cell->material_id() == material_id_toroid)
             {
                 hp_fe_values.reinit(cell);
                 const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();

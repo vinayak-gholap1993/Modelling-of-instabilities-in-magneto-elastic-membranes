@@ -103,6 +103,12 @@ subsection Material properties
 
   # Poisson's ratio
   set Poisson's ratio = 0.4
+
+  # Shear modulus for free space material
+  set Free space shear modulus = 0.0003
+
+  # Poisson's ratio for free space material
+  set Free space poisson's ratio = 0.4
 end
 
 
