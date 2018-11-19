@@ -30,6 +30,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
   material_id_toroid(1),
   material_id_vacuum(2),
   material_id_bar_magnet(3),
+  material_id_vacuum_inner_interface_membrane(4),
   triangulation(mpi_communicator,
                 Triangulation<dim>::maximum_smoothing),
   refinement_strategy (parameters.refinement_strategy),
@@ -573,8 +574,7 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
                   // take tube material parameters as it is
                   ;
               }
-              else if (cell->material_id() == material_id_vacuum ||
-                       cell->material_id() == material_id_bar_magnet)
+              else if (cell->material_id() != material_id_toroid)
               {
                   // take the free space material parameters
                   mu_ = parameters.free_space_mu;
@@ -974,13 +974,13 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           parameters.geometry_shape == "Toroidal_tube")
       {
           if (cell->material_id() == material_id_toroid)
+          {
               for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               {
-                  // Identify the face if it is outer interface
-                  // i.e. if it lies on torus minor radius outer
-//                  const Point<dim> face_center = cell->face(face)->center();
-                  if (cell->face(face)->manifold_id() == manifold_id_outer_radius &&
-                      cell->neighbor(face)->material_id() != material_id_toroid)
+                  // Identify the face if it is inner interface
+                  // i.e. if it lies on torus minor radius inner
+                  if (cell->face(face)->manifold_id() == manifold_id_inner_radius &&
+                      cell->neighbor(face)->material_id() == material_id_vacuum_inner_interface_membrane)
                   {
                       hp_fe_face_values.reinit(cell, face);
                       const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
@@ -993,9 +993,9 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                           const double load_ramp = (loadstep.current() / loadstep.final());
                           const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
-                          // outerward unit normal vector for the face on outer interface
+                          // outward unit normal vector for the face on inner interface
                           const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
-                          const Tensor<1, dim> traction = magnitude * N;
+                          const Tensor<1, dim> traction = -magnitude * N; // negative to take inward normal to face
 
                           const double radial_distance = quadrature_points_face[f_q_point][0];
                           // If dim == 2, assembly using axisymmetric formulation
@@ -1025,6 +1025,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       }
                   }
               }
+          }
       }
 
       // Finally, we need to copy the lower half of the local matrix into the
@@ -1528,7 +1529,7 @@ public:
                         const hp::QCollection<dim> &qf_collection_cell,
                         const unsigned int i, const unsigned int j)
         :
-          DataPostprocessorScalar<dim> ("S_"+std::to_string(i)+std::to_string(j), update_values),
+          DataPostprocessorScalar<dim> ("sigma_"+std::to_string(i)+std::to_string(j), update_values),
           quadrature_point_history_(quadrature_point_history),
           mapping_collection_(mapping_collection),
           fe_collection_(fe_collection),
@@ -1547,8 +1548,7 @@ public:
                                         fe_collection_,
                                         qf_collection_cell_,
                                         update_values |
-                                        update_quadrature_points |
-                                        update_JxW_values);
+                                        update_quadrature_points);
         const typename hp::DoFHandler<dim>::cell_iterator
                 current_cell = input_data.template get_cell<hp::DoFHandler<dim> >();
         hp_fe_values.reinit(current_cell);
@@ -1566,15 +1566,18 @@ public:
             {
                 Assert(lqph[q_point], ExcInternalError());
                 const SymmetricTensor<2, dim_Tensor> &S = lqph[q_point]->get_second_Piola_Kirchoff_stress();
-                const double S_component = S[i_][j_];
+                const Tensor<2, dim_Tensor> &F = invert(lqph[q_point]->get_F_inv());
+
+                // Get the Cauchy stress: sigma = F S F^t / detF
+                const SymmetricTensor<2, dim_Tensor> &sigma = Physics::Transformations::Piola::push_forward(S, F);
+                const double sigma_component = sigma[i_][j_];
                 for (unsigned int k = 0; k < n_dofs_per_cell; ++k)
                 {
                     const unsigned int k_group = fe_values.get_fe().system_to_base_index(k).first.first;
                     if (k_group == 1) // proceed only for u_block
                     {
                         const double Nk = fe_values.shape_value(k, q_point);
-                        const double JxW = fe_values.JxW(q_point);
-                        computed_quantities[q_point](0) += Nk * S_component * JxW;
+                        computed_quantities[q_point](0) += Nk * sigma_component;
                     }
                 }
             }
@@ -1658,6 +1661,8 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   MagneticFieldPostprocessor<dim> mag_field_bar_magnet(material_id_bar_magnet, phi_component);
   MagneticFieldPostprocessor<dim> mag_field_toroid(material_id_toroid, phi_component); // Material ID for Toroid tube as read in from Mesh file
   MagneticFieldPostprocessor<dim> mag_field_vacuum(material_id_vacuum, phi_component); // Material ID for free space
+  MagneticFieldPostprocessor<dim> mag_field_vacuum_inner(material_id_vacuum_inner_interface_membrane,
+                                                         phi_component); // Material ID for inner interface vacuum
 //  DisplacementFieldPostprocessor<dim> displacements;
   StressPostProcessor<dim, dim_Tensor> stress_component_00(quadrature_point_history,
                                                            mapping_collection, fe_collection,
@@ -1677,6 +1682,7 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);
+  data_out.add_data_vector (solution, mag_field_vacuum_inner);
   data_out.add_data_vector (solution, stress_component_00);
   data_out.add_data_vector (solution, stress_component_22);
 
@@ -1853,12 +1859,14 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
 
       if(cell->material_id() == material_id_toroid)
       {
+//          cell->set_all_manifold_ids(manifold_id_outer_radius);
           for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
           {
-              if(cell->neighbor(face)->material_id() != cell->material_id())
-              {
-                  cell->face(face)->set_manifold_id(manifold_id_outer_radius);
-              }
+              if (cell->neighbor(face)->material_id() == material_id_vacuum)
+                  cell->face(face)->set_manifold_id(manifold_id_outer_radius); // outer interface of membrane
+
+              else if (cell->neighbor(face)->material_id() == material_id_vacuum_inner_interface_membrane)
+                  cell->face(face)->set_manifold_id(manifold_id_inner_radius); // inner interface of membrane
           }
       }
     }
@@ -1983,14 +1991,14 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           {
               // For a block of cells at center within a torous region of rectangular cross section
               const auto cell_center = cell->center();
-              if(std::hypot(cell_center[0], cell_center[2]) >= 0.17 && // inner (min) radial distance
-                 std::hypot(cell_center[0], cell_center[2]) <= 0.27 && // outer (max) radial distance
-                 std::abs(cell_center[1]) <= 0.06) // max axial height
+              if(std::hypot(cell_center[0], cell_center[2]) >= 0.17 * parameters.grid_scale && // inner (min) radial distance
+                 std::hypot(cell_center[0], cell_center[2]) <= 0.27 * parameters.grid_scale && // outer (max) radial distance
+                 std::abs(cell_center[1]) <= 0.06 * parameters.grid_scale) // max axial height
               {
                   cell->set_all_manifold_ids(manifold_id_magnet);
               }
-              if(std::hypot(cell_center[0], cell_center[2]) < 0.17 &&
-                 std::abs(cell_center[1]) <= 0.06)
+              if(std::hypot(cell_center[0], cell_center[2]) < 0.17 * parameters.grid_scale &&
+                 std::abs(cell_center[1]) <= 0.06 * parameters.grid_scale)
               {
                   cell->set_all_manifold_ids(5);
               }
@@ -2001,8 +2009,19 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           triangulation.set_manifold(5, manifold_magnet);
       }
 
+      /*if (dim == 2)
+      {
+          typename Triangulation<dim>::active_cell_iterator
+                  cell = triangulation.begin_active(),
+                  endc = triangulation.end();
+          for (; cell!=endc; ++cell)
+              if (cell->material_id() == material_id_toroid)
+                  cell->set_all_manifold_ids(manifold_id_outer_radius);
+      }*/
+
       // Refine adaptively the permanent magnet region for given
       // input parameters of box lenghts
+      // also refine the membrane
       for(unsigned int cycle = 0; cycle < 2; ++cycle)
       {
           typename Triangulation<dim>::active_cell_iterator
@@ -2010,11 +2029,19 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   endc = triangulation.end();
           for (; cell!=endc; ++cell)
           {
+              // adaptively refine the torus membrane
+              if (cell->material_id() == material_id_toroid)
+                  cell->set_refine_flag();
+
               for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
               {
                   if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
                       std::abs(cell->vertex(vertex)[1]) < parameters.bounding_box_z &&
-                      (dim == 3 ? std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r : true))
+                      (dim == 3
+                       ?
+                        std::abs(cell->vertex(vertex)[2]) < parameters.bounding_box_r
+                       :
+                        true))
                   {
                       cell->set_refine_flag();
                   }
@@ -2024,27 +2051,42 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           triangulation.execute_coarsening_and_refinement();
       }
 
+      const Point<dim> &membrane_minor_radius_center = geometry.get_membrane_minor_radius_centre();
+
       // Set material id to bar magnet for the constrained cells
+      // and vacuum on inner interface of membrane, enclosed within it
       typename Triangulation<dim>::active_cell_iterator
               cell = triangulation.begin_active(),
               endc = triangulation.end();
       for (; cell!=endc; ++cell)
       {
+          const Point<dim> &cell_center = cell->center();
           unsigned int vertex_count = 0;
           for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
           {
               if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
                   std::abs(cell->vertex(vertex)[1]) <= parameters.bounding_box_z &&
-                  (dim == 3 ? std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r : true) &&
-                  (dim == 3 ?
-                   std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) < (0.98 * parameters.bounding_box_r) //radial distance with tolerance of 2%
+                  (dim == 3
+                   ?
+                    std::abs(cell->vertex(vertex)[2]) <= parameters.bounding_box_r
                    :
-                   true))
+                    true) &&
+                  (dim == 3
+                   ?
+                    std::hypot(cell->vertex(vertex)[0],cell->vertex(vertex)[2]) < (0.98 * parameters.bounding_box_r) //radial distance with tolerance of 2%
+                   :
+                    true))
                   vertex_count++;
           }
 
           if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
               cell->set_material_id(material_id_bar_magnet);
+
+          // set material id vacuum to cells enclosed within the torus
+          if (cell_center.distance(membrane_minor_radius_center) < parameters.torus_minor_radius_inner * parameters.grid_scale
+                  &&
+              cell->material_id() != material_id_toroid)
+              cell->set_material_id(material_id_vacuum_inner_interface_membrane);
       }
 
       // Rescale the geometry before attaching manifolds
@@ -2258,6 +2300,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
 //      postprocess_energy();
+      quadrature_point_history.clear();
     }
 }
 

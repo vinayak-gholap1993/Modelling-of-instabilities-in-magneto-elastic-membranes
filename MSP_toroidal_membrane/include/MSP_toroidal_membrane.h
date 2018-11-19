@@ -68,6 +68,7 @@
 #include <deal.II/distributed/shared_tria.h>
 #include <deal.II/physics/elasticity/kinematics.h>
 #include <deal.II/physics/elasticity/standard_tensors.h>
+#include <deal.II/physics/transformations.h>
 
 #include <fstream>
 #include <iostream>
@@ -1125,6 +1126,7 @@ private:
   const types::material_id material_id_toroid;
   const types::material_id material_id_vacuum;
   const types::material_id material_id_bar_magnet;
+  const types::material_id material_id_vacuum_inner_interface_membrane;
 
   parallel::shared::Triangulation<dim>      triangulation;
   RefinementStrategy<dim> refinement_strategy;
