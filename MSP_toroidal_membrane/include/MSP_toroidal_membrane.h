@@ -765,7 +765,7 @@ void Coefficient<dim>::value_list (const std::vector<Point<dim> > &points,
       if (geometry.within_membrane(points[i]) == true)
         values[i] = mu_membrane;
       else
-        values[i] = mu_membrane;
+        values[i] = mu_air;
     }
 }
 

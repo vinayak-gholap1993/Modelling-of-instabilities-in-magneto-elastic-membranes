@@ -237,7 +237,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
-                                                         fe_collection.component_mask(u_fe));
+                                                         fe_collection.component_mask(x_displacement));
             }
             {
                 // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
@@ -246,7 +246,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
-                                                         fe_collection.component_mask(u_fe));
+                                                         fe_collection.component_mask(x_displacement));
             }
             {
                 // zero DBC on bottom boundary (2nd face) i.e. u_x = u_y = u_z = 0
@@ -255,7 +255,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
-                                                         fe_collection.component_mask(u_fe));
+                                                         fe_collection.component_mask(y_displacement));
             }
             {
                 // zero DBC on top boundary (3rd face) i.e. u_x = u_y = u_z = 0
@@ -264,7 +264,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
-                                                         fe_collection.component_mask(u_fe));
+                                                         fe_collection.component_mask(y_displacement));
             }
         }
     }
@@ -1210,8 +1210,12 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         error_residual_norm = error_residual;
         error_residual_norm.normalize(error_residual_0);
 
-        if (newton_iteration > 0 && error_residual_norm.u <= parameters.tol_f
-                && error_update_norm.u <= parameters.tol_u)
+        if ( (newton_iteration > 3 &&
+              error_residual_norm.u <= parameters.tol_f &&
+              error_update_norm.u <= parameters.tol_u) ||
+              (newton_iteration > 5 &&
+               error_residual.norm < parameters.tol_f &&
+               error_update.norm < parameters.tol_f) )
         {
             pcout << " CONVERGED!" << std::endl;
             print_convergence_footer();
@@ -1859,7 +1863,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
 
       if(cell->material_id() == material_id_toroid)
       {
-//          cell->set_all_manifold_ids(manifold_id_outer_radius);
+          cell->set_all_manifold_ids(manifold_id_outer_radius);
           for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
           {
               if (cell->neighbor(face)->material_id() == material_id_vacuum)
@@ -2009,7 +2013,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           triangulation.set_manifold(5, manifold_magnet);
       }
 
-      /*if (dim == 2)
+      if (dim == 2)
       {
           typename Triangulation<dim>::active_cell_iterator
                   cell = triangulation.begin_active(),
@@ -2017,7 +2021,9 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           for (; cell!=endc; ++cell)
               if (cell->material_id() == material_id_toroid)
                   cell->set_all_manifold_ids(manifold_id_outer_radius);
-      }*/
+
+          triangulation.set_manifold(manifold_id_outer_radius, manifold_outer_radius);
+      }
 
       // Refine adaptively the permanent magnet region for given
       // input parameters of box lenghts
