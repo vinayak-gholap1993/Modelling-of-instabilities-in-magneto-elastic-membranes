@@ -526,6 +526,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       unsigned int max_iterations_NR;
       double tol_f;
       double tol_u;
+      double abs_err_tol_f;
 
       static void
       declare_parameters(ParameterHandler &prm);
@@ -549,6 +550,10 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
           prm.declare_entry("Tolerance displacement", "1.0e-6",
                             Patterns::Double(0.0),
                             "Displacement error tolerance");
+
+          prm.declare_entry("Absolute error force tolerance", "1.0e-9",
+                            Patterns::Double(0.0),
+                            "Absolute error force residual tolerance");
       }
       prm.leave_subsection();
   }
@@ -560,6 +565,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
         max_iterations_NR = prm.get_integer("Max iterations Newton-Raphson");
         tol_f = prm.get_double("Tolerance force");
         tol_u = prm.get_double("Tolerance displacement");
+        abs_err_tol_f = prm.get_double("Absolute error force tolerance");
       }
       prm.leave_subsection();
   }

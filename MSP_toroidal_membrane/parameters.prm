@@ -121,6 +121,9 @@ subsection Nonlinear solver
 
   # Force residual tolerance
   set Tolerance force = 1.0e-9
+
+  # Absolute error force residual tolerance
+  set Absolute error force tolerance = 1.0e-9
 end
 
 subsection Problem type

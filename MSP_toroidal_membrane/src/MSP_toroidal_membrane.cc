@@ -918,7 +918,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
       // Assemble Neumann type Traction contribution
       if (parameters.mechanical_boundary_condition_type == "Traction" &&
-          parameters.geometry_shape != "Toroidal_tube") // currently for beam or patch test models only
+          parameters.geometry_shape == "Beam") // currently for beam test model only
       {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               if (cell->face(face)->at_boundary() == true
@@ -1212,10 +1212,10 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
         if ( (newton_iteration > 3 &&
               error_residual_norm.u <= parameters.tol_f &&
-              error_update_norm.u <= parameters.tol_u) ||
+              error_update_norm.u <= parameters.tol_u) // Relative error convergence check
+             ||
               (newton_iteration > 5 &&
-               error_residual.norm < parameters.tol_f &&
-               error_update.norm < parameters.tol_f) )
+               error_residual.norm < parameters.abs_err_tol_f) ) // Absolute error convergence check
         {
             pcout << " CONVERGED!" << std::endl;
             print_convergence_footer();
@@ -1563,6 +1563,7 @@ public:
         const std::vector<std::shared_ptr<const PointHistory<dim,dim_Tensor> > > lqph =
                 quadrature_point_history_.get_data(current_cell);
         Assert(lqph.size() == n_q_points, ExcInternalError());
+        AssertDimension(computed_quantities.size(), n_q_points);
 
         if (dim == 2)
         {
@@ -1687,8 +1688,52 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);
   data_out.add_data_vector (solution, mag_field_vacuum_inner);
-  data_out.add_data_vector (solution, stress_component_00);
-  data_out.add_data_vector (solution, stress_component_22);
+//  data_out.add_data_vector (solution, stress_component_00);
+//  data_out.add_data_vector (solution, stress_component_22);
+
+/*  Vector<double> cellwise_avg_stress (triangulation.n_active_cells());
+  {
+      hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                      fe_collection,
+                                      qf_collection_cell,
+                                      update_values |
+                                      update_quadrature_points |
+                                      update_JxW_values);
+
+      typename Triangulation<dim>::active_cell_iterator
+      cell = triangulation.begin_active(),
+      endc = triangulation.end();
+      for (; cell!=endc; ++cell)
+          if(cell->is_locally_owned())
+      {
+          hp_fe_values.reinit(cell);
+          const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+          const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+
+          const std::vector<std::shared_ptr<const PointHistory<dim,dim_Tensor> > > lqph =
+                  quadrature_point_history.get_data(cell);
+          Assert(lqph.size() == n_q_points, ExcInternalError());
+          double average_stress = 0.0;
+          double cell_volume = 0.0;
+
+          for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+          {
+              Assert(lqph[q_point], ExcInternalError());
+              const SymmetricTensor<2, dim_Tensor> &S = lqph[q_point]->get_second_Piola_Kirchoff_stress();
+              const Tensor<2, dim_Tensor> &F = invert(lqph[q_point]->get_F_inv());
+
+              // Get the Cauchy stress: sigma = F S F^t / detF
+              const SymmetricTensor<2, dim_Tensor> &sigma = Physics::Transformations::Piola::push_forward(S, F);
+              const double sigma_component = sigma[0][0];
+
+              average_stress += sigma_component * fe_values.JxW(q_point);
+              cell_volume += fe_values.JxW(q_point);
+          }
+          average_stress /= cell_volume;
+          cellwise_avg_stress[cell->active_cell_index()] = average_stress;
+      }
+  }
+  data_out.add_data_vector(cellwise_avg_stress, "sigma_00");*/
 
   // --- Additional data ---
   // Material coefficients; polynomial order; material id
