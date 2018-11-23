@@ -1107,6 +1107,7 @@ private:
   get_total_solution(const TrilinosWrappers::MPI::BlockVector &solution_delta) const;
   void print_convergence_header();
   void print_convergence_footer();
+  void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;

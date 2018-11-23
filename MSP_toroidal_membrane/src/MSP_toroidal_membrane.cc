@@ -50,7 +50,6 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
        degree <= parameters.poly_degree_max; ++degree)
     {
       degree_collection.push_back(degree); // Polynomial degree
-//      fe_collection.push_back(FE_Q<dim>(degree));
       fe_collection.push_back(FESystem<dim>(FE_Q<dim>(degree), 1, // scalar fe for magnetic potential
                                             FE_Q<dim>(degree), dim)); // vector fe for displacement
       mapping_collection.push_back(MappingQGeneric<dim>(degree));
@@ -80,7 +79,6 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
   for (; cell!=endc; ++cell)
     {
     if (cell->is_locally_owned() == false) continue;
-//      if (cell->subdomain_id() != this_mpi_process) continue;
 
 //      if (geometry.within_membrane(cell->center()))
 //        cell->set_active_fe_index(0); // 1 for p-refinement test
@@ -96,6 +94,7 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints, const int &itr_nr)
 {
+    TimerOutput::Scope timer_scope (computing_timer, "Make constraints");
     // All dirichlet constraints need to be specified only at 0th NR iteration
     // constraints are different at different NR iterations
     constraints.clear();
@@ -515,11 +514,6 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
                                                         locally_relevant_dofs);
                                                         */
     system_matrix.reinit (sp);
-    /*system_rhs.reinit(locally_owned_dofs,
-                      mpi_communicator);
-    solution.reinit(locally_owned_dofs,
-                    locally_relevant_dofs,
-                    mpi_communicator);*/
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
     estimated_error_per_cell.reinit(triangulation.n_active_cells());
@@ -531,7 +525,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
 {
-    pcout << "Setting up quadrature point data..." << std::endl;
+    TimerOutput::Scope timer_scope (computing_timer, "Setup QPH data");
+    pcout << "   Setting up quadrature point data..." << std::endl;
 
     hp::FEValues<dim> hp_fe_values (mapping_collection,
                                     fe_collection,
@@ -595,7 +590,7 @@ void
 MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Update QPH data");
-    pcout << "Update QPH data" << std::endl;
+//    pcout << " UQPH" << std::flush;
 
     TrilinosWrappers::MPI::BlockVector solution_total(locally_owned_partitioning,
                                                       locally_relevant_partitioning,
@@ -734,7 +729,6 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
   for (; cell!=endc; ++cell)
     {
     if (cell->is_locally_owned() == false) continue;
-//      if (cell->subdomain_id() != this_mpi_process) continue;
 
       hp_fe_values.reinit(cell);
       const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
@@ -1117,7 +1111,6 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           endc = hp_dof_handler.end();
           for (; cell!=endc; ++cell)
             {
-              //    if (cell->is_locally_owned() == false) continue;
               if (cell->subdomain_id() != this_mpi_process) continue;
 
               const unsigned int cell_fe_idx = cell->active_fe_index();
@@ -1155,9 +1148,9 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
   newton_update = distributed_solution;
 
   pcout
-      << "  Linear solver iterations: " << solver_control.last_step()
-      << "\tLinear solver residual: " << solver_control.last_value()
-      << std::endl;
+      << std::fixed << std::setprecision(3) << std::scientific
+      << solver_control.last_step()
+      << "\t" << solver_control.last_value();
 }
 
 // Newton-Raphson scheme to solve nonlinear system of equation iteratively
@@ -1165,6 +1158,7 @@ template <int dim>
 void
 MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta)
 {
+    TimerOutput::Scope timer_scope (computing_timer, "Solve nonlinear system");
     pcout << "Load step: " << loadstep.get_loadstep() << " "
           << " Load value: " << loadstep.current() << std::endl;
 
@@ -1184,7 +1178,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
     unsigned int newton_iteration = 0;
     for(; newton_iteration < parameters.max_iterations_NR; ++newton_iteration)
     {
-        pcout << "  Newton iteration:  " << newton_iteration << "  " <<std::endl;
+        pcout << "    " << newton_iteration << " \t | ";
 
         // since we use NR scheme to solve the fully nonlinear problem
         // data stored in tangent matrix and RHS vector is not reusable so clear
@@ -1198,7 +1192,6 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
         // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
-//        constraints.condense(system_matrix, system_rhs); // need to check this for MPI::BlockVector
 
         assemble_system();
         get_error_residual(error_residual);
@@ -1238,12 +1231,12 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         // update qph related to this new displacement and stress state
         update_qph_incremental(solution_delta);
 
-        pcout << std::fixed << std::setprecision(3) << std::scientific
-              << error_residual_norm.norm << "  "
-              << error_residual_norm.u << "  "
-              << error_residual_norm.phi << "  "
-              << error_update_norm.norm << "  "
-              << error_update_norm.u << "  "
+        pcout << std::fixed << std::setprecision(3) << std::scientific << "\t"
+              << error_residual_norm.norm << "\t"
+              << error_residual_norm.u << "\t"
+              << error_residual_norm.phi << "\t"
+              << error_update_norm.norm << "\t"
+              << error_update_norm.u << "\t"
               << error_update_norm.phi << "\n" << std::endl;
     }
     // if more NR iterations performed than max allowed
@@ -1260,9 +1253,11 @@ void MSP_Toroidal_Membrane<dim>::print_convergence_header()
         pcout << "-";
     pcout << std::endl;
 
-    pcout << "RES_NORM  "
-          << "RES_U  RES_PHI  NU_NORM  "
-          << "NU_U  NU_PHI  " << std::endl;
+    pcout << "SOLVER STEP | "
+          << "LIN_IT    LIN_RES    "
+          << "RES_NORM    "
+          << "RES_U    RES_PHI    NU_NORM    "
+          << "NU_U      NU_PHI" << std::endl;
 
     for(unsigned int i = 0; i < l_width; ++i)
         pcout << "-";
@@ -1311,7 +1306,6 @@ void MSP_Toroidal_Membrane<dim>::compute_error ()
                                       typename FunctionMap<dim>::type(),
                                       localised_solution,
                                       estimated_error_per_cell,
-//                                      fe_collection.component_mask(phi_fe));
                                       ComponentMask());
 //                                      ,
 //                                      /*coefficients = */ 0,
@@ -1367,7 +1361,6 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
 
       // Check that there are no violations on maximum cell level
       // If so, then remove the marking
-//      if (triangulation.n_global_levels() > static_cast<int>(parameters.n_levels_max))
       if (triangulation.n_levels() >= parameters.n_levels_max)
         for (typename Triangulation<dim>::active_cell_iterator
              cell = triangulation.begin_active(parameters.n_levels_max-1);
@@ -1390,7 +1383,6 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
           endc = hp_dof_handler.end();
           for (; cell!=endc; ++cell)
             {
-              //    if (cell->is_locally_owned() == false) continue;
               if (cell->subdomain_id() != this_mpi_process)
                 {
                   // Clear flags on non-owned cell that would
@@ -1598,6 +1590,58 @@ private:
     const unsigned int i_, j_;
 };
 
+// Compute cellwise volume averaged Cauchy stress component
+template<int dim>
+void MSP_Toroidal_Membrane<dim>::average_cauchy_stress_components(Vector<double> &output_vector,
+                                                                  const unsigned int &component_i,
+                                                                  const unsigned int &component_j) const
+{
+    Assert(output_vector.size() == triangulation.n_active_cells(),
+           ExcInternalError());
+    Assert(component_i <= dim_Tensor, ExcInternalError());
+    Assert(component_j <= dim_Tensor, ExcInternalError());
+
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_cell,
+                                    update_values |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+
+    typename Triangulation<dim>::active_cell_iterator
+    cell = triangulation.begin_active(),
+    endc = triangulation.end();
+    for (; cell!=endc; ++cell)
+        if(cell->is_locally_owned())
+    {
+        hp_fe_values.reinit(cell);
+        const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+        const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+
+        const std::vector<std::shared_ptr<const PointHistory<dim,dim_Tensor> > > lqph =
+                quadrature_point_history.get_data(cell);
+        Assert(lqph.size() == n_q_points, ExcInternalError());
+        double average_stress = 0.0;
+        double cell_volume = 0.0;
+
+        for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+        {
+            Assert(lqph[q_point], ExcInternalError());
+            const SymmetricTensor<2, dim_Tensor> &S = lqph[q_point]->get_second_Piola_Kirchoff_stress();
+            const Tensor<2, dim_Tensor> &F = invert(lqph[q_point]->get_F_inv());
+
+            // Get the Cauchy stress: sigma = F S F^t / detF
+            const SymmetricTensor<2, dim_Tensor> &sigma = Physics::Transformations::Piola::push_forward(S, F);
+            const double sigma_component = sigma[component_i][component_j];
+
+            average_stress += sigma_component * fe_values.JxW(q_point);
+            cell_volume += fe_values.JxW(q_point);
+        }
+        average_stress /= cell_volume;
+        output_vector[cell->active_cell_index()] = average_stress;
+    }
+}
+
 // @sect4{MSP_Toroidal_Membrane::output_results}
 
 template<int dim, class DH=DoFHandler<dim> >
@@ -1691,49 +1735,13 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
 //  data_out.add_data_vector (solution, stress_component_00);
 //  data_out.add_data_vector (solution, stress_component_22);
 
-/*  Vector<double> cellwise_avg_stress (triangulation.n_active_cells());
-  {
-      hp::FEValues<dim> hp_fe_values (mapping_collection,
-                                      fe_collection,
-                                      qf_collection_cell,
-                                      update_values |
-                                      update_quadrature_points |
-                                      update_JxW_values);
+  Vector<double> avg_stress_rr (triangulation.n_active_cells());
+  average_cauchy_stress_components(avg_stress_rr, 0, 0);
+  data_out.add_data_vector(avg_stress_rr, "sigma_rr");
 
-      typename Triangulation<dim>::active_cell_iterator
-      cell = triangulation.begin_active(),
-      endc = triangulation.end();
-      for (; cell!=endc; ++cell)
-          if(cell->is_locally_owned())
-      {
-          hp_fe_values.reinit(cell);
-          const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
-          const unsigned int  &n_q_points = fe_values.n_quadrature_points;
-
-          const std::vector<std::shared_ptr<const PointHistory<dim,dim_Tensor> > > lqph =
-                  quadrature_point_history.get_data(cell);
-          Assert(lqph.size() == n_q_points, ExcInternalError());
-          double average_stress = 0.0;
-          double cell_volume = 0.0;
-
-          for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-          {
-              Assert(lqph[q_point], ExcInternalError());
-              const SymmetricTensor<2, dim_Tensor> &S = lqph[q_point]->get_second_Piola_Kirchoff_stress();
-              const Tensor<2, dim_Tensor> &F = invert(lqph[q_point]->get_F_inv());
-
-              // Get the Cauchy stress: sigma = F S F^t / detF
-              const SymmetricTensor<2, dim_Tensor> &sigma = Physics::Transformations::Piola::push_forward(S, F);
-              const double sigma_component = sigma[0][0];
-
-              average_stress += sigma_component * fe_values.JxW(q_point);
-              cell_volume += fe_values.JxW(q_point);
-          }
-          average_stress /= cell_volume;
-          cellwise_avg_stress[cell->active_cell_index()] = average_stress;
-      }
-  }
-  data_out.add_data_vector(cellwise_avg_stress, "sigma_00");*/
+  Vector<double> avg_stress_theta_theta (triangulation.n_active_cells());
+  average_cauchy_stress_components(avg_stress_theta_theta, 2, 2);
+  data_out.add_data_vector(avg_stress_theta_theta, "sigma_tt");
 
   // --- Additional data ---
   // Material coefficients; polynomial order; material id
@@ -1750,7 +1758,6 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
     endc = triangulation.end();
     for (; cell!=endc; ++cell, ++c)
       {
-//      if (cell->is_locally_owned() == false) continue;
         if (cell->subdomain_id() != this_mpi_process) continue;
 
         material_coefficients(c) = function_material_coefficients.value(cell->center());
@@ -1767,7 +1774,6 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
     endc = hp_dof_handler.end();
     for (; cell!=endc; ++cell, ++c)
       {
-//      if (cell->is_locally_owned() == false) continue;
         if (cell->subdomain_id() != this_mpi_process) continue;
 
         polynomial_order(c) = degree_collection[cell->active_fe_index()];
@@ -1885,27 +1891,6 @@ void MSP_Toroidal_Membrane<dim>::make_grid_manifold_ids ()
   endc = triangulation.end();
   for (; cell!=endc; ++cell)
     {
-//      const bool cell_1_is_membrane = geometry.within_membrane(cell->center());
-//      if (!cell_1_is_membrane) continue;
-
-//      for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
-//      {
-    //      if (cell->face(face)->at_boundary()) continue;
-    //
-    //      const bool cell_2_is_membrane = geometry.within_membrane(cell->neighbor(face)->center());
-    //      if (cell_2_is_membrane != cell_1_is_membrane)
-//              cell->face(face)->set_manifold_id(manifold_id_outer_radius);
-
-    //      for (unsigned int vertex=0; vertex<GeometryInfo<dim>::vertices_per_face; ++vertex)
-    //      {
-    //        if (geometry.on_radius_outer(cell->face(face)->vertex(vertex)))
-    //          cell->face(face)->set_manifold_id(manifold_id_outer_radius);
-    //
-    //        if (geometry.on_radius_inner(cell->face(face)->vertex(vertex)))
-    //          cell->face(face)->set_manifold_id(manifold_id_inner_radius);
-    //      }
-//      }
-
       if(cell->material_id() == material_id_toroid)
       {
           cell->set_all_manifold_ids(manifold_id_outer_radius);
@@ -1925,6 +1910,7 @@ template <int dim>
 void MSP_Toroidal_Membrane<dim>::make_grid ()
 {
   TimerOutput::Scope timer_scope (computing_timer, "Make grid");
+  pcout << "Creating meshed " << parameters.geometry_shape << " geometry..." << std::endl;
 
   // Make rectangular beam for finite strain elasticity problem test
   if(parameters.geometry_shape == "Beam")
@@ -2008,29 +1994,6 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       std::ifstream input (parameters.mesh_file); // Use for production code
     //  std::ifstream input (std::string(SOURCE_DIR + parameters.mesh_file)); // Use for testing the code with ctest
       gridin.read_abaqus(input);
-
-      // Set boundary IDs
-    /*  typename Triangulation<dim>::active_cell_iterator
-      cell = triangulation.begin_active(),
-      endc = triangulation.end();
-      for (; cell!=endc; ++cell)
-        {
-          for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
-            {
-              if (cell->face(face)->at_boundary())
-                {
-                  const Point<dim> &centre = cell->face(face)->center();
-                  if (centre[0] > 0.0 && // Not on the y-axis...
-                      centre[0] < geometry.get_membrane_minor_radius_centre()[0] && // ... but to the left of the toroid...
-                      centre[1] < geometry.get_torus_minor_radius_outer() && // ...and contained within the height of the toroid
-                      centre[1] > -geometry.get_torus_minor_radius_outer())
-                    {
-                      cell->face(face)->set_boundary_id(boundary_id_magnet);
-                    }
-                }
-            }
-        }
-    */
 
       // Attach manifold to the cells within the permanent magnet region
       if(dim == 3)
@@ -2204,6 +2167,7 @@ template <int dim>
 void MSP_Toroidal_Membrane<dim>::postprocess_energy()
 {
     TimerOutput::Scope timer_scope (computing_timer, "Postprocess energy");
+    pcout << "Postprocessing energy..." << std::endl;
 
     hp::FEValues<dim> hp_fe_values (mapping_collection,
                                     fe_collection,
