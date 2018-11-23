@@ -1,0 +1,140 @@
+# Listing of Parameters
+# ---------------------
+
+subsection Boundary conditions
+  # Potential difference per unit length
+  set Potential difference per unit length = 1000
+
+  # Type of boundary condition to deform body by mechanical load:
+  # Inhomogeneous Dirichlet | Traction
+  set Mechanical boundary condition type = Inhomogeneous Dirichlet
+
+  # Traction force per unit area
+  set Prescribed traction load = 1e-3
+end
+
+
+subsection Finite element system
+  # Minimum potential polynomial order
+  set Minimum polynomial degree = 1
+
+  # Maximum potential polynomial order
+  set Maximum polynomial degree = 8
+end
+
+
+subsection Geometry
+  # Mesh file for the toroidal geometry
+  set Mesh file                   = ../mesh/new_2d_toroidal_membrane.inp
+
+  # Major radius of the torus
+  set Torus major radius          = 0.5
+
+  # Minor inner radius of the torus
+  set Torus minor radius (inner)  = 0.195
+
+  # Minor outer radius of the torus
+  set Torus minor radius (outer)  = 0.2
+
+  # Global grid scaling factor
+  set Grid scale          = 1.0
+
+  # Permanent magnet region radial (x) length
+  set Magnet bounding box radial length  = 0.22
+
+  # Permanent magnet region axial (z) length
+  set Magnet bounding box axial length = 0.051
+
+  # Geometry selection for problem: Toroidal_tube | Beam | Patch test
+  set Geometry shape for the problem = Patch test
+end
+
+
+subsection Refinement
+  # Refinement strategy
+  # Options: h-GMR , p-GMR , h-AMR , p-AMR
+  set Refinement strategy         = h-AMR
+
+  # Initial global refinement level
+  set Initial global refinements  = 0
+
+  # Maximum number of refinement cycles
+  set Maximum cycles              = 2
+
+  # Maximum number of refinement levels
+  set Maximum h-level             = 20
+
+  # Fraction of cells to refine
+  set Refinement fraction         = 0.25
+
+  # Fraction of cells to coarsen
+  set Coarsening fraction         = 0.00
+  
+  # Force adaptive refinement at manifolds
+  set Force manifold_refinement  = true
+end
+
+
+subsection Linear solver
+  # Linear solver iterations (multiples of the system matrix size)
+  set Max iteration multiplier   = 1
+
+  # Linear solver residual
+  set Residual                   = 1e-12
+
+  # Preconditioner type
+  set Preconditioner type        = AMG
+
+  # Preconditioner relaxation value
+  set Preconditioner relaxation  = 1.2
+
+  # Type of solver used to solve the linear system
+  # Options: Direct ; Iterative
+  set Solver type                = Iterative
+end
+
+
+subsection Material properties
+  # Relative permeability of the toroidal membrane
+  set Membrane relative permeability = 6.0
+
+  # Shear modulus
+  set Shear modulus = 0.03
+
+  # Poisson's ratio
+  set Poisson's ratio = 0.4
+
+  # Shear modulus for free space material
+  set Free space shear modulus = 0.00003
+
+  # Poisson's ratio for free space material
+  set Free space poisson's ratio = 0.3
+end
+
+
+subsection Nonlinear solver
+  # Number of Newton-Raphson iterations allowed
+  set Max iterations Newton-Raphson = 10
+
+  # Displacement error tolerance
+  set Tolerance displacement = 1.0e-6
+
+  # Force residual tolerance
+  set Tolerance force = 1.0e-9
+
+  # Absolute error force residual tolerance
+  set Absolute error force tolerance = 1.0e-8
+end
+
+subsection Problem type
+  # The problem type to solve: Purely magnetic | Purely elastic | Coupled magnetoelastic
+  set Problem type = Purely elastic
+end
+
+subsection Load step
+  # Final load value at the end of all load steps
+  set Total load = 0.1
+
+  # Load step size for each load increment cylce
+  set Load step size = 0.025
+end
