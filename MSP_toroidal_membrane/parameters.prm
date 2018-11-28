@@ -6,7 +6,7 @@ subsection Boundary conditions
   set Potential difference per unit length = 1000
 
   # Type of boundary condition to deform body by mechanical load:
-  # Inhomogeneous Dirichlet | Traction
+  # Options: Inhomogeneous Dirichlet | Traction
   set Mechanical boundary condition type = Traction
 
   # Traction force per unit area
@@ -45,7 +45,8 @@ subsection Geometry
   # Permanent magnet region axial (z) length
   set Magnet bounding box axial length = 0.051
 
-  # Geometry selection for problem: Toroidal_tube | Beam | Patch test
+  # Geometry selection for problem: 
+  # Options: Toroidal_tube | Beam | Patch test
   set Geometry shape for the problem = Toroidal_tube
 end
 
@@ -72,6 +73,12 @@ subsection Refinement
   
   # Force adaptive refinement at manifolds
   set Force manifold_refinement  = true
+
+  # Number of initial h-adaptive refinements for torus membrane
+  set Initial h-adaptive refinements for torus membrane = 2
+
+  # Number of initial h-adaptive refinements for permanent magnet region
+  set Initial h-adaptive refinements for permanent magnet region = 2
 end
 
 
@@ -127,7 +134,8 @@ subsection Nonlinear solver
 end
 
 subsection Problem type
-  # The problem type to solve: Purely magnetic | Purely elastic | Coupled magnetoelastic
+  # The problem type to solve: 
+  # Options: Purely magnetic | Purely elastic | Coupled magnetoelastic
   set Problem type = Purely elastic
 end
 

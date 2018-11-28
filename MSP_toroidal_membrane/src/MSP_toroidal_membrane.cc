@@ -2033,10 +2033,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           triangulation.set_manifold(manifold_id_outer_radius, manifold_outer_radius);
       }
 
-      // Refine adaptively the permanent magnet region for given
-      // input parameters of box lenghts
-      // also refine the membrane
-      for(unsigned int cycle = 0; cycle < 2; ++cycle)
+      // Refine h-adaptively the torus membrane
+      for(unsigned int cycle = 0; cycle < parameters.n_initial_adap_refs_torus_membrane; ++cycle)
       {
           typename Triangulation<dim>::active_cell_iterator
                   cell = triangulation.begin_active(),
@@ -2045,8 +2043,20 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           {
               // adaptively refine the torus membrane
               if (cell->material_id() == material_id_toroid)
-                  cell->set_refine_flag();
+                  cell->set_refine_flag();              
+          }
+          triangulation.execute_coarsening_and_refinement();
+      }
 
+      // Refine h-adaptively the permanent magnet region for given
+      // input parameters of box lenghts
+      for(unsigned int cycle = 0; cycle < parameters.n_initial_adap_refs_permanent_magnet; ++cycle)
+      {
+          typename Triangulation<dim>::active_cell_iterator
+                  cell = triangulation.begin_active(),
+                  endc = triangulation.end();
+          for (; cell!=endc; ++cell)
+          {
               for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
               {
                   if (std::abs(cell->vertex(vertex)[0]) < parameters.bounding_box_r &&
@@ -2064,6 +2074,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           }
           triangulation.execute_coarsening_and_refinement();
       }
+
 
       const Point<dim> &membrane_minor_radius_center = geometry.get_membrane_minor_radius_centre();
 

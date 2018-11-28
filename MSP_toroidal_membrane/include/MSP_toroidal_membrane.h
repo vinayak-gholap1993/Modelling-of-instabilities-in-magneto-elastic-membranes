@@ -343,6 +343,8 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     double frac_refine;
     double frac_coarsen;
     double force_manifold_refinement;
+    unsigned int n_initial_adap_refs_torus_membrane;
+    unsigned int n_initial_adap_refs_permanent_magnet;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -383,6 +385,14 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       prm.declare_entry("Force manifold_refinement", "false",
                         Patterns::Bool(),
                         "Force adaptive refinement at manifolds");
+
+      prm.declare_entry("Initial h-adaptive refinements for torus membrane", "2",
+                        Patterns::Integer(0),
+                        "Number of initial h-adaptive refinements for torus membrane");
+
+      prm.declare_entry("Initial h-adaptive refinements for permanent magnet region", "2",
+                        Patterns::Integer(0),
+                        "Number of initial h-adaptive refinements for permanent magnet region");
     }
     prm.leave_subsection();
   }
@@ -398,6 +408,8 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       frac_refine = prm.get_double("Refinement fraction");
       frac_coarsen = prm.get_double("Coarsening fraction");
       force_manifold_refinement = prm.get_bool("Force manifold_refinement");
+      n_initial_adap_refs_torus_membrane = prm.get_integer("Initial h-adaptive refinements for torus membrane");
+      n_initial_adap_refs_permanent_magnet = prm.get_integer("Initial h-adaptive refinements for permanent magnet region");
     }
     prm.leave_subsection();
   }
