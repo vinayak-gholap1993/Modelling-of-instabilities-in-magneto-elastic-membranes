@@ -1,0 +1,49 @@
+Starting prologue... Tue Aug 28 16:03:04 CEST 2018
+Master node: e0411
+Kill all process from other users
+Adjust oom killer config
+Clearing buffers and caches on the nodes.
+Power management available, setting specified frequency of 2200000 using performance governor
+End of prologue: Tue Aug 28 16:03:11 CEST 2018
+Running with 4 MPI processes
+=================
+Running in 3-d...
+=================
+Cycle 0:
+   Number of active cells:       215304 (on 3 levels)
+   Number of degrees of freedom: 225843
+   Iterations: 60  Residual: 9.46976e-13
+   Computing errors
+Total energy: 0.000192294
+Cycle 1:
+   Number of active cells:       766512 (on 4 levels)
+   Number of degrees of freedom: 826681
+   Iterations: 61  Residual: 9.3228e-13
+   Computing errors
+Total energy: 0.000189026
+Cycle 2:
+   Number of active cells:       3171488 (on 5 levels)
+   Number of degrees of freedom: 3414957
+   Iterations: 60  Residual: 7.79946e-13
+   Computing errors
+Total energy: 0.00018808
+Cycle 3:
+   Number of active cells:       13086568 (on 6 levels)
+   Number of degrees of freedom: 14046423
+   Iterations: 65  Residual: 8.87688e-13
+   Computing errors
+Total energy: 0.000187646
+Starting epilogue... Tue Aug 28 16:20:15 CEST 2018
+=== JOB_STATISTICS ===
+=== current date     : Tue Aug 28 16:20:15 CEST 2018
+= Job-ID             : 976831.eadm
+= Job-Name           : 3d_3ref
+= Queue              : work
+= PBS_O_WORKDIR      : /home/woody/iwtm/iwtm003h/Master-Thesis/MSP_toroidal_membrane
+= Requested resources: ncpus=1,neednodes=1:ppn=40:f2.2,nodes=1:ppn=40:f2.2,walltime=24:00:00
+= Used resources     : cput=02:17:52,mem=60718404kb,vmem=70038656kb,walltime=00:17:05
+= Node list          : e0411
+= AccessKey          : d7bdd26f
+======================
+Power management available, setting all CPUs to ondemand govenor
+End of epilogue: Tue Aug 28 16:20:16 CEST 2018

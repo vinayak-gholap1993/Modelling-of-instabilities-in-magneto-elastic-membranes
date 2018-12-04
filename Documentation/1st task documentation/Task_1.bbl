@@ -1,0 +1,494 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 2.6 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \sortlist[entry]{ynt/global}
+    \entry{dorfmann2004}{article}{}
+      \name{author}{2}{}{%
+        {{hash=f71d05103da8200cef2a7a46e262a08a}{%
+           family={Dorfmann},
+           family_i={D\bibinitperiod},
+           given={A.},
+           given_i={A\bibinitperiod}}}%
+        {{hash=e9a0130588c44276ff2f00c895829f5e}{%
+           family={Ogden},
+           family_i={O\bibinitperiod},
+           given={R.\bibnamedelimi W.},
+           given_i={R\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+      }
+      \strng{namehash}{dc99e65cf6f244de50be91bf37b533cc}
+      \strng{fullhash}{dc99e65cf6f244de50be91bf37b533cc}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{The Quarterly Journal of Mechanics and Applied Mathematics}
+      \field{number}{4}
+      \field{title}{Nonlinear magnetoelastic deformations}
+      \field{volume}{57}
+      \field{year}{2004}
+      \field{pages}{599\bibrangedash 622}
+      \range{pages}{24}
+      \verb{doi}
+      \verb 10.1093/qjmam/57.4.599
+      \endverb
+      \verb{eprint}
+      \verb /oup/backfile/content_public/journal/qjmam/57/4/10.1093/qjmam/57.4.599/2/570599.pdf
+      \endverb
+      \verb{url}
+      \verb http://dx.doi.org/10.1093/qjmam/57.4.599
+      \endverb
+    \endentry
+    \entry{KANKANALA}{article}{}
+      \name{author}{2}{}{%
+        {{hash=387e81c8ef19f9410355c7f6870d2b46}{%
+           family={Kankanala},
+           family_i={K\bibinitperiod},
+           given={S.V.},
+           given_i={S\bibinitperiod}}}%
+        {{hash=4f35a344e817dee337c82343c61fb47c}{%
+           family={Triantafyllidis},
+           family_i={T\bibinitperiod},
+           given={N.},
+           given_i={N\bibinitperiod}}}%
+      }
+      \strng{namehash}{5068088f724e570c61ec24ea5892929c}
+      \strng{fullhash}{5068088f724e570c61ec24ea5892929c}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0022-5096}
+      \field{journaltitle}{Journal of the Mechanics and Physics of Solids}
+      \field{number}{12}
+      \field{title}{On finitely strained magnetorheological elastomers}
+      \field{volume}{52}
+      \field{year}{2004}
+      \field{pages}{2869\bibrangedash 2908}
+      \range{pages}{40}
+      \verb{doi}
+      \verb https://doi.org/10.1016/j.jmps.2004.04.007
+      \endverb
+      \verb{url}
+      \verb http://www.sciencedirect.com/science/article/pii/S0022509604000821
+      \endverb
+      \keyw{A. Electromechanical processes,B. Finite strain,B. Particulate reinforced material,C. Conservation integrals,C. Energy methods}
+    \endentry
+    \entry{dorfmann2005}{article}{}
+      \name{author}{2}{}{%
+        {{hash=f71d05103da8200cef2a7a46e262a08a}{%
+           family={Dorfmann},
+           family_i={D\bibinitperiod},
+           given={A.},
+           given_i={A\bibinitperiod}}}%
+        {{hash=e9a0130588c44276ff2f00c895829f5e}{%
+           family={Ogden},
+           family_i={O\bibinitperiod},
+           given={R.\bibnamedelimi W.},
+           given_i={R\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+      }
+      \strng{namehash}{dc99e65cf6f244de50be91bf37b533cc}
+      \strng{fullhash}{dc99e65cf6f244de50be91bf37b533cc}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{In this paper we examine the influence of magnetic fields on the static response of magnetoelastic materials, such as magneto-sensitive elastomers, that are capable of large deformations. The analysis is based on a simple formulation of the mechanical equilibrium equations and constitutive law for such materials developed recently by the authors, coupled with the governing magnetic field equations. The equations are applied in the solution of some simple representative and illustrative problems, with the focus on incompressible materials. First, we consider the pure homogeneous deformation of a slab of material in the presence of a magnetic field normal to its faces. This is followed by a review of the problem of simple shear of the slab in the presence of the same magnetic field. Next we examine a problem involving non-homogeneous deformations, namely the extension and inflation of a circular cylindrical tube. In this problem the magnetic field is taken to be either axial (a uniform field) or circumferential. For each problem we give a general formulation for the case of an isotropic magnetoelastic constitutive law, and then, for illustration, specific results are derived for a prototype constitutive law. We emphasize that in general there are significant differences in the results for formulations in which the magnetic field or the magnetic induction is taken as the independent magnetic variable. This is demonstrated for one particular problem, in which restrictions are placed on the admissible class of constitutive laws if the magnetic induction is the independent variable but no restrictions if the magnetic field is the independent variable.}
+      \field{issn}{1420-9039}
+      \field{journaltitle}{Zeitschrift für angewandte Mathematik und Physik ZAMP}
+      \field{month}{07}
+      \field{number}{4}
+      \field{title}{Some problems in nonlinear magnetoelasticity}
+      \field{volume}{56}
+      \field{year}{2005}
+      \field{pages}{718\bibrangedash 745}
+      \range{pages}{28}
+      \verb{doi}
+      \verb 10.1007/s00033-004-4066-z
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1007/s00033-004-4066-z
+      \endverb
+    \endentry
+    \entry{trilinos}{article}{}
+      \name{author}{16}{}{%
+        {{hash=7f4ef5d43dcc44b4a0cf8e85fc816405}{%
+           family={Heroux},
+           family_i={H\bibinitperiod},
+           given={Michael\bibnamedelima A.},
+           given_i={M\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=fa182d0215a7cf6da57095dc971260b7}{%
+           family={Bartlett},
+           family_i={B\bibinitperiod},
+           given={Roscoe\bibnamedelima A.},
+           given_i={R\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=e63b93c4bfc4fe0ecddedb41b224c09d}{%
+           family={Howle},
+           family_i={H\bibinitperiod},
+           given={Vicki\bibnamedelima E.},
+           given_i={V\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+        {{hash=0fcffc6ebdc2d77f619995097c2b609c}{%
+           family={Hoekstra},
+           family_i={H\bibinitperiod},
+           given={Robert\bibnamedelima J.},
+           given_i={R\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=5cafd85d5e07a099962aea70513a7e32}{%
+           family={Hu},
+           family_i={H\bibinitperiod},
+           given={Jonathan\bibnamedelima J.},
+           given_i={J\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=0a29b50d0fa1f560292900ffcde4900a}{%
+           family={Kolda},
+           family_i={K\bibinitperiod},
+           given={Tamara\bibnamedelima G.},
+           given_i={T\bibinitperiod\bibinitdelim G\bibinitperiod}}}%
+        {{hash=3da4bc2e51b310f4a3d077c092d13ee0}{%
+           family={Lehoucq},
+           family_i={L\bibinitperiod},
+           given={Richard\bibnamedelima B.},
+           given_i={R\bibinitperiod\bibinitdelim B\bibinitperiod}}}%
+        {{hash=6c3079f0bd22cc7cf6811b8e742bda85}{%
+           family={Long},
+           family_i={L\bibinitperiod},
+           given={Kevin\bibnamedelima R.},
+           given_i={K\bibinitperiod\bibinitdelim R\bibinitperiod}}}%
+        {{hash=685ec989f53cc7018b2b7cf764069ee0}{%
+           family={Pawlowski},
+           family_i={P\bibinitperiod},
+           given={Roger\bibnamedelima P.},
+           given_i={R\bibinitperiod\bibinitdelim P\bibinitperiod}}}%
+        {{hash=6d37ff2aaa1941ee03fe590ac4edcc0e}{%
+           family={Phipps},
+           family_i={P\bibinitperiod},
+           given={Eric\bibnamedelima T.},
+           given_i={E\bibinitperiod\bibinitdelim T\bibinitperiod}}}%
+        {{hash=1f126610ba869343defe898e9909f75d}{%
+           family={Salinger},
+           family_i={S\bibinitperiod},
+           given={Andrew\bibnamedelima G.},
+           given_i={A\bibinitperiod\bibinitdelim G\bibinitperiod}}}%
+        {{hash=481a19c52246606b9b2fa206f28e3bac}{%
+           family={Thornquist},
+           family_i={T\bibinitperiod},
+           given={Heidi\bibnamedelima K.},
+           given_i={H\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=4d508a6973a8f5ff2eb8f8e7f2d73b05}{%
+           family={Tuminaro},
+           family_i={T\bibinitperiod},
+           given={Ray\bibnamedelima S.},
+           given_i={R\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=e69019002c6be959ebea514711c6cd14}{%
+           family={Willenbring},
+           family_i={W\bibinitperiod},
+           given={James\bibnamedelima M.},
+           given_i={J\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=abf2d8401aa1a83aba6ba02dfaaeddf0}{%
+           family={Williams},
+           family_i={W\bibinitperiod},
+           given={Alan},
+           given_i={A\bibinitperiod}}}%
+        {{hash=c649dc37d4ea234410727fe0c364f4fe}{%
+           family={Stanley},
+           family_i={S\bibinitperiod},
+           given={Kendall\bibnamedelima S.},
+           given_i={K\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York, NY, USA}%
+      }
+      \list{publisher}{1}{%
+        {ACM Press}%
+      }
+      \strng{namehash}{3cbe6c046c905d4e935e47949f539706}
+      \strng{fullhash}{7c43d318e224a773f3e02617a17a8533}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{The Trilinos Project is an effort to facilitate the design, development, integration and ongoing support of mathematical software libraries within an object-oriented framework for the solution of large-scale, complex multi-physics engineering and scienti c problems. Trilinos addresses two fundamental issues of developing software for these problems: (i) Providing a streamlined process and set of tools for development of new algorithmic implementations and (ii) promoting interoperability of independently developed software. \par Trilinos uses a two-level software structure designed around collections of packages. A Trilinos package is an integral unit usually developed by a small team of experts in a particular algorithms area such as algebraic preconditioners, nonlinear solvers, etc. Packages exist underneath the Trilinos top level, which provides a common look-and-feel, including configuration, documentation, licensing, and bug-tracking. \par Here we present the overall Trilinos design, describing our use of abstract interfaces and default concrete implementations. We discuss the services that Trilinos provides to a prospective package and how these services are used by various packages. We also illustrate how packages can be combined to rapidly develop new algorithms. Finally, we discuss how Trilinos facilitates highquality software engineering practices that are increasingly required from simulation software.}
+      \field{issn}{0098-3500}
+      \field{journaltitle}{ACM Trans. Math. Softw.}
+      \field{number}{3}
+      \field{title}{An overview of the Trilinos project}
+      \field{volume}{31}
+      \field{year}{2005}
+      \field{pages}{397\bibrangedash 423}
+      \range{pages}{27}
+      \verb{doi}
+      \verb http://doi.acm.org/10.1145/1089014.1089021
+      \endverb
+    \endentry
+    \entry{cubit}{article}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{URL: https://cubit.sandia.gov}
+      \field{title}{Cubit: Geometry and mesh generation toolkit}
+      \field{year}{2006}
+    \endentry
+    \entry{BangerthHartmannKanschat2007}{article}{}
+      \name{author}{3}{}{%
+        {{hash=172f7d1d27fcc9299b534704279fe583}{%
+           family={Bangerth},
+           family_i={B\bibinitperiod},
+           given={W.},
+           given_i={W\bibinitperiod}}}%
+        {{hash=06d54e9322f49b859e9452b1b8c13443}{%
+           family={Hartmann},
+           family_i={H\bibinitperiod},
+           given={R.},
+           given_i={R\bibinitperiod}}}%
+        {{hash=a3846815fb94fa352f770d2373e72152}{%
+           family={Kanschat},
+           family_i={K\bibinitperiod},
+           given={G.},
+           given_i={G\bibinitperiod}}}%
+      }
+      \strng{namehash}{b9093ed7b0099d19f80ecf46e2400504}
+      \strng{fullhash}{b9093ed7b0099d19f80ecf46e2400504}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{ACM Trans. Math. Softw.}
+      \field{number}{4}
+      \field{title}{{deal.II} -- a General Purpose Object Oriented Finite Element Library}
+      \field{volume}{33}
+      \field{year}{2007}
+      \field{pages}{24/1\bibrangedash 24/27}
+      \range{pages}{-1}
+    \endentry
+    \entry{barham}{article}{}
+      \name{author}{3}{}{%
+        {{hash=a8e77b38a64cb3584a4f42baab6c256e}{%
+           family={Barham},
+           family_i={B\bibinitperiod},
+           given={Matthew\bibnamedelima I.},
+           given_i={M\bibinitperiod\bibinitdelim I\bibinitperiod}}}%
+        {{hash=797f98055253aedf6fc7f61fbf0f54e8}{%
+           family={White},
+           family_i={W\bibinitperiod},
+           given={Daniel\bibnamedelima A.},
+           given_i={D\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=352db2d81d358d4a0943dad232fb3c11}{%
+           family={Steigmann},
+           family_i={S\bibinitperiod},
+           given={David\bibnamedelima J.},
+           given_i={D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{a92b518fabff418235a6d363163a6f11}
+      \strng{fullhash}{a92b518fabff418235a6d363163a6f11}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0021-9991}
+      \field{journaltitle}{Journal of Computational Physics}
+      \field{number}{18}
+      \field{title}{Finite element modeling of the deformation of magnetoelastic film}
+      \field{volume}{229}
+      \field{year}{2010}
+      \field{pages}{6193\bibrangedash 6207}
+      \range{pages}{15}
+      \verb{doi}
+      \verb https://doi.org/10.1016/j.jcp.2010.04.007
+      \endverb
+      \verb{url}
+      \verb http://www.sciencedirect.com/science/article/pii/S002199911000183X
+      \endverb
+      \keyw{Magnetoelastic,Magnetics,Deformation,Finite element}
+    \endentry
+    \entry{reddy_toroid}{article}{}
+      \name{author}{2}{}{%
+        {{hash=42ac93ff455de0556944ca27bcefd65b}{%
+           family={Reddy},
+           family_i={R\bibinitperiod},
+           given={Narravula\bibnamedelima Harshavardhan},
+           given_i={N\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+        {{hash=0f7a94f07faeb3e3f793f6c847e17da4}{%
+           family={Saxena},
+           family_i={S\bibinitperiod},
+           given={Prashant},
+           given_i={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{16290f0fe8e5a08a0fc272e56c2eaff5}
+      \strng{fullhash}{16290f0fe8e5a08a0fc272e56c2eaff5}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0020-7462}
+      \field{journaltitle}{International Journal of Non-Linear Mechanics}
+      \field{title}{Limit points in the free inflation of a magnetoelastic toroidal membrane}
+      \field{volume}{95}
+      \field{year}{2017}
+      \field{pages}{248\bibrangedash 263}
+      \range{pages}{16}
+      \verb{doi}
+      \verb https://doi.org/10.1016/j.ijnonlinmec.2017.06.017
+      \endverb
+      \verb{url}
+      \verb http://www.sciencedirect.com/science/article/pii/S0020746217301282
+      \endverb
+      \keyw{Magnetoelasticity,Finite deformation,Membrane,Limit point}
+    \endentry
+    \entry{dealII90}{article}{}
+      \name{author}{15}{}{%
+        {{hash=861f3e71b128db503a7c0697cd6275e8}{%
+           family={Alzetta},
+           family_i={A\bibinitperiod},
+           given={G.},
+           given_i={G\bibinitperiod}}}%
+        {{hash=c9beb6bcbea521b6bb52d8f740a8711f}{%
+           family={Arndt},
+           family_i={A\bibinitperiod},
+           given={D.},
+           given_i={D\bibinitperiod}}}%
+        {{hash=172f7d1d27fcc9299b534704279fe583}{%
+           family={Bangerth},
+           family_i={B\bibinitperiod},
+           given={W.},
+           given_i={W\bibinitperiod}}}%
+        {{hash=567e3a78d16a826c8637f87111294a7a}{%
+           family={Boddu},
+           family_i={B\bibinitperiod},
+           given={V.},
+           given_i={V\bibinitperiod}}}%
+        {{hash=121c5296ce4f371df8f11e7e3ae15b3c}{%
+           family={Brands},
+           family_i={B\bibinitperiod},
+           given={B.},
+           given_i={B\bibinitperiod}}}%
+        {{hash=4ac62c9134e7650161f0eb0dff08a611}{%
+           family={Davydov},
+           family_i={D\bibinitperiod},
+           given={D.},
+           given_i={D\bibinitperiod}}}%
+        {{hash=1a6157965be1381a1a9e84401573b683}{%
+           family={Gassmoeller},
+           family_i={G\bibinitperiod},
+           given={R.},
+           given_i={R\bibinitperiod}}}%
+        {{hash=97e7bdee701c4352caddc03b9aca0498}{%
+           family={Heister},
+           family_i={H\bibinitperiod},
+           given={T.},
+           given_i={T\bibinitperiod}}}%
+        {{hash=4f992ddc0750655170c4ae5a3160e675}{%
+           family={Heltai},
+           family_i={H\bibinitperiod},
+           given={L.},
+           given_i={L\bibinitperiod}}}%
+        {{hash=05a98a7ffbe9a5c6ce2fa8212334c811}{%
+           family={Kormann},
+           family_i={K\bibinitperiod},
+           given={K.},
+           given_i={K\bibinitperiod}}}%
+        {{hash=df428557cad4c42b8aa2e360909f1ba9}{%
+           family={Kronbichler},
+           family_i={K\bibinitperiod},
+           given={M.},
+           given_i={M\bibinitperiod}}}%
+        {{hash=891d6b73906764c22a80015d7d23f814}{%
+           family={Maier},
+           family_i={M\bibinitperiod},
+           given={M.},
+           given_i={M\bibinitperiod}}}%
+        {{hash=3951cdd7bd19f210f379bfb0db7b8df1}{%
+           family={Pelteret},
+           family_i={P\bibinitperiod},
+           given={J.-P.},
+           given_i={J\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=674e8dff3683aa86b1ec0db154a7c813}{%
+           family={Turcksin},
+           family_i={T\bibinitperiod},
+           given={B.},
+           given_i={B\bibinitperiod}}}%
+        {{hash=7770c86a4412efeebfba88067669549d}{%
+           family={Wells},
+           family_i={W\bibinitperiod},
+           given={D.},
+           given_i={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{abdd5acc239323904b5f6b9084ed8bc1}
+      \strng{fullhash}{ee4346428c61be05a408b198d54518bd}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Numerical Mathematics}
+      \field{title}{The \texttt{deal.II} Library, Version 9.0}
+      \field{year}{2018, accepted}
+    \endentry
+    \entry{pelteret2016}{article}{}
+      \name{author}{5}{}{%
+        {{hash=4baae6166d1287a0be1e03293b0e7f8d}{%
+           family={Pelteret},
+           family_i={P\bibinitperiod},
+           given={Jean-Paul},
+           given_i={J\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=223aa07bd0a7b78f3f4c94ee948e9205}{%
+           family={Davydov},
+           family_i={D\bibinitperiod},
+           given={Denis},
+           given_i={D\bibinitperiod}}}%
+        {{hash=ac4aa8f51a47a9ae8386540a1dc1a4cf}{%
+           family={McBride},
+           family_i={M\bibinitperiod},
+           given={Andrew},
+           given_i={A\bibinitperiod}}}%
+        {{hash=35e0f16ca3246d9e9fdc32402bf97974}{%
+           family={Vu},
+           family_i={V\bibinitperiod},
+           given={Duc\bibnamedelima Khoi},
+           given_i={D\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=85eb99c254587a8b351349f7be9aa3f1}{%
+           family={Steinmann},
+           family_i={S\bibinitperiod},
+           given={Paul},
+           given_i={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{48509ae7f53f5b897f97c061450101fc}
+      \strng{fullhash}{eb07cc017f531bc6a9923cde893239a8}
+      \field{sortinit}{9}
+      \field{sortinithash}{5a7694b2c36c7534b22948c31e4b7920}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Summary In this work, a mixed variational formulation to simulate quasi-incompressible electro-active or magneto-active polymers immersed in the surrounding free space is presented. A novel domain decomposition is used to disconnect the primary coupled problem and the arbitrary free-space mesh update problem. Exploiting this decomposition, we describe a block-iterative approach to solving the linearised multiphysics problem, and a physically and geometrically based, three-parameter method to update the free space mesh. Several application-driven example problems are implemented to demonstrate the robustness of the mixed formulation for both electro-elastic and magneto-elastic problems involving both finite deformations and quasi-incompressible media. Copyright © 2016 John Wiley \& Sons, Ltd.}
+      \field{journaltitle}{International Journal for Numerical Methods in Engineering}
+      \field{number}{11}
+      \field{title}{Computational electro-elasticity and magneto-elasticity for quasi-incompressible media immersed in free space}
+      \field{volume}{108}
+      \field{pages}{1307\bibrangedash 1342}
+      \range{pages}{36}
+      \verb{doi}
+      \verb 10.1002/nme.5254
+      \endverb
+      \verb{eprint}
+      \verb https://onlinelibrary.wiley.com/doi/pdf/10.1002/nme.5254
+      \endverb
+      \verb{url}
+      \verb https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.5254
+      \endverb
+      \keyw{nonlinear electro-elasticity/magneto-elasticity,quasi-incompressible media,free space,finite strain}
+    \endentry
+  \endsortlist
+\endrefsection
+\endinput
+

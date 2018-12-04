@@ -1,0 +1,411 @@
+\documentclass[11pt,a4paper,final]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{bm,bbm}
+\usepackage[final]{graphicx}
+\graphicspath{{./images/}}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[usenames, dvipsnames]{color}
+\usepackage[margin=1in]{geometry} % to adjust the page margins
+\pagenumbering{gobble} % To suppress page numbering 
+
+\DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
+\newcommand{\seminorm}[1]{\left\lvert #1 \right\rvert}
+
+\usepackage{tikz,pgfplots}
+\pgfplotsset{table/search path={./data}} %checks in data folder
+\pgfplotsset{compat=newest}	%mention version to avoid warnings
+\pgfplotsset{every axis/.append style={
+                    label style={font=\small},
+                    legend style={font=\small, draw=none, fill=none},
+                    tick label style={font=\small}
+                    }}
+
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{stmaryrd} % for jump in gradient symbol
+\usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
+\addbibresource{task2_ref.bib}
+
+\begin{document}
+\begin{center}
+\textbf{\Large Master thesis: documentation of task 2.1}\\ \vspace{0.25cm}
+\textbf{\large Vinayak Gholap}
+\end{center}
+
+\section{Tasks performed}
+\begin{enumerate}
+\item Understand and implement a quasi-static finite-strain elasticity problem for pure mechanical loads and deformations \cite{Pelteret2016a}, \cite{Pelteret2012}
+\item Extend the application code for the axisymmetric formulation of the magneto-static magnetic scalar potential (MSP) problem to a coupled magneto-elastic problem known as a vector-valued problem
+\item Implement a constitutive material law considering the geometric and material non-linearity of an isotropic continuum body \cite{Wriggers2008}
+\item Implement an iterative Newton method with (quasi-static linear) load incrementing algorithm to solve the non-linear system of equations for the vector-valued solution
+\item Test the developed code with mechanical toy problems that exhibit finite-strain elasticity with instability/ buckling characteristics
+\end{enumerate}
+
+\section{Quasi-static finite-strain compressible elasticity}
+
+\subsection{Kinematics}
+Consider a continuum body $\mathcal{B}_0$ in a three dimensional Euclidean space. Let any point in this reference configuration $\mathcal{B}_0$ be identified by the position vector $\mathbf{X}$. The configuration after some time $t > 0$ is termed as deformed configuration $\mathcal{B}_t$ and the corresponding position vector $\mathbf{x}$ is given by a non-linear one-to-one deformation map $\mathbf{x} = \bm{\varphi} (\mathbf{X}, t)$. The material description of the displacement of the particle at the position $\mathbf{X}$ is defined as
+\begin{equation}
+\mathbf{U}(\mathbf{X}, t) := \mathbf{x}(\mathbf{X}, t) - \mathbf{X}.
+\end{equation}
+A tensor $\mathbf{F}$ which describes the deformation process locally relates the tangent vectors of reference and current configuration to each other. It maps a material line element of the reference configuration $\bm{\mathrm{d}}\mathbf{X}$ in $\mathcal{B}_0$ to a line element $\bm{\mathrm{d}\mathbf{x}}$ in $\mathcal{B}_t$ as 
+\begin{equation}
+\bm{\mathrm{d}\mathbf{x}} = \mathbf{F} \bm{\mathrm{d}\mathbf{X}}.
+\end{equation} 
+This tensor $\mathbf{F}$ is called the deformation gradient and is the material gradient of the motion defined as
+\begin{equation}
+\mathbf{F}(\mathbf{X}, t) := \dfrac{\partial \bm{\varphi}(\mathbf{X}, t)}{\partial \mathbf{X}} = \nabla_0 \mathbf{x}(\mathbf{X}, t) = \mathbf{I} + \nabla_0 \mathbf{U}.
+\label{eq:1.3}
+\end{equation}
+The gradient w.r.t. the reference configuration $\mathcal{B}_0$ is denoted as $\nabla_0$ and the gradient w.r.t. the deformed configuration $\mathcal{B}_t$ be denoted as $\nabla$ and are related as 
+\begin{equation}
+\nabla \{ \cdot \} = \dfrac{\partial \{ \cdot \} }{\partial \mathbf{x}} = \dfrac{\partial \{ \cdot \} }{\partial \mathbf{X}} \dfrac{\partial \mathbf{X}}{\partial \mathbf{x}} = \nabla_0 \{ \cdot \} \mathbf{F}^{-1}.
+\end{equation} 
+The transformation of surface area elements between $\mathcal{B}_0$ and $\mathcal{B}_t$ is given by the \textbf{Nanson's formula}
+\begin{equation}
+\bm{\mathrm{d}}\mathbf{a} = \mathbf{n} \ \mathrm{d}a = J \ \mathbf{F}^{-T} \mathbf{N} \mathrm{d}A = J \ \mathbf{F}^{-T} \bm{\mathrm{d}}\mathbf{A},
+\end{equation}
+where $\mathbf{n}$ is the normal vector of the surface in $\mathcal{B}_t$, $\mathbf{N}$ is the normal vector in $\mathcal{B}_0$ and $\mathrm{d}a$ and $\mathrm{d}A$ are the corresponding area elements. The determinant of the deformation gradient, known as the Jacobian, $J(\mathbf{X}, t) := \text{det} \mathbf{F}(\mathbf{X}, t) > 0$ (non-negative to avoid material self-penetration) maps the volume elements in material and spatial configurations $\mathrm{d}V$ and $\mathrm{d}v$, respectively, as 
+\begin{equation}
+\mathrm{d}v = J(\mathbf{X}, t) \mathrm{d}V.
+\end{equation} 
+The strain tensor in the material configuration $\mathcal{B}_0$ is defined as
+\begin{equation}
+\mathbf{E} := \frac{1}{2} (\mathbf{F}^T \cdot \mathbf{F} - \mathbf{I}) = \frac{1}{2} (\mathbf{C} - \mathbf{I}),
+\end{equation}
+called as the Green-Lagrange strain tensor. The tensor $\mathbf{C}:= \mathbf{F}^T \cdot \mathbf{F}$ is known as the right Cauchy-Green deformation tensor which expresses the square of the line element $\bm{\mathrm{d}}\mathbf{x}$ by the material line element $\bm{\mathrm{d}}\mathbf{X}$ as $\bm{\mathrm{d}}\mathbf{x} \cdot \bm{\mathrm{d}}\mathbf{x} = \bm{\mathrm{d}}\mathbf{X} \cdot \mathbf{C} \bm{\mathrm{d}}\mathbf{X}$. $\mathbf{C}$ is \textit{symmetric} and \textit{positive definite} at each $\mathbf{X} \in \mathcal{B}_0$. Thus the Green-Lagrange strain $\mathbf{E}$ is also symmetric. The strain $\mathbf{E}$ describes the change of the square of the line elements from $\mathcal{B}_0$ to $\mathcal{B}_t$. Using the definition of $\mathbf{F}$ from \eqref{eq:1.3}, we can express the Green-Lagrange strain in terms of the displacement gradient as 
+\begin{equation}
+\mathbf{E} = \frac{1}{2} ( \nabla_0 \mathbf{U} + [\nabla_0 \mathbf{U}]^T + [\nabla_0 \mathbf{U}]^T \cdot \nabla_0 \mathbf{U} ).
+\end{equation}
+
+\subsection{Kinetics}
+The Cauchy stress theorem states that the Cauchy traction $\mathbf{t}$ acting on an infinitesimal surface element $\mathrm{d}a$ in the current configuration $\mathcal{B}_t$ is the product of the Cauchy stress tensor $\bm{\sigma}$, a spatial quantity, and the outward unit normal vector to the surface $\mathrm{d}a$ as 
+\begin{equation}
+\mathbf{t}(\mathbf{x}, t, \mathbf{n}) = \bm{\sigma}(\mathbf{x}, t) \cdot \mathbf{n}.
+\end{equation}
+Following the result of balance of angular momentum, it is known that the Cauchy stress tensor is symmetric. Similar relation in the material configuration is given as 
+\begin{equation}
+\mathbf{T}(\mathbf{X}, t, \mathbf{N}) = \mathbf{P}(\mathbf{X}, t) \cdot \mathbf{N},
+\end{equation}
+where $\mathbf{T}$ is the first Piola-Kirchhoff traction acting on an infinitesimal surface element $\mathrm{d}A$ and $\mathbf{P}$ is the first Piola-Kirchhoff stress tensor. $\mathbf{P}$ is a two-point tensor indicating that it is neither a material or a spatial quantity. The Cauchy traction $\mathbf{t}$ and the first Piola-Kirchhoff traction $\mathbf{T}$ are related as 
+\begin{equation}
+\mathbf{t} \mathrm{d}a = \mathbf{T} \mathrm{d}A.
+\end{equation}
+The first Piola-Kirchhoff stress tensor is related to the Cauchy stress tensor as 
+\begin{equation}
+\mathbf{P} = J \bm{\sigma} \cdot \mathbf{F}^{-T}.
+\end{equation}
+A completely material stress measure is also introduced known as the second Piola-Kirchhoff stress tensor given as
+\begin{equation}
+\mathbf{S} = \mathbf{F}^{-1} \cdot \mathbf{P}.
+\end{equation}
+The second Piola-Kirchhoff stress tensor is symmetric tensor.
+
+\subsection{Constitutive material model}
+\label{sec:const_law}
+The kinematical relations and balance laws are not sufficient to solve a boundary value or initial value problem. For a complete set of equations, a constitutive equation needs to be formulated which can appropriately characterize the material response of a body. \par 
+
+Hyperelastic materials are the purely elastic material behaviour under the assumption of the so-called Green elasticity. The material response is characterised by a Helmholtz free energy function $\Psi = \Psi(\mathbf{F}) = \Psi(\mathbf{C}) $ which serves as a potential for the stress. $\Psi$ describes the strain energy stored in the body and hence also known as the strain energy function (S.E.F.). When S.E.F. is described in terms of the right Cauchy-Green tensor $\mathbf{C}$ then the isotropic hyperelastic material response is 
+\begin{equation}
+\mathbf{S} = 2 \dfrac{\partial \Psi (\mathbf{C})}{\partial \mathbf{C}}.
+\end{equation}
+A Neo-Hookean solid is a hyperelastic material model that can be used for predicting the non-linear behaviour of materials undergoing large deformations under loads. The Neo-Hookean material model is usable for plastics and rubber-like materials. The S.E.F. corresponding to a compressible Neo-Hookean material is given as
+\begin{equation}
+\Psi \equiv \dfrac{\mu}{2} [\mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} - 2 \ln J] + \dfrac{\lambda}{2} (\ln J)^2,
+\label{eq:1.2}
+\end{equation}
+where $\mu$ and $\lambda$ are the Lam\'e parameters. For the magneto-elastic material of our interest we augment the Neo-Hookean material law with a term which takes into account the energy stored in the body due to applied external magnetic field $\mathbb{H}$ as 
+\begin{equation}
+\Psi \equiv \dfrac{\mu}{2} [\mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} - 2 \ln J] + \dfrac{\lambda}{2} (\ln J)^2 - \frac{\mu_0 \mu_r}{2} [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}].
+\end{equation}
+For the considered S.E.F. for the Neo-Hookean material as stated in Equation \eqref{eq:1.2}, the second Piola-Kirchhoff stress is:
+\begin{align}
+\mathbf{S} = 2 \left\{ \dfrac{\mu}{2} \left[\dfrac{\partial (\mathbf{C} : \mathbf{I})}{\partial \mathbf{C}} - 0 - 2 \dfrac{\partial \ln J}{\partial \mathbf{C}}\right] + \dfrac{\lambda}{2} \dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} \right\}
+\end{align}
+Employing the chain rule for the intermediate partial derivatives
+\begin{align}
+\dfrac{\partial (\mathbf{C} : \mathbf{I})}{\partial \mathbf{C}} &= \mathbf{I} \label{eq:1.4.1} \\ 
+\dfrac{\partial \ln J}{\partial \mathbf{C}} &= \dfrac{1}{J} \dfrac{\partial J}{\partial \mathbf{C}} \label{eq:1.4.2} \\ 
+\dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} &= 2 \dfrac{\partial \ln J}{\partial \mathbf{C}} = 2 \dfrac{1}{J} \dfrac{\partial J}{\partial \mathbf{C}}
+\label{eq:1.4.3}
+\end{align}
+The partial derivative of the Jacobian w.r.t. the right Cauchy-Green deformation tensor is given as \cite[see][page 46 Equation (3.124)]{Wriggers2008}:
+\begin{equation}
+\dfrac{\partial J}{\partial \mathbf{C}} = \dfrac{1}{2} J \mathbf{C}^{-1}.
+\label{eq:1.5}
+\end{equation}
+Rearranging the terms with the use of the results from Equations \eqref{eq:1.4.1}, \eqref{eq:1.4.2}, \eqref{eq:1.4.3} and \eqref{eq:1.5}, we have
+\begin{equation}
+\mathbf{S} = \mu \mathbf{I} - \left[ \mu - \lambda \ln J \right] \mathbf{C}^{-1}.
+\label{eq:1.6}
+\end{equation}
+The fourth-order elasticity tensor in the material description is defined as 
+\begin{equation}
+\mathfrak{C} := 2 \dfrac{\partial \mathbf{S}(\mathbf{C})}{\partial \mathbf{C}} = 4 \dfrac{\partial^2 \Psi (\mathbf{C})}{\partial \mathbf{C} \partial \mathbf{C}}.
+\label{eq:1.6.2}
+\end{equation}
+Using the derived form for the second Piola-Kirchhoff stress from Equation \eqref{eq:1.6}, we have
+\begin{equation}
+\mathfrak{C} = \left[ 2 \lambda \ln J - 2 \mu \right]\dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} + \lambda \mathbf{C}^{-1} \otimes \mathbf{C}^{-1}.
+\end{equation}
+The fourth-order elasticity tensor for hyperelastic materials possess both major and minor symmetries, i.e. $\mathfrak{C} = C_{IJKL} = C_{KLIJ} = C_{JIKL} = C_{IJLK}$.
+
+\section{Weak formulation in the referential configuration}
+For the analysis of (non-)linear initial boundary value problems in continuum theory, a coupled system of partial differential equations needs to be solved consisting of kinematical relations, the local balance law of linear momentum and the constitutive equations. The description of the strong form of these equations, here, will be with respect to the initial configuration of the bodies. 
+\begin{align*}
+\text{Kinematics}&: \ \mathbf{F}, \ \mathbf{E} = \dfrac{1}{2} (\mathbf{F}^T \mathbf{F} - \mathbf{I}) \\
+\text{Equilibrium}&: \ \text{Div}(\mathbf{F S}) + \mathbf{b}^p = 0 \\
+\text{Constitutive equation}&: \ \mathbf{S} = 2\dfrac{\partial \Psi}{\partial \mathbf{C}}.
+\end{align*}
+In addition the boundary conditions for the displacements have to be imposed on $\partial \mathcal{B}_{0,U}$ and for tractions on the boundary $\partial \mathcal{B}_{0,t}$, with $\partial \mathcal{B}_{0,U} \cap \partial \mathcal{B}_{0,t} = \emptyset$.
+\begin{equation*}
+\text{Boundary conditions} : \ \mathbf{U} = \mathbf{U}^p \ \text{on} \ \partial \mathcal{B}_{0,U} \ \& \ \mathbf{F S N} = \mathbf{t}^p \ \text{on} \ \partial \mathcal{B}_{0,t}.
+\end{equation*}
+The finite element method, which is based on a variational formulation of the equations, can be fulfilled in a weak sense minimizing the error of the finite element approximation for arbitrarily chosen test functions. Let $\mathbf{U}^h$ be the approximation of the exact solution $\mathbf{U}$. Since the approximate solution is usually not the same as the exact solution, an error $R$ will occur when satisfying the strong form of the above equations.
+\begin{equation}
+\text{Div}(\mathbf{F}(\mathbf{U}^h) S) + \mathbf{b}^p = R.
+\end{equation}
+The error $R$ will be minimized in a weak sense by multiplying the residual by a vector-valued weighting function $\eta$ and integrating the residual over the whole domain. This vector-valued function $\bm{\eta}$ is called as test function. Thus, we have
+\begin{equation}
+\int\limits_{\mathcal{B}_0} \text{Div}(\mathbf{F S}) \cdot \bm{\eta} \ \mathrm{d}V + \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \bm{\eta} \ \mathrm{d}V = 0 \ \ \forall \bm{\eta}.
+\label{eq:1.7}
+\end{equation}
+By doing integration by parts of the first term in \eqref{eq:1.7}, with the application of divergence theorem and the boundary conditions for displacement and traction, we have the weak form as 
+\begin{equation}
+\int\limits_{\mathcal{B}_0} \mathbf{F S} \cdot \nabla_0 \bm{\eta} \ \mathrm{d}V - \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \bm{\eta} \ \mathrm{d}V - \int\limits_{\mathcal{\partial B}_{0,t}} \mathbf{t}^p \cdot \bm{\eta} \ \mathrm{d}A = 0 \ \ \forall \bm{\eta}.
+\label{eq:1.8}
+\end{equation}
+Simplifying the first term in \eqref{eq:1.8} using the fact that the scalar product of a symmetrical tensor with an anti-symmetrical tensor is zero, we have
+\begin{align}
+\mathbf{F S} \cdot \nabla_0 \bm{\eta} = \mathbf{S} \mathbf{F}^T \cdot \nabla_0 \bm{\eta} = \mathbf{S} \cdot \dfrac{1}{2} (\mathbf{F}^T \nabla_0 \bm{\eta} + \nabla_0^T \bm{\eta} \mathbf{F}) = \mathbf{S} \cdot \delta \mathbf{E}.
+\label{eq:1.9}
+\end{align}
+$\delta \mathbf{E}$ denotes the variation of the Green-Lagrange strain tensor which is obtained as the directional derivative
+\begin{align}
+D\mathbf{E} \cdot \bm{\eta} &= \dfrac{1}{2} \dfrac{\mathrm{d}}{\mathrm{d\alpha}} \left[ \mathbf{F}^T (\bm{\varphi} + \alpha \bm{\eta}) \ \mathbf{F}(\bm{\varphi} + \alpha \bm{\eta}) - \mathbf{I} \right] \Big|_{\alpha = 0} \nonumber \\
+&= \dfrac{1}{2} \dfrac{\mathrm{d}}{\mathrm{d\alpha}} \left[ {\left[ \nabla_0 (\bm{\varphi} + \alpha \bm{\eta}) \right]}^T \ \nabla_0(\bm{\varphi} + \alpha \bm{\eta}) - \mathbf{I} \right] \Big|_{\alpha = 0} \nonumber \\
+&= \dfrac{1}{2} \left[ (\nabla_0 \bm{\eta})^T \mathbf{F} + \mathbf{F}^T \nabla_0 \bm{\eta} \right] = \delta \mathbf{E}.
+\label{eq:1.10}
+\end{align}
+Using the result of Equation \eqref{eq:1.9} and \eqref{eq:1.10} in Equation \eqref{eq:1.8}, we have
+\begin{equation}
+G(\bm{\varphi},\bm{\eta}):= \int\limits_{\mathcal{B}_0} \mathbf{S} \cdot \delta \mathbf{E} \ \mathrm{d}V - \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \bm{\eta} \ \mathrm{d}V - \int\limits_{\mathcal{\partial B}_{0,t}} \mathbf{t}^p \cdot \bm{\eta} \ \mathrm{d}A = 0 \ \ \forall \bm{\eta}.
+\label{eq:1.11}
+\end{equation}
+The first term in Equation \eqref{eq:1.11} is called as  stress divergence term and denotes the internal virtual work stored in the body. The last two terms are the virtual work of the applied traction and the inertia load.
+
+\subsection{Variational principles}
+\textbf{Principle of stationary potential energy}: The S.E.F. for the considered hyperelastic material model describes the stored energy in the continuum body. Based on this S.E.F. we can find the equilibrium configuration by the principle of minimum potential energy. The total potential energy of the system $\Pi$ is the sum of the internal and external potential energies and is defined as 
+\begin{equation}
+\Pi = \Pi_{int} + \Pi_{ext},
+\label{eq:1.12}
+\end{equation}
+where 
+\begin{align}
+\Pi_{int} &= \int\limits_{\mathcal{B}_0} \Psi (\mathbf{C}) \ \mathrm{d}V \\
+\Pi_{ext} &= - \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \bm{\varphi} \ \mathrm{d}V - \int\limits_{\mathcal{\partial B}_{0,t}} \mathbf{t}^p \cdot \bm{\varphi} \ \mathrm{d}A.
+\end{align}
+The value of $\bm{\varphi}$ which makes $\Pi$ stationary satisfy the equilibrium configuration. The stationary value of Equation \eqref{eq:1.12} is found by the variation of $\Pi$ w.r.t. the deformation
+\begin{align}
+\delta \Pi = D \Pi \cdot \bm{\eta} &= \dfrac{\partial \Pi}{\partial \mathbf{U}} \cdot \delta \mathbf{U} =: R(\mathbf{U}; \delta \mathbf{U})\nonumber \\
+&= \int\limits_{\mathcal{B}_0} \dfrac{\partial \Psi (\mathbf{C})}{\partial \mathbf{C}} \cdot D \mathbf{C} \cdot \bm{\eta} \ \mathrm{d}V - \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \delta \mathbf{U} \ \mathrm{d}V - \int\limits_{\mathcal{\partial B}_{0,t}} \mathbf{t}^p \cdot \delta \mathbf{U} \ \mathrm{d}A = 0
+\end{align}
+with 
+\begin{equation}
+\dfrac{\partial \Psi (\mathbf{C})}{\partial \mathbf{C}} = \dfrac{1}{2} \mathbf{S} \ \ \text{and} \ \ D \mathbf{C} \cdot \bm{\eta} = 2 \ D \mathbf{E} \cdot \bm{\eta} = 2 \delta \mathbf{E}
+\label{eq:1.12.2}
+\end{equation}
+\begin{align}
+R(\mathbf{U}; \delta \mathbf{U}) =\delta \Pi = \int\limits_{\mathcal{B}_0} \mathbf{S} \cdot \delta \mathbf{E} \ \mathrm{d}V - \int\limits_{\mathcal{B}_0} \mathbf{b}^p \cdot \delta \mathbf{U} \ \mathrm{d}V - \int\limits_{\mathcal{\partial B}_{0,t}} \mathbf{t}^p \cdot \delta \mathbf{U} \ \mathrm{d}A = 0 
+\label{eq:1.13}
+\end{align}
+Hence the variational form $R(\mathbf{U}; \delta \mathbf{U})$ in Equation \eqref{eq:1.13} is equivalent to the weak form $G(\bm{\varphi},\bm{\eta})$ in Equation \eqref{eq:1.11}. 
+
+\section{Linearizations}
+The variational form $R$ in Equation \eqref{eq:1.13} is a non-linear equation. Geometrical non-linearity occurs due to the non-linear Green-Lagrange strain tensor. Linearizations of the associated non-linear terms is necessary in the algorithmic treatment of the solution process for the non-linear boundary value problems. Assuming the state of the system is known at some load or time step at $t_{n-1}$, the linearization of the non-linear residual $R$ by an iterative solution method (such as Newton-Raphson) is given as: Find $d\mathbf{U}$ such that 
+\begin{equation}
+\mathbf{L}\left[ R \right]_{\mathbf{U}_{i+1} = \mathbf{U}_{i}} \ = \ R(\mathbf{U}_{i}) + D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} = R(\mathbf{U}_{i}) + D^2_{d\mathbf{U}, \delta\mathbf{U}} \Pi(\mathbf{U}_{i}) \cdot d\mathbf{U} = 0,
+\label{eq:1.14}
+\end{equation}
+where, the value of a quantity at the current iteration $i$ under an iterative solver regime is denoted as ${\left\lbrace \cdot \right\rbrace}_{i}^{n} = {\left\lbrace \cdot \right\rbrace}_{i}$ at the currently unknown state at $t_n$ load or time step. The incremental change between iterative solver iterations $i$ and $i+1$ is denoted as $d \left\lbrace \cdot \right\rbrace := {\left\lbrace \cdot \right\rbrace}_{i+1} - {\left\lbrace \cdot \right\rbrace}_{i}$. \par 
+
+After a certain convergence criteria is reached, we update the solution at the current load step $t_n$ as $\mathbf{U}_{i+1} = \mathbf{U}_i + d \mathbf{U}$. The tangent matrix $\mathbf{K}$ in Equation \eqref{eq:1.14} is given as 
+\begin{equation}
+D^2_{d\mathbf{U}, \delta\mathbf{U}} \Pi(\mathbf{U}_{i}) = D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} =: \mathbf{K}(\mathbf{U}_i; d\mathbf{U}, \delta \mathbf{U}).
+\end{equation}
+Assuming dead loading for the sake of simplicity to derive the tangent matrix, i.e. the body load and traction do not change due to the deformation of the body, we have
+\begin{align}
+\mathbf{K}(\mathbf{U}_i; d\mathbf{U}, \delta \mathbf{U}) = \int\limits_{\mathcal{B}_0} D_{d\mathbf{U}} \left[ \mathbf{S} \cdot \delta \mathbf{E} \right] \cdot d\mathbf{U} \ \mathrm{d}V.
+\label{eq:1.15}
+\end{align}
+Since both, the kinematical quantity Green-Lagrange strain $\mathbf{E}$ and the constitutive law 2. Piola-Kirchhoff stress tensor $\mathbf{S}$ are non-linear tensors and we require the derivatives of it, we need their linearized forms in Equation \eqref{eq:1.15}.
+\subsection{\textbf{Basic concept of linearization process}}
+To demonstrate the basic idea of linearizations for non-linear problems, consider a non-linear $C^1$ mapping $\mathbf{G}: \mathcal{E} \mapsto \mathcal{F}$, where $\overline{\mathbf{x}}$ and $\mathbf{u}$ are points of the abstract space $\mathcal{E}$. The elements of the spaces $\mathcal{E}$ and $\mathcal{F}$ can be scalar-, vector- or tensor-fields. The Taylor series expansion of this mapping about a point $\overline{\mathbf{x}} + \mathbf{u}$ is given as
+\begin{equation}
+\mathbf{G}(\overline{\mathbf{x}} + \mathbf{u}) = \mathbf{G}(\overline{\mathbf{x}}) + D \mathbf{G}(\mathbf{x}) \cdot \mathbf{u} + \mathbf{R}.
+\end{equation}
+The linear part of the mapping $\mathbf{G}$ at $\overline{\mathbf{x}}$ is 
+\begin{equation}
+\mathbf{L} \left[ \mathbf{G} \right]_{\mathbf{x} = \overline{\mathbf{x}}} = \mathbf{G}(\overline{\mathbf{x}}) + D \mathbf{G}(\overline{\mathbf{x}}) \cdot \mathbf{u}.
+\end{equation} 
+Thus, the Taylor series expansion corresponds to the linearization of the weak form in finite element applications. 
+\subsection{\textbf{Linearization of Kinematical quantity}}
+The linearization of the variation of Green-Lagrange strain tensor is 
+\begin{equation}
+\mathbf{L}\left[ \mathbf{E} \right] = \mathbf{E}(\overline{\bm{\varphi}}) + D \mathbf{E}(\bm{\varphi}) \cdot d \mathbf{U},
+\label{eq:1.17}
+\end{equation}
+where the directional derivative in the direction of increment $d \mathbf{U}$ is given as in the result of Equation \eqref{eq:1.10}
+\begin{equation}
+D \mathbf{E}(\bm{\varphi}) \cdot d\mathbf{U} = \dfrac{1}{2} \left[ (\nabla_0 (d\mathbf{U}))^T \mathbf{F} + \mathbf{F}^T \nabla_0 (d\mathbf{U}) \right] = d \mathbf{E},
+\label{eq:1.18}
+\end{equation}
+with $d\mathbf{E}$ being the increment of the Green-Lagrange deformation tensor.
+\subsection{\textbf{Linearization of Constitutive equation}}
+The constitutive equation for the hyperelastic Neo-Hookean material model in Section \eqref{sec:const_law} was derived in terms of the right Cauchy-Green deformation tensor $\mathbf{C}$ and thus the 2. Piola-Kirchhoff stress tensor also depends on $\mathbf{C}$. The linearization of $\mathbf{S}$ is
+\begin{align}
+\mathbf{L}\left[ \mathbf{S} \right]_{\bm{\varphi} = \overline{\bm{\varphi}}} \ &= \ \mathbf{S}(\overline{\bm{\varphi}}) + D \mathbf{S}(\bm{\varphi}) \cdot d\mathbf{U} \nonumber \\
+&= \ \mathbf{S}(\overline{\bm{\varphi}}) + \dfrac{\partial \mathbf{S}}{\partial \mathbf{C}} \Big|_{\bm{\varphi} = \overline{\bm{\varphi}}} : \left[ D \mathbf{C}(\overline{\bm{\varphi}}) \cdot d\mathbf{U} \right].
+\label{eq:1.16}
+\end{align}
+Using the results of Equation \eqref{eq:1.6.2} and \eqref{eq:1.12.2} in Equation \eqref{eq:1.16}, we get
+\begin{equation}
+\mathbf{L}\left[ \mathbf{S} \right]_{\bm{\varphi} = \overline{\bm{\varphi}}} \ = \mathbf{S}(\overline{\bm{\varphi}}) + \mathfrak{C}(\overline{\bm{\varphi}}) : \left[ d \mathbf{E}(\overline{\bm{\varphi}}) \right]
+\label{eq:1.19}
+\end{equation} \newline 
+The first term in Equation \eqref{eq:1.19} is Equation \eqref{eq:1.9} with $\mathbf{F}$ and $\mathbf{S}$ evaluated at $\overline{\bm{\varphi}}$ instead of $\bm{\varphi}$. With the assumption that the applied load is conservative, the directional derivative in Equation \eqref{eq:1.14} can be computed by taking only the first term in Equation \eqref{eq:1.9} into account
+\begin{align}
+D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} &= \int\limits_{\mathcal{B}_0} \left[ D \{ \mathbf{F}(\overline{\bm{\varphi}}) \mathbf{S}(\overline{\bm{\varphi}})\} \cdot d\mathbf{U} \right] \cdot \nabla_0 \bm{\eta} \ \mathrm{d}V \ \ \forall \bm{\eta} \nonumber \\
+&= \int\limits_{\mathcal{B}_0} \Big\lbrace \nabla_0 (d\mathbf{U}) \ \mathbf{S}(\overline{\bm{\varphi}}) + \mathbf{F}(\overline{\bm{\varphi}}) \left[ D \mathbf{S}(\overline{\bm{\varphi}}) \cdot d\mathbf{U} \right] \Big\rbrace \cdot \nabla_0 \bm{\eta} \ \mathrm{d}V \ \ \forall \bm{\eta}
+\label{eq:1.20}
+\end{align}
+The directional derivative of $\mathbf{S}$ at $\overline{\bm{\varphi}}$ as taken from the linearization of constitutive equation in Equation \eqref{eq:1.19} is 
+\begin{equation}
+D \mathbf{S}(\overline{\bm{\varphi}}) \cdot d\mathbf{U} = \mathfrak{C}(\overline{\bm{\varphi}}) : \left[ d \mathbf{E}(\overline{\bm{\varphi}}) \right],
+\label{eq:1.21}
+\end{equation}
+where $d \mathbf{E}$ is the linearization of kinematical quantity from Equation \eqref{eq:1.18} evaluated at $\overline{\bm{\varphi}}$.  Substituting Equation \eqref{eq:1.21} in Equation \eqref{eq:1.20} and by using the symmetry of $\mathfrak{C}$ along with the result of Equation \eqref{eq:1.10} we have the final linearized form of the variational formulation as
+\begin{equation}
+D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} = \int\limits_{\mathcal{B}_0} \Big\lbrace \nabla_0 (d\mathbf{U}) \ \mathbf{S}(\overline{\bm{\varphi}}) \cdot \nabla_0 \bm{\eta} + \delta \mathbf{E}(\overline{\bm{\varphi}}) \cdot \mathfrak{C}(\overline{\bm{\varphi}}) : \left[ d\mathbf{E}(\overline{\bm{\varphi}}) \right] \Big\rbrace \ \mathrm{d}V \ \ \forall \bm{\eta}.
+\label{eq:1.22}
+\end{equation}
+The final linearized form is symmetric in $\bm{\eta}$ and $d\mathbf{U}$. The first term in Equation \eqref{eq:1.22} is known as \textit{initial or the geometrical stress} due to the direct appearance of stress at the given state. The second term is known as \textit{material contribution} since it contains along with the incremental constitutive tensor $\mathfrak{C}$, the variation $\delta \mathbf{E} := \dfrac{1}{2} \Big(\left[\nabla_0 \bm{\eta}\right]^T \mathbf{F}(\overline{\bm{\varphi}}) + \mathbf{F}^T (\overline{\bm{\varphi}}) \nabla_0 \bm{\eta} \Big)$ and the increment $d \mathbf{E} := \dfrac{1}{2} \Big(\left[\nabla_0 \mathbf{U}\right]^T \mathbf{F}(\overline{\bm{\varphi}}) + \mathbf{F}^T (\overline{\bm{\varphi}}) \nabla_0 \mathbf{U} \Big)$ of the Green-Lagrange strain tensor.  
+ 
+\section{Discretization by the finite element method}
+
+\subsection{\textbf{Vector-valued problem}} The solution in the elasticity problem discussed here is not just a single scalar function but has displacements $\mathbf{U} := \left\lbrace U_x, U_y, U_z \right\rbrace^T$ in each euclidean direction, thus we have a vector system which is a set of scalar functions and thus is also addressed as \textit{vector-valued solution}. When considering the coupled magneto-elastic problem (to be solved in next task), the resulting vector-valued solution we will solve for has elements $\left\lbrace \phi, U_x, U_y, U_z \right\rbrace^T$. These elements of the vector-valued solution are also termed as \textit{blocks}, where for the coupled magneto-elastic problem we have two blocks at each global Degree of Freedom in the finite element mesh, one block for the magnetic scalar potential function $\phi$ and the second block for the vector displacement function $\mathbf{U}$ with three individual components $U_x, U_y, U_z$ in 3D. This way one is able to access all the components/ elements of the vector field such as displacement together without splitting them into their individual components. 
+\subsection{\textbf{Block linear algebra}} Use of the block structure also proves advantageous in terms of linear algebra and solution methods. One can think of the global linear system of equation $\mathbf{A}\mathbf{x} = \mathbf{b}$ as
+\begin{equation*}
+\begin{bmatrix}
+\mathbf{A}_{pp} & 0 \\
+0 & \mathbf{A}_{UU} 
+\end{bmatrix}
+\begin{bmatrix}
+\phi \\
+\mathbf{U}
+\end{bmatrix} 
+= 
+\begin{bmatrix}
+\mathbf{F_p} \\
+\mathbf{F_U}
+\end{bmatrix},
+\end{equation*}
+where $\phi$ and $\mathbf{U}$ are the values of the scalar magnetic potential field and the displacement field. $\mathbf{A}_{pp}$ denotes the matrix contributions arising in the magnetic problem and $\mathbf{A}_{UU}$ describes the tangent matrix in the elasticity problem. Depending upon the properties of the (block) matrices for individual problem, one can then define individual preconditioners that best suite the operators present in the system of equations, rather than defining a single preconditioner for the global matrix $\mathbf{A}$. On the contrary, one can also solve the complete system considering as a single unit which can be convenient for the assembly of the matrix and right-hand-side vector for some class of problems. 
+\subsection{\textbf{Vector-valued Finite Elements}} We shall consider here in all the discussions only \textit{primitive finite elements}. A finite element is said to be primitive if there is a unique relation from the shape function number to the vector component of the vector-valued element. This means for a primitive element we have exactly one non-zero component for each shape function of the vector-valued element. The Lagrangian elements that we shall employ are primitive elements. For the considered vector-valued coupled magneto-elastic problem we build the vector-valued finite element from simpler base elements using tensor product of the base elements. We take multiple simple elements (eg. scalar linear Lagrange elements $\mathbf{Q}_1$) and connect them to have an element with more than one block. For the vector-valued displacement field in 2D, we can construct a vector-valued finite element using two $\mathbf{Q}_1$ elements (each constituting to a single component $U_x$ and $U_y$) to form using a tensor product $\mathbf{Q}_1 \times \mathbf{Q}_1$ element with two components. This will form a single block in our coupled problem where the second block for the scalar magnetic potential will have only a single component such as a quadratic element $\mathbf{Q}_2$. Thus, the vector-valued element we shall employ, for eg., can be represented in block form as ($\mathbf{Q}_1 \times \mathbf{Q}_1, \mathbf{Q}_2$) which will have in total $\text{dim}+1$ individual components in 2D as [$U_x, U_y, \phi$]. \newline 
+
+\noindent For the considered linearized weak formulation 
+\begin{equation}
+D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} = -R(\mathbf{U}_{i}) ,
+\label{eq:1.24}
+\end{equation}
+with the tangent matrix and the residual as
+\begin{align*}
+D_{d\mathbf{U}} R(\mathbf{U}_i; \delta \mathbf{U}) \cdot d\mathbf{U} &= \int\limits_{\mathcal{B}_0} \Big\lbrace \nabla_0 (d\mathbf{U}) \ \mathbf{S}(\overline{\bm{\varphi}}) \cdot \nabla_0 \bm{\eta} + \delta \mathbf{E}(\overline{\bm{\varphi}}) \cdot \mathfrak{C}(\overline{\bm{\varphi}}) : \left[ d\mathbf{E}(\overline{\bm{\varphi}}) \right] \Big\rbrace \ \mathrm{d}V \ \ \forall \bm{\eta} \\
+\text{and} \ \ R(\mathbf{U}_i; \delta \mathbf{U}) &= \int\limits_{\mathcal{B}_0} \mathbf{S} \cdot \delta \mathbf{E} \ \mathrm{d}V,
+\end{align*}
+we can now discretize it using the finite element approximation: find $\mathbf{U} \in \mathbf{S} = H^1_0 (\mathcal{B}_0; \mathbb{R}^{\text{dim}})$ such that for all $\bm{\eta} \in \mathbf{V} = H^1 (\mathcal{B}_0; \mathbb{R}^{\text{dim}})$ it holds
+\begin{equation}
+\int\limits_{\mathcal{B}_0} \Big\lbrace \nabla_0 (d\mathbf{U}) \ \mathbf{S}(\overline{\bm{\varphi}}) \cdot \nabla_0 \bm{\eta} + \delta \mathbf{E}(\overline{\bm{\varphi}}) \cdot \mathfrak{C}(\overline{\bm{\varphi}}) : \left[ d\mathbf{E}(\overline{\bm{\varphi}}) \right] \Big\rbrace \ \mathrm{d}V = -\int\limits_{\mathcal{B}_0} \mathbf{S} \cdot \delta \mathbf{E} \ \mathrm{d}V \ \ \forall \bm{\eta}.
+\label{eq:1.23}
+\end{equation}
+The Sobolev space is given as 
+\begin{equation}
+H^1 = \Big\lbrace \mathbf{U}: \Omega \mapsto \mathbb{R} \Bigg| \int\limits_{\Omega} \norm{\mathbf{U}}^2 + \norm{\nabla \mathbf{U}}^2 \ \mathrm{d}\Omega < \infty \Big\rbrace.
+\end{equation}
+The vector-valued function spaces are given as 
+\begin{align}
+\mathbf{S} &= \left\lbrace \mathbf{U} \in H^1, \mathbf{U} \big|_{\partial \Omega_D} = \overline{\mathbf{U}} \right\rbrace, \\
+\mathbf{V} &= \left\lbrace \bm{\eta} \in H^1, \bm{\eta} \big|_{\partial \Omega_D} = \mathbf{0} \right\rbrace.
+\end{align}
+The approximates in the discrete function spaces $\mathbf{S}^h \subset \mathbf{S}$ and $\mathbf{V}^h \subset \mathbf{V}$ is given as a linear combination of $M$ vector-valued shape functions
+\begin{align}
+\mathbf{S}^h &= \left\lbrace \mathbf{U}^h \in \mathbf{S} : \mathbf{U}^h (\mathbf{x}) = \sum\limits_{i=1}^{M} U_i \ \mathbf{N}_i (\mathbf{x}), \ U_i \in \mathbb{R} \right\rbrace, \nonumber\\
+\mathbf{V}^h &= \left\lbrace \bm{\eta}^h \in \mathbf{V} : \bm{\eta}^h (\mathbf{x}) = \sum\limits_{j=1}^{M} \eta_j \ \mathbf{N}_j (\mathbf{x}), \ \eta_j \in \mathbb{R} \right\rbrace
+\end{align}
+and can be used in Equation \eqref{eq:1.23} to get the discretized formulation using finite elements.
+
+
+\section{Implementation details}
+
+\subsection{Newton's method for non-linear problems}
+The discretization of the quasi-static finite strain elasticity problem leads to a non-linear system of algebraic equations. A direct solution of such a non-linear equation is in general not possible and hence iterative solution procedures are considered. One such iterative solution procedure is the Newton's method, also known as Newton-Raphson method. \par 
+
+Newton's method uses first and second derivatives of the objective function. The general idea of this method is: Given an initial guess (close to the minimizer of the objective function), we construct a quadratic approximation to the objective function that matches the first and second derivative values at this point. We then minimize the approximate (quadratic) function instead of the original objective function. We use the minimizer of the approximate function as the starting point in the next iteration step and repeat the procedure iteratively \cite{EdwinK.P.Chong2013}. \par
+
+We will consider here the load controlled Newton-Raphson scheme for this discussion. The term \textit{load control} means that the applied external loads are prescribed and increased in a stepwise manner. For each of these load steps, the unknown displacements are then computed by the non-linear solver. The Newton-Raphson scheme relies on a Taylor series expansion of the non-linear equation $R (\mathbf{U}) = \bm{0}$ at a known state, i.e. at the last known equilibrium state. The Taylor series expansion with linearization as given in Equation \eqref{eq:1.24} can be written as 
+\begin{equation}
+\mathbf{K}^i \cdot d\mathbf{U} + R(\mathbf{U}_i) = \bm{0},
+\end{equation}
+for the iteration $i$. The unknown increment in the solution $d\mathbf{U}$ is the difference in the unknown solution at the current state $\mathbf{U}_{i+1}$ and solution at the known state $\mathbf{U}_i$. This is obtained by the solution of the resulting discretized linear system of equations by direct or iterative solution methods. The updates in the nodal displacement is then derived as 
+\begin{equation}
+\mathbf{U}_{i+1} = \mathbf{U}_i + d\mathbf{U}.
+\end{equation}
+With the updated displacements, the residuum $R$ is computed again and the procedure is repeated until the norm of the residuum is under a specified numerical tolerance. The algorithm for Newton-Raphson method is presented in Algorithm \eqref{alg:1}.
+
+\begin{algorithm}[H]
+\SetKwInOut{Input}{Given}
+\SetKwInOut{Output}{Return} 
+\Input{Number of load steps $n$, Numerical tolerance value $tol$ and maximum Newton-Raphson iterations $i_{max}$}
+\Output{Displacements for the total applied load}
+\BlankLine
+\ForEach{Load step $n$}
+{
+	\begin{itemize}
+	\item Prescribe the external load for current load step $n$\;
+	\item Compute the residuum $R(\mathbf{U})^1_{n+1}$\;
+	\end{itemize}
+
+	\ForEach{Newton-Raphson iteration $i < i_{max}$}
+	{
+		\While{$\norm{R(\mathbf{U}^{i+1}_{n+1})} > tol$}
+		{
+		\begin{itemize}
+		\item Impose boundary conditions corresponding to the NR iteration $i$\;
+		\item Assemble the tangent matrix $\mathbf{K}^{i}_{n+1}$\;
+		\item Solve the linear system: $\mathbf{K}^{i}_{n+1} \cdot d\mathbf{U} = -R(\mathbf{U}^i_{n+1})$\;
+		\item Update solution $\mathbf{U}_{i+1} = \mathbf{U}_i + d\mathbf{U}$\;
+		\item Update Quadrature point data: $\mathbf{F}$ and corresponding stress and strain measures\;
+		\item Compute residuum $R(\mathbf{U}^{i+1}_{n+1})$\;
+		\end{itemize}
+		}
+		\If{$\norm{R(\mathbf{U}^{i+1}_{n+1})} \leq tol$}
+		{Break and move to next load step\;}			
+	}
+}
+\caption{Newton-Raphson method}
+\label{alg:1}
+\end{algorithm} \par 
+
+The rate of convergence of the Newton-Raphson method is given by the inequality $\norm{\mathbf{U}_{i+1} - \mathbf{U}} \leq C \norm{\mathbf{U}_i - \mathbf{U}}^2$, where $\mathbf{U}$ is the actual solution of $R(\mathbf{U}) = 0$ and $C$ is a positive constant. The quadratic convergence of this scheme is only valid near the solution point. An advantage of this property is a converged solution is obtained within a few iterations. As a disadvantage, as one can observe in the Algorithmic steps in Algorithm \eqref{alg:1}, one needs to assemble the tangent matrix $\mathbf{K}$ and solve the linear system of equations at each iteration step. This can be time consuming and also computationally expensive for a system with large number of unknowns.  
+
+\section{Results}
+
+
+\newpage
+\printbibliography
+\end{document}

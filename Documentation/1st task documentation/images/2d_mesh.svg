@@ -1,0 +1,59 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw"
+    version="1.1" baseProfile="full">
+    <g>
+        <g latexdraw:type="picture" id="id872663017">
+            <image
+                xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/1st task documentation/images/2d_mesh_1.png"
+                x="17.14285714285714" y="254.28571428571433"
+                height="730" width="463"/>
+        </g>
+        <g latexdraw:type="picture" id="id464256553">
+            <image
+                xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/1st task documentation/images/2d_mesh_2.png"
+                x="580.0000000000001" y="225.71428571428572"
+                height="782" width="907"/>
+        </g>
+        <g latexdraw:type="rectangle" id="id450397015">
+            <rect x="111.09090909090908" y="583.8181818181818"
+                width="68.72727272727273" height="68.72727272727275"
+                latexdraw:borderPos="outer" stroke-width="4.0"
+                stroke="#ee0404" fill="none" stroke-dasharray="8.819444444444445, 5.291666666666667"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1084938890">
+            <polyline
+                points="181.8181818181818,581.8181818181818 581.8181818181818,254.54545454545453 "
+                stroke-width="4.0" stroke="#ee0404"
+                stroke-dasharray="8.819444444444445, 5.291666666666667" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1646368742">
+            <polyline
+                points="181.8181818181818,654.5454545454545 581.8181818181818,981.8181818181818 "
+                stroke-width="4.0" stroke="#ee0404"
+                stroke-dasharray="8.819444444444445, 5.291666666666667" latexdraw:rotationAngle="0.0"/>
+        </g>
+    </g>
+    <defs/>
+    <metadata>
+        <latexdraw:metadata>
+            <latexdraw:latexIncludes/>
+            <latexdraw:displayXScale>true</latexdraw:displayXScale>
+            <latexdraw:displayYScale>true</latexdraw:displayYScale>
+            <latexdraw:unit>CM</latexdraw:unit>
+            <latexdraw:zoom>0.55</latexdraw:zoom>
+            <latexdraw:magneticGridStyle>CUSTOMISED</latexdraw:magneticGridStyle>
+            <latexdraw:gridGap>20</latexdraw:gridGap>
+            <latexdraw:magneticGrid>true</latexdraw:magneticGrid>
+            <latexdraw:version>3.3.8</latexdraw:version>
+            <latexdraw:size>
+                <latexdraw:width>1301</latexdraw:width>
+                <latexdraw:height>744</latexdraw:height>
+            </latexdraw:size>
+            <latexdraw:position>
+                <latexdraw:x>65.0</latexdraw:x>
+                <latexdraw:y>24.0</latexdraw:y>
+            </latexdraw:position>
+        </latexdraw:metadata>
+    </metadata>
+</svg>

@@ -1,0 +1,18 @@
+[0] Config.pm:340> INFO - This is Biber 2.4
+[0] Config.pm:343> INFO - Logfile is 'Task_2_1.blg'
+[1031] biber:287> INFO - === Mo Nov 26, 2018, 19:50:28
+[1326] Biber.pm:348> INFO - Reading 'Task_2_1.bcf'
+[1538] Biber.pm:742> INFO - Found 4 citekeys in bib section 0
+[1721] Biber.pm:3151> INFO - Processing section 0
+[2203] Biber.pm:3308> INFO - Looking for bibtex format file 'task2_ref.bib' for section 0
+[2280] bibtex.pm:1113> INFO - Decoding LaTeX character macros into UTF-8
+[2318] bibtex.pm:974> INFO - Found BibTeX data source 'task2_ref.bib'
+[2526] Utils.pm:147> WARN - Overwriting field 'year' with year value from field 'date' for entry 'Wriggers2008'
+[2584] Utils.pm:147> WARN - Overwriting field 'year' with year value from field 'date' for entry 'EdwinK.P.Chong2013'
+[2855] UCollate.pm:65> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[2855] UCollate.pm:65> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[2855] Biber.pm:3028> INFO - Sorting list 'ynt/global' of type 'entry' with scheme 'ynt' and locale 'en-US'
+[2855] Biber.pm:3032> INFO - No sort tailoring available for locale 'en-US'
+[2868] bbl.pm:519> INFO - Writing 'Task_2_1.bbl' with encoding 'UTF-8'
+[2910] bbl.pm:615> INFO - Output to Task_2_1.bbl
+[2910] Biber.pm:109> INFO - WARNINGS: 2

@@ -1,0 +1,138 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 2.6 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \sortlist[entry]{ynt/global}
+    \entry{Wriggers2008}{book}{}
+      \name{author}{1}{}{%
+        {{hash=2d019685bd1a254ac94f01e3c2e01cf8}{%
+           family={Wriggers},
+           family_i={W\bibinitperiod},
+           given={Peter},
+           given_i={P\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer-Verlag GmbH}%
+      }
+      \strng{namehash}{2d019685bd1a254ac94f01e3c2e01cf8}
+      \strng{fullhash}{2d019685bd1a254ac94f01e3c2e01cf8}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{24}
+      \field{isbn}{3540710000}
+      \field{month}{09}
+      \field{title}{Nonlinear Finite Element Methods}
+      \field{year}{2008}
+      \verb{url}
+      \verb https://www.ebook.de/de/product/7511919/peter_wriggers_nonlinear_finite_element_methods.html
+      \endverb
+      \warn{\item Overwriting field 'year' with year value from field 'date' for entry 'Wriggers2008'}
+    \endentry
+    \entry{Pelteret2012}{misc}{}
+      \name{author}{2}{}{%
+        {{hash=4baae6166d1287a0be1e03293b0e7f8d}{%
+           family={Pelteret},
+           family_i={P\bibinitperiod},
+           given={Jean-Paul},
+           given_i={J\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=ac4aa8f51a47a9ae8386540a1dc1a4cf}{%
+           family={McBride},
+           family_i={M\bibinitperiod},
+           given={Andrew},
+           given_i={A\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Zenodo}%
+      }
+      \strng{namehash}{10c6be1037a80a275ea1c351aae2b35c}
+      \strng{fullhash}{10c6be1037a80a275ea1c351aae2b35c}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The deal.II Tutorial Step-44: Three-Field Formulation For Non-Linear Solid Mechanics}
+      \field{year}{2012}
+      \verb{doi}
+      \verb 10.5281/zenodo.439772
+      \endverb
+      \keyw{finite strain nonlinear elasticity,mixed methods}
+    \endentry
+    \entry{EdwinK.P.Chong2013}{book}{}
+      \name{author}{1}{}{%
+        {{hash=0a4c3eb15e24eb3bb270f54095bf5acc}{%
+           family={Edwin\bibnamedelimb K.\bibnamedelimi P.\bibnamedelimi Chong},
+           family_i={E\bibinitperiod\bibinitdelim K\bibinitperiod\bibinitdelim P\bibinitperiod\bibinitdelim C\bibinitperiod},
+           given={Stanislaw\bibnamedelimb H.\bibnamedelimi Zak},
+           given_i={S\bibinitperiod\bibinitdelim H\bibinitperiod\bibinitdelim Z\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {JOHN WILEY \& SONS INC}%
+      }
+      \strng{namehash}{0a4c3eb15e24eb3bb270f54095bf5acc}
+      \strng{fullhash}{0a4c3eb15e24eb3bb270f54095bf5acc}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{14}
+      \field{isbn}{1118279018}
+      \field{month}{01}
+      \field{pagetotal}{640}
+      \field{title}{An Introduction to Optimization}
+      \field{year}{2013}
+      \verb{url}
+      \verb https://www.ebook.de/de/product/19579661/edwin_k_p_chong_stanislaw_h_zak_an_introduction_to_optimization.html
+      \endverb
+      \warn{\item Overwriting field 'year' with year value from field 'date' for entry 'EdwinK.P.Chong2013'}
+    \endentry
+    \entry{Pelteret2016a}{misc}{}
+      \name{author}{2}{}{%
+        {{hash=4baae6166d1287a0be1e03293b0e7f8d}{%
+           family={Pelteret},
+           family_i={P\bibinitperiod},
+           given={Jean-Paul},
+           given_i={J\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=ac4aa8f51a47a9ae8386540a1dc1a4cf}{%
+           family={McBride},
+           family_i={M\bibinitperiod},
+           given={Andrew},
+           given_i={A\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Zenodo}%
+      }
+      \strng{namehash}{10c6be1037a80a275ea1c351aae2b35c}
+      \strng{fullhash}{10c6be1037a80a275ea1c351aae2b35c}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The deal.II Code Gallery: Quasi-Static Finite-Strain Compressible Elasticity}
+      \field{year}{2016}
+      \verb{doi}
+      \verb 10.5281/zenodo.1228964
+      \endverb
+      \keyw{Finite elements,Finite strain nonlinear elasticity}
+    \endentry
+  \endsortlist
+\endrefsection
+\endinput
+
