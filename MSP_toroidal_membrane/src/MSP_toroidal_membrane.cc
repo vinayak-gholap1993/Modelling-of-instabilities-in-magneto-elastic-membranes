@@ -169,12 +169,23 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         }
 
         if (parameters.geometry_shape == "Beam" ||
-            parameters.geometry_shape == "Patch test")
+            parameters.geometry_shape == "Patch test" ||
+            parameters.geometry_shape == "Hooped beam")
         {
             // applying the inhomogeneous DBC for the vector valued displacement field
             {
                 // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
                 const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            if (parameters.geometry_shape == "Hooped beam")
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 1;
                 VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
@@ -327,7 +338,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
           }
 
         if (parameters.geometry_shape == "Beam" ||
-            parameters.geometry_shape == "Patch test")
+            parameters.geometry_shape == "Patch test" ||
+            parameters.geometry_shape == "Hooped beam")
         {
             // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
             {
@@ -336,6 +348,16 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components), // all dim components of displ
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            if (parameters.geometry_shape == "Hooped beam")
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
                                                          fe_collection.component_mask(u_fe));
             }
@@ -911,8 +933,11 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       }
 
       // Assemble Neumann type Traction contribution
-      if (parameters.mechanical_boundary_condition_type == "Traction" &&
-          parameters.geometry_shape == "Beam") // currently for beam test model only
+      if (parameters.mechanical_boundary_condition_type == "Traction"
+              &&
+           ( parameters.geometry_shape == "Beam"
+             ||
+             parameters.geometry_shape == "Hooped beam" ) ) // currently for beam test model only
       {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               if (cell->face(face)->at_boundary() == true
@@ -929,9 +954,13 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       // Traction in reference configuration
                       const double load_ramp = (loadstep.current() / loadstep.final());
                       const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
-                      Tensor<1, dim> dir; // traction direction is irrespective of body deformation
-                      dir[1] = -1.0; // -y; downward force direction
-                      const Tensor<1, dim> traction = magnitude * dir;
+//                      Tensor<1, dim> dir; // traction direction is irrespective of body deformation
+//                      dir[1] = -1.0; // -y; downward force direction
+//                      const Tensor<1, dim> traction = magnitude * dir;
+
+                      // outward unit normal vector for the face
+                      const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
+                      const Tensor<1, dim> traction = -magnitude * N; // negative for downward force
 
                       const double radial_distance = quadrature_points_face[f_q_point][0];
                       // If dim == 2, assembly using axisymmetric formulation
@@ -1961,6 +1990,69 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                     }
                 }
       }
+  }
+
+  // Hooped beam geometry test for snap through behavior and
+  // instability study
+  else if (parameters.geometry_shape == "Hooped beam" && dim == 2)
+  {
+      GridIn<dim> gridin;
+      gridin.attach_triangulation(triangulation);
+      std::ifstream input (parameters.mesh_file);
+      gridin.read_abaqus(input);
+
+      // Setup boundary id's
+      typename Triangulation<dim>::active_cell_iterator
+      cell = triangulation.begin_active(),
+      endc = triangulation.end();
+      for (; cell!=endc; ++cell)
+          for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if (cell->face(face)->at_boundary() == true)
+              {
+                  // Left boundary faces
+                  if (cell->face(face)->center()[0] == 0.0)
+                      cell->face(face)->set_boundary_id(0);
+
+//                  else if (cell->face(face)->center()[0] == 2.0)
+//                      cell->face(face)->set_boundary_id(1);
+
+//                  else if(cell->face(face)->center()[1] < 0.275 &&
+//                          cell->face(face)->center()[0] > 0.0 &&
+//                          cell->face(face)->center()[0] < 2.0)
+//                      cell->face(face)->set_boundary_id(2);
+
+//                  else if(cell->face(face)->center()[1] > 0.25 &&
+//                          cell->face(face)->center()[0] > 0.0 &&
+//                          cell->face(face)->center()[0] < 2.0)
+//                      cell->face(face)->set_boundary_id(3);
+              }
+          }
+      cell = triangulation.begin_active();
+      for (; cell!=endc; ++cell)
+          for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if (cell->face(face)->at_boundary() == true)
+                  // Setting boundary id 6 for Neumann type Traction boundary condition
+                  // Traction applied on right part of top surface (+y in 2D)
+                  if (parameters.mechanical_boundary_condition_type == "Traction")
+                  {
+                      if (cell->face(face)->center()[0] > 0.0 &&
+                          cell->face(face)->center()[0] < 2.5 &&
+                          cell->face(face)->center()[1] > 102.7)
+                      {
+                          cell->face(face)->set_boundary_id(6);
+                          cell->set_material_id(6);
+                          break;
+                      }
+                  }
+          }
+
+      // Rescale the geometry before attaching manifolds
+      GridTools::scale(parameters.grid_scale, triangulation);
+      triangulation.refine_global(parameters.n_global_refinements);
+
+//      GridTools::distort_random(0.25, triangulation, /*keep boundary*/ true);
   }
 
   // Cube geometry for patch test with colorized boundaries

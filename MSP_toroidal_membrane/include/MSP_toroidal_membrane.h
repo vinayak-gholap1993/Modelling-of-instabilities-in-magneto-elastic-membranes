@@ -310,7 +310,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         "Permanent magnet region axial (z) length");
 
       prm.declare_entry("Geometry shape for the problem", "Toroidal_tube",
-                        Patterns::Selection("Toroidal_tube | Beam | Patch test"),
+                        Patterns::Selection("Toroidal_tube | Beam | Patch test | Hooped beam"),
                         "Geometry selection for problem");
     }
     prm.leave_subsection();
