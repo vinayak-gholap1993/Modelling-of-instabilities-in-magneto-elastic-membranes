@@ -53,6 +53,7 @@
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/error_estimator.h>
 #include <deal.II/numerics/data_postprocessor.h>
+#include <deal.II/numerics/fe_field_function.h>
 
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
@@ -310,7 +311,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         "Permanent magnet region axial (z) length");
 
       prm.declare_entry("Geometry shape for the problem", "Toroidal_tube",
-                        Patterns::Selection("Toroidal_tube | Beam | Patch test | Hooped beam"),
+                        Patterns::Selection("Toroidal_tube | Beam | Patch test | Hooped beam | Crisfield beam"),
                         "Geometry selection for problem");
     }
     prm.leave_subsection();
@@ -1238,6 +1239,78 @@ private:
   // Inputs: Total load at the end of load steps &
   //         Load increments in each step
   LoadStep loadstep;
+
+  // A data structure to postprocess load-displacement data for a single
+  // point of interest and write it to an output file
+  // Function called at the end of load step loop before next
+  // refinement cycle begins
+  struct Postprocess_load_displacement
+  {
+      Postprocess_load_displacement(const Point<dim> &point_of_interest,
+                                    const unsigned int total_num_load_steps)
+          :
+            point_of_interest(point_of_interest), total_num_load_steps(total_num_load_steps)
+      {
+          load_values.resize(this->total_num_load_steps);
+          displacement_norm.resize(this->total_num_load_steps);
+      }
+
+      void evaluate_data_and_fill_vectors(const Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
+                                          &solution_function,
+                                          const LoadStep &loadstep_)
+      {
+          // Evaluate point data and fill in the vectors
+          Vector<double> solution_at_point(n_components);
+          bool point_found = true;
+
+          load_values[loadstep_.get_loadstep()-1] = loadstep_.current();
+          double norm_disp = 0.0;
+
+          try
+          {
+              solution_function.vector_value(point_of_interest, solution_at_point);
+          }
+          catch (const VectorTools::ExcPointNotAvailableHere &)
+          {
+              point_found = false;
+          }
+
+          if (point_found)
+          {
+              // cannot use l2_norm() of Vector since
+              // solution also includes phi component result
+              norm_disp = std::hypot(solution_at_point(displacement_r_component),
+                                     solution_at_point(displacement_z_component));
+              displacement_norm[loadstep_.get_loadstep()-1] = norm_disp;
+          }
+      }
+
+      void write_load_disp_data(const unsigned int cycle) const
+      {
+          // Write the vector data to an output file
+              const std::string base_filename =
+                      "load_disp_" + dealii::Utilities::int_to_string(dim) + "d" + "_cycle" +
+                      dealii::Utilities::int_to_string(cycle);
+              const std::string filename = base_filename + ".dat";
+              std::ofstream f(filename.c_str());
+
+              f << "# Point: " << point_of_interest << std::endl;
+              f << "Disp_norm  Load_value" << std::endl;
+
+              AssertDimension (load_values.size(), displacement_norm.size());
+              for (unsigned int i = 0; i < load_values.size(); ++i)
+                  f << std::fixed << std::setprecision(3) << std::scientific <<
+                       displacement_norm[i] << "\t" << load_values[i] << std::endl;
+
+              f << std::flush;
+      }
+
+  private:
+      const Point<dim> point_of_interest;
+      const unsigned int total_num_load_steps;
+      std::vector<double> load_values;
+      std::vector<double> displacement_norm;
+  };
 };
 
 

@@ -97,6 +97,11 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     TimerOutput::Scope timer_scope (computing_timer, "Make constraints");
     // All dirichlet constraints need to be specified only at 0th NR iteration
     // constraints are different at different NR iterations
+
+    // After 1st iteration the constraints remain the same
+    // and we can simply skip the rebuilding step if we do not clear it
+    if (itr_nr > 1)
+        return;
     constraints.clear();
     const bool apply_dirichlet_bc = (itr_nr == 0); // need to apply inhomogeneous DBC
 
@@ -169,23 +174,12 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         }
 
         if (parameters.geometry_shape == "Beam" ||
-            parameters.geometry_shape == "Patch test" ||
-            parameters.geometry_shape == "Hooped beam")
+            parameters.geometry_shape == "Patch test")
         {
             // applying the inhomogeneous DBC for the vector valued displacement field
             {
                 // zero DBC on left boundary (0th face) i.e. u_x = u_y = u_z = 0
                 const int boundary_id = 0;
-                VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                         boundary_id,
-                                                         Functions::ZeroFunction<dim>(n_components),
-                                                         constraints,
-                                                         fe_collection.component_mask(x_displacement));
-            }
-            if (parameters.geometry_shape == "Hooped beam")
-            {
-                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
-                const int boundary_id = 1;
                 VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components),
@@ -235,6 +229,30 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
                                                          fe_collection.component_mask(z_displacement));
+            }
+        }
+
+        if (parameters.geometry_shape == "Hooped beam" ||
+            parameters.geometry_shape == "Crisfield beam")
+        {
+            // applying the inhomogeneous DBC for the vector valued displacement field
+            {
+                // zero DBC on left boundary (0th face) i.e. u_x = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
             }
         }
 
@@ -338,8 +356,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
           }
 
         if (parameters.geometry_shape == "Beam" ||
-            parameters.geometry_shape == "Patch test" ||
-            parameters.geometry_shape == "Hooped beam")
+            parameters.geometry_shape == "Patch test")
         {
             // set homogeneous DBC for the vector valued displacement field at itr_nr > 0
             {
@@ -348,16 +365,6 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                          boundary_id,
                                                          Functions::ZeroFunction<dim>(n_components), // all dim components of displ
-                                                         constraints,
-                                                         fe_collection.component_mask(x_displacement));
-            }
-            if (parameters.geometry_shape == "Hooped beam")
-            {
-                // zero DBC on right boundary (1st face) i.e. u_x = 0
-                const int boundary_id = 1;
-                VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                         boundary_id,
-                                                         Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
                                                          fe_collection.component_mask(u_fe));
             }
@@ -403,6 +410,30 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          Functions::ZeroFunction<dim>(n_components),
                                                          constraints,
                                                          fe_collection.component_mask(z_displacement));
+            }
+        }
+
+        if (parameters.geometry_shape == "Hooped beam" ||
+            parameters.geometry_shape == "Crisfield beam")
+        {
+            // applying the inhomogeneous DBC for the vector valued displacement field
+            {
+                // zero DBC on left boundary (0th face) i.e. u_x = 0
+                const int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            {
+                // zero DBC on right boundary (1st face) i.e. u_x = u_y = u_z = 0
+                const int boundary_id = 1;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(u_fe));
             }
         }
 
@@ -937,7 +968,9 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               &&
            ( parameters.geometry_shape == "Beam"
              ||
-             parameters.geometry_shape == "Hooped beam" ) ) // currently for beam test model only
+             parameters.geometry_shape == "Hooped beam"
+             ||
+             parameters.geometry_shape == "Crisfield beam") ) // currently for beam test model only
       {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
               if (cell->face(face)->at_boundary() == true
@@ -1402,7 +1435,8 @@ void MSP_Toroidal_Membrane<dim>::refine_grid ()
           refinement_strategy.use_p_refinement() == false) // h-refinement
         {
           triangulation.execute_coarsening_and_refinement ();
-          make_grid_manifold_ids();
+          if (parameters.geometry_shape == "Toroidal_tube")
+              make_grid_manifold_ids();
         }
       else if (refinement_strategy.use_h_refinement() == false &&
                refinement_strategy.use_p_refinement() == true) // p-refinement
@@ -2014,18 +2048,66 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   if (cell->face(face)->center()[0] == 0.0)
                       cell->face(face)->set_boundary_id(0);
 
-//                  else if (cell->face(face)->center()[0] == 2.0)
-//                      cell->face(face)->set_boundary_id(1);
+                  else if (cell->face(face)->center()[0] == 2.0)
+                      cell->face(face)->set_boundary_id(1);
 
-//                  else if(cell->face(face)->center()[1] < 0.275 &&
-//                          cell->face(face)->center()[0] > 0.0 &&
-//                          cell->face(face)->center()[0] < 2.0)
-//                      cell->face(face)->set_boundary_id(2);
+                  else if(cell->face(face)->center()[1] < 0.275 &&
+                          cell->face(face)->center()[0] > 0.0 &&
+                          cell->face(face)->center()[0] < 2.0)
+                      cell->face(face)->set_boundary_id(2);
 
-//                  else if(cell->face(face)->center()[1] > 0.25 &&
-//                          cell->face(face)->center()[0] > 0.0 &&
-//                          cell->face(face)->center()[0] < 2.0)
-//                      cell->face(face)->set_boundary_id(3);
+                  else if(cell->face(face)->center()[1] > 0.25 &&
+                          cell->face(face)->center()[0] > 0.0 &&
+                          cell->face(face)->center()[0] < 2.0)
+                      cell->face(face)->set_boundary_id(3);
+              }
+          }
+      cell = triangulation.begin_active();
+      for (; cell!=endc; ++cell)
+          for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if (cell->face(face)->at_boundary() == true)
+                  // Setting boundary id 6 for Neumann type Traction boundary condition
+                  // Traction applied on right part of top surface (+y in 2D)
+                  if (parameters.mechanical_boundary_condition_type == "Traction")
+                  {
+                      if (cell->face(face)->center()[0] > 0.0 &&
+                          cell->face(face)->center()[0] < 0.05 &&
+                          cell->face(face)->center()[1] > 0.47)
+                      {
+                          cell->face(face)->set_boundary_id(6);
+                          cell->set_material_id(6);
+                          break;
+                      }
+                  }
+          }
+
+      // Rescale the geometry before attaching manifolds
+      GridTools::scale(parameters.grid_scale, triangulation);
+      triangulation.refine_global(parameters.n_global_refinements);
+
+//      GridTools::distort_random(0.25, triangulation, /*keep boundary*/ true);
+  }
+
+  else if (parameters.geometry_shape == "Crisfield beam" && dim == 2)
+  {
+      GridIn<dim> gridin;
+      gridin.attach_triangulation(triangulation);
+      std::ifstream input (parameters.mesh_file);
+      gridin.read_abaqus(input);
+
+      // Setup boundary id's
+      typename Triangulation<dim>::active_cell_iterator
+      cell = triangulation.begin_active(),
+      endc = triangulation.end();
+      for (; cell!=endc; ++cell)
+          for(unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+          {
+              if (cell->face(face)->at_boundary() == true)
+              {
+                  // Left boundary faces
+                  if (cell->face(face)->center()[0] == 0.0)
+                      cell->face(face)->set_boundary_id(0);
               }
           }
       cell = triangulation.begin_active();
@@ -2051,8 +2133,6 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       // Rescale the geometry before attaching manifolds
       GridTools::scale(parameters.grid_scale, triangulation);
       triangulation.refine_global(parameters.n_global_refinements);
-
-//      GridTools::distort_random(0.25, triangulation, /*keep boundary*/ true);
   }
 
   // Cube geometry for patch test with colorized boundaries
@@ -2403,6 +2483,16 @@ void MSP_Toroidal_Membrane<dim>::run ()
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
+
+      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
+      // Create postprocessor object for load displacement data
+      // Hooped beam
+      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
+      // Crisfield beam
+//      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
+      // Toroidal_tube
+//      Postprocess_load_displacement torus_point_1 (Point<dim>(0.695, 0.0), total_num_loadsteps);
+
       // Can add a loop over load domain here later
       // currently single load step taken
       while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
@@ -2411,9 +2501,30 @@ void MSP_Toroidal_Membrane<dim>::run ()
           solve_nonlinear_system(solution_delta);
           // update the total solution for current load step
           solution += solution_delta;
+
+          BlockVector<double> total_solution (solution);
+          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
+                  solution_function(hp_dof_handler, total_solution);
+          // Evaluate and fill the load disp data
+          // since our FEFieldFunction knows solution at all dofs (global solution)
+          if (this_mpi_process == 0)
+          {
+              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
+    //          crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
+    //          torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep);
+          }
+
           compute_error ();
           output_results(cycle, loadstep.get_loadstep());
           loadstep.increment();
+      }
+
+      // Write load disp data to an output file for given point
+      if (this_mpi_process == 0)
+      {
+          hooped_beam_point.write_load_disp_data(cycle);
+//          crisfield_beam_point.write_load_disp_data(cycle);
+//          torus_point_1.write_load_disp_data(cycle);
       }
 
       // clear laodstep internal data for new adaptive refinement cycle
