@@ -540,6 +540,9 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       double tol_f;
       double tol_u;
       double abs_err_tol_f;
+      std::string nonlinear_solver_type;
+      double delta_s;
+      double psi;
 
       static void
       declare_parameters(ParameterHandler &prm);
@@ -567,6 +570,18 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
           prm.declare_entry("Absolute error force tolerance", "1.0e-9",
                             Patterns::Double(0.0),
                             "Absolute error force residual tolerance");
+
+          prm.declare_entry("Nonlinear solver type", "Newton-Raphson",
+                            Patterns::Selection("Newton-Raphson | Arc-Length"),
+                            "Type of nonlinear solution method to employ");
+
+          prm.declare_entry("Increment of the arc-length", "1.0e-3",
+                            Patterns::Double(0.0),
+                            "User defined parameter for increments of the arc-length (delta_s)");
+
+          prm.declare_entry("psi", "1.0",
+                            Patterns::Double(0.0),
+                            "User defined parameter psi in the arc-length constraint equation");
       }
       prm.leave_subsection();
   }
@@ -579,6 +594,9 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
         tol_f = prm.get_double("Tolerance force");
         tol_u = prm.get_double("Tolerance displacement");
         abs_err_tol_f = prm.get_double("Absolute error force tolerance");
+        nonlinear_solver_type = prm.get("Nonlinear solver type");
+        delta_s = prm.get_double("Increment of the arc-length");
+        psi = prm.get_double("psi");
       }
       prm.leave_subsection();
   }
@@ -1121,6 +1139,8 @@ private:
   void print_convergence_header();
   void print_convergence_footer();
   void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
+  void solve_nonlinear_system_with_arc_length_method();
+  void solve_linear_system_block_eliminaton();
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
@@ -1167,6 +1187,9 @@ private:
   TrilinosWrappers::BlockSparseMatrix system_matrix;
   TrilinosWrappers::MPI::BlockVector  system_rhs;
   TrilinosWrappers::MPI::BlockVector  solution;
+  TrilinosWrappers::MPI::BlockVector  D_G_lambda; // D G(u, lambda) delta_lambda = - F_ext delta_lambda
+  TrilinosWrappers::MPI::BlockVector  D_f_u; // D f(u, lambda) delta_u = (\nabla_u f)^T delta_u
+  double D_f_lambda; // D f(u, lambda) delta_lambda = (\partial f)/(\partial lambda) delta_lambda
 
   Vector<float>        estimated_error_per_cell; // For Kelly error estimator
 

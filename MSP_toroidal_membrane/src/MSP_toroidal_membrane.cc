@@ -569,6 +569,8 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     system_matrix.reinit (sp);
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
+    D_G_lambda.reinit(locally_owned_partitioning, mpi_communicator);
+    D_f_u.reinit(locally_owned_partitioning, mpi_communicator);
     estimated_error_per_cell.reinit(triangulation.n_active_cells());
     estimated_error_per_cell = 0.0;
     setup_quadrature_point_history();
@@ -1290,6 +1292,103 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
         // update the solution with current solution increment
         solution_delta += newton_update;
+        // update qph related to this new displacement and stress state
+        update_qph_incremental(solution_delta);
+
+        pcout << std::fixed << std::setprecision(3) << std::scientific << "\t"
+              << error_residual_norm.norm << "\t"
+              << error_residual_norm.u << "\t"
+              << error_residual_norm.phi << "\t"
+              << error_update_norm.norm << "\t"
+              << error_update_norm.u << "\t"
+              << error_update_norm.phi << "\n" << std::endl;
+    }
+    // if more NR iterations performed than max allowed
+    AssertThrow (newton_iteration < parameters.max_iterations_NR,
+                 ExcMessage("No convergence in nonlinear solver!"));
+}
+
+// Linear system of equations solver for Arc-Length method nonlinear solver
+// Using block elimination for solution update and load parameter update
+//
+
+
+// Nonlinear system of equation iterative solver using Arc-Length method
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
+{
+    TimerOutput::Scope timer_scope (computing_timer, "Solve nonlinear system: Arc-Length");
+    pcout << "Load step: " << loadstep.get_loadstep() << " "
+          << " Load value: " << loadstep.current() << std::endl;
+
+    TrilinosWrappers::MPI::BlockVector newton_update(locally_owned_partitioning,
+                                                     locally_relevant_partitioning,
+                                                     mpi_communicator);
+    double load_parameter_update = 0.0;
+
+    error_residual.reset();
+    error_residual_0.reset();
+    error_residual_norm.reset();
+    error_update.reset();
+    error_update_0.reset();
+    error_update_norm.reset();
+
+    print_convergence_header();
+
+    unsigned int newton_iteration = 0;
+    for(; newton_iteration < parameters.max_iterations_NR; ++newton_iteration)
+    {
+        pcout << "    " << newton_iteration << " \t | ";
+
+        // data stored in tangent matrix and RHS vector is not reusable so clear
+        system_matrix = 0.0;
+        system_rhs = 0.0;
+        D_G_lambda = 0.0;
+        D_f_u = 0.0;
+        D_f_lambda = 0.0;
+
+        // impose the DBC for displacement
+        make_constraints(constraints, newton_iteration);
+        constraints.close();
+
+        // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
+        constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
+
+        assemble_system();
+        get_error_residual(error_residual);
+
+        if (newton_iteration == 0)
+            error_residual_0 = error_residual;
+
+        // find the normalized error in residual and check for convergence
+        error_residual_norm = error_residual;
+        error_residual_norm.normalize(error_residual_0);
+
+        if (error_residual_norm.u <= parameters.tol_f &&
+            error_update_norm.u <= parameters.tol_u)
+        {
+            pcout << " CONVERGED!" << std::endl;
+            print_convergence_footer();
+            break;
+        }
+
+        // Solve linear system in two steps using static-condensation:
+        // Step 1: solve for load parameter update delta_lambda
+        // Step 2: Back substituion to find displacement update solution_delta
+        solve_linear_system_block_eliminaton();
+
+        get_error_update(newton_update, error_update);
+        if (newton_iteration == 0)
+            error_update_0 = error_update;
+
+        // Find the normalized error in newton update
+        error_update_norm = error_update;
+        error_update_norm.normalize(error_update_0);
+
+        // update the solution with current solution increment
+        solution_delta += newton_update;
+        // update the load parameter with current load increment
+        lambda_delta += load_parameter_update;
         // update qph related to this new displacement and stress state
         update_qph_incremental(solution_delta);
 
@@ -2478,59 +2577,80 @@ void MSP_Toroidal_Membrane<dim>::run ()
 
       // before starting the simulation output the grid
       output_results(cycle, loadstep.get_loadstep());
-      loadstep.increment();
+
       // Declare the incremental solution update
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
+      // Declare the incremental load update
+      double lambda_delta = 0.0;
 
-      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
-      // Create postprocessor object for load displacement data
-      // Hooped beam
-      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
-      // Crisfield beam
-//      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
-      // Toroidal_tube
-//      Postprocess_load_displacement torus_point_1 (Point<dim>(0.695, 0.0), total_num_loadsteps);
-
-      // Can add a loop over load domain here later
-      // currently single load step taken
-      while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+      if (parameters.nonlinear_solver_type == "Newton-Raphson")
       {
-          solution_delta = 0.0;
-          solve_nonlinear_system(solution_delta);
-          // update the total solution for current load step
-          solution += solution_delta;
+          loadstep.increment();
 
-          BlockVector<double> total_solution (solution);
-          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
-                  solution_function(hp_dof_handler, total_solution);
-          // Evaluate and fill the load disp data
-          // since our FEFieldFunction knows solution at all dofs (global solution)
-          if (this_mpi_process == 0)
+          const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
+          // Create postprocessor object for load displacement data
+          // Hooped beam
+          Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
+          // Crisfield beam
+    //      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
+          // Toroidal_tube
+    //      Postprocess_load_displacement torus_point_1 (Point<dim>(0.695, 0.0), total_num_loadsteps);
+
+          // Can add a loop over load domain here later
+          // currently single load step taken
+          while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
           {
-              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
-    //          crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
-    //          torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep);
+              solution_delta = 0.0;
+              solve_nonlinear_system(solution_delta);
+              // update the total solution for current load step
+              solution += solution_delta;
+
+              BlockVector<double> total_solution (solution);
+              Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
+                      solution_function(hp_dof_handler, total_solution);
+              // Evaluate and fill the load disp data
+              // since our FEFieldFunction knows solution at all dofs (global solution)
+              if (this_mpi_process == 0)
+              {
+                  hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
+        //          crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
+        //          torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep);
+              }
+
+              compute_error ();
+              output_results(cycle, loadstep.get_loadstep());
+              loadstep.increment();
           }
 
-          compute_error ();
-          output_results(cycle, loadstep.get_loadstep());
-          loadstep.increment();
-      }
+          // Write load disp data to an output file for given point
+          if (this_mpi_process == 0)
+          {
+              hooped_beam_point.write_load_disp_data(cycle);
+    //          crisfield_beam_point.write_load_disp_data(cycle);
+    //          torus_point_1.write_load_disp_data(cycle);
+          }
 
-      // Write load disp data to an output file for given point
-      if (this_mpi_process == 0)
+          // clear laodstep internal data for new adaptive refinement cycle
+          loadstep.reset();
+    //      postprocess_energy();
+          quadrature_point_history.clear();
+      }
+      else if (parameters.nonlinear_solver_type == "Arc-Length")
       {
-          hooped_beam_point.write_load_disp_data(cycle);
-//          crisfield_beam_point.write_load_disp_data(cycle);
-//          torus_point_1.write_load_disp_data(cycle);
-      }
+          loadstep.increment();
+          while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+          {
+              solution_delta = 0.0;
+              lambda_delta = 0.0;
 
-      // clear laodstep internal data for new adaptive refinement cycle
-      loadstep.reset();
-//      postprocess_energy();
-      quadrature_point_history.clear();
+              solve_nonlinear_system_with_arc_length_method();
+          }
+      }
+      else
+          Assert(false, ExcMessage("Select the appropriate non-linear solution method type!"));
+
     }
 }
 
