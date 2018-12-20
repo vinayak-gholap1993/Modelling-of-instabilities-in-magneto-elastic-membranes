@@ -60,6 +60,10 @@
 #include <deal.II/lac/trilinos_vector.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_solver.h>
+#include <deal.II/lac/linear_operator.h>
+#include <deal.II/lac/trilinos_linear_operator.h>
+#include <deal.II/lac/packaged_operation.h>
+#include <deal.II/lac/solver_selector.h>
 // For block system:
 #include <deal.II/lac/trilinos_block_sparse_matrix.h>
 #include <deal.II/lac/trilinos_parallel_block_vector.h>
@@ -577,11 +581,11 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
 
           prm.declare_entry("Increment of the arc-length", "1.0e-3",
                             Patterns::Double(0.0),
-                            "User defined parameter for increments of the arc-length (delta_s)");
+                            "User defined parameter for increments of the arc-length (delta_s^2)");
 
           prm.declare_entry("psi", "1.0",
                             Patterns::Double(0.0),
-                            "User defined parameter psi in the arc-length constraint equation");
+                            "User defined parameter (psi) in the arc-length constraint equation");
       }
       prm.leave_subsection();
   }
@@ -1139,8 +1143,11 @@ private:
   void print_convergence_header();
   void print_convergence_footer();
   void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
-  void solve_nonlinear_system_with_arc_length_method();
-  void solve_linear_system_block_eliminaton();
+  void solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
+                                                     double &lambda_delta);
+  void solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
+                                            double &load_parameter_update,
+                                            const unsigned int newton_iteration);
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
@@ -1187,8 +1194,7 @@ private:
   TrilinosWrappers::BlockSparseMatrix system_matrix;
   TrilinosWrappers::MPI::BlockVector  system_rhs;
   TrilinosWrappers::MPI::BlockVector  solution;
-  TrilinosWrappers::MPI::BlockVector  D_G_lambda; // D G(u, lambda) delta_lambda = - F_ext delta_lambda
-  TrilinosWrappers::MPI::BlockVector  D_f_u; // D f(u, lambda) delta_u = (\nabla_u f)^T delta_u
+  TrilinosWrappers::MPI::BlockVector  D_f_u; // D f(u, lambda) delta_u = (\nabla_u f) delta_u
   double D_f_lambda; // D f(u, lambda) delta_lambda = (\partial f)/(\partial lambda) delta_lambda
 
   Vector<float>        estimated_error_per_cell; // For Kelly error estimator

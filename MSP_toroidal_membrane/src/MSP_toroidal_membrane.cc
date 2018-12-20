@@ -569,7 +569,6 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     system_matrix.reinit (sp);
     system_rhs.reinit(locally_owned_partitioning, mpi_communicator);
     solution.reinit(locally_owned_partitioning, locally_relevant_partitioning, mpi_communicator);
-    D_G_lambda.reinit(locally_owned_partitioning, mpi_communicator);
     D_f_u.reinit(locally_owned_partitioning, mpi_communicator);
     estimated_error_per_cell.reinit(triangulation.n_active_cells());
     estimated_error_per_cell = 0.0;
@@ -1310,20 +1309,174 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 
 // Linear system of equations solver for Arc-Length method nonlinear solver
 // Using block elimination for solution update and load parameter update
-//
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
+                                                                      double &load_parameter_update,
+                                                                      const unsigned int newton_iteration)
+{
+    TimerOutput::Scope timer_scope (computing_timer, "Solve linear system: Block elimination");
+
+    TrilinosWrappers::MPI::BlockVector solution_up(locally_owned_partitioning,
+                                                   mpi_communicator);
+    solution_up = solution_update;
+
+    // \Delta v_{P0}, cf. Wriggers book: Arc-Length algorithm
+    TrilinosWrappers::MPI::BlockVector delta_solution_P_0(locally_owned_partitioning,
+                                                          mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector delta_solution_P(locally_owned_partitioning,
+                                                        mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector delta_solution_G(locally_owned_partitioning,
+                                                        mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector P(locally_owned_partitioning,
+                                         mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector neg_G(locally_owned_partitioning,
+                                             mpi_communicator);
+    SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(u_block, u_block).m(),
+                                          parameters.lin_slvr_tol);
+
+    if (parameters.lin_slvr_type == "Iterative")
+    {
+        // Solver required to compute inverse of tangent matrix
+        // using LinearOperator class function
+        TrilinosWrappers::SolverCG solver_K_T_inv (solver_control);
+
+        // Clear earlier data
+        delta_solution_P_0 = 0.0;
+        delta_solution_P = 0.0;
+        delta_solution_G = 0.0;
+        P = 0.0;
+        neg_G = 0.0;
+
+        // Generate LinearOperator for tangent matrix block
+        const auto op_K_T = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
+                            (system_matrix.block(u_block, u_block));
+
+        // Preconditioner required to compute inverse of tangent matrix
+        // using LinearOperator class function
+        std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner_K_T_inv;
+        if (parameters.preconditioner_type == "jacobi")
+          {
+            TrilinosWrappers::PreconditionJacobi *ptr_prec
+              = new TrilinosWrappers::PreconditionJacobi ();
+
+            TrilinosWrappers::PreconditionJacobi::AdditionalData
+            additional_data (parameters.preconditioner_relaxation);
+
+            ptr_prec->initialize(system_matrix.block(u_block,u_block),
+                                 additional_data);
+            preconditioner_K_T_inv.reset(ptr_prec);
+          }
+        else if (parameters.preconditioner_type == "ssor")
+          {
+            TrilinosWrappers::PreconditionSSOR *ptr_prec
+              = new TrilinosWrappers::PreconditionSSOR ();
+
+            TrilinosWrappers::PreconditionSSOR::AdditionalData
+            additional_data (parameters.preconditioner_relaxation);
+
+            ptr_prec->initialize(system_matrix.block(u_block,u_block),
+                                 additional_data);
+            preconditioner_K_T_inv.reset(ptr_prec);
+          }
+        else // AMG
+          {
+            TrilinosWrappers::PreconditionAMG *ptr_prec
+              = new TrilinosWrappers::PreconditionAMG ();
+
+            TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
+
+            typename hp::DoFHandler<dim>::active_cell_iterator
+            cell = hp_dof_handler.begin_active(),
+            endc = hp_dof_handler.end();
+            for (; cell!=endc; ++cell)
+              {
+                if (cell->subdomain_id() != this_mpi_process) continue;
+
+                const unsigned int cell_fe_idx = cell->active_fe_index();
+                const unsigned int cell_poly = cell_fe_idx + 1;
+                if (cell_poly > 1)
+                  {
+                    additional_data.higher_order_elements = true;
+                    break;
+                  }
+              }
+            {
+              const int hoe = additional_data.higher_order_elements;
+              additional_data.higher_order_elements
+                = Utilities::MPI::max(hoe, mpi_communicator);
+            }
+            ptr_prec->initialize(system_matrix.block(u_block,u_block),
+                                 additional_data);
+            preconditioner_K_T_inv.reset(ptr_prec);
+          }
+
+        // Compute inverse of tangent matrix block
+        const auto K_T_inv = inverse_operator(op_K_T,
+                                              solver_K_T_inv,
+                                              *preconditioner_K_T_inv);
+
+        // By Defn: D_f_u = \nabla_u f_i = f^T
+        D_f_u.block(u_block) = 2.0 * solution_up.block(u_block);
+
+        // By Defn: P = F_ext_i
+        P.block(u_block) = system_rhs.block(u_block);
+
+        // Predictor step for initial displacement increment delta_solution_P_0
+        if (newton_iteration == 0)
+        {
+            K_T_inv.vmult(delta_solution_P_0.block(u_block), P.block(u_block));
+            // Compute load increment
+            // Need to figure out about +- sign
+            load_parameter_update = parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm();
+        }
+
+        // G = F_int_i - lambda_i * F_ext_i => (sys_mat * sol - lambda * sys_rhs) at current iteration i
+        TrilinosWrappers::MPI::Vector G = -load_parameter_update * P.block(u_block); // -lambda_i * P_i
+        system_matrix.block(u_block, u_block).vmult_add(G, solution_up.block(u_block));
+        neg_G.block(u_block) = -1.0 * G;
+
+        // By Defn: f,lambda_i = (\partial f)/(\partial lambda)
+        // => 2 * psi^2 * delta_lambda_i * (P^T * P)
+        D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
+                     (P.block(u_block).norm_sqr());
+
+        // Compute delta_solution_P
+        K_T_inv.vmult(delta_solution_P.block(u_block),P.block(u_block));
+        // Compute delta_solution_G
+         K_T_inv.vmult(delta_solution_G.block(u_block), neg_G.block(u_block));
+
+         // Arc-Length constraint value at current iteration
+         const double f_i = ( solution_up.block(u_block).norm_sqr() +
+                              ( parameters.psi * parameters.psi * load_parameter_update * load_parameter_update *
+                              (P.block(u_block).norm_sqr()) ) -
+                              parameters.delta_s);
+
+        // Step 1: Compute load parameter update
+        load_parameter_update -= ( (f_i +
+                                   D_f_u.block(u_block) * delta_solution_G.block(u_block)) /
+                                   (D_f_lambda +
+                                    D_f_u.block(u_block) * delta_solution_P.block(u_block)) );
+
+        // Step 2: Compute displacement update
+        delta_solution_G.block(u_block).sadd(1.0, load_parameter_update, delta_solution_P.block(u_block));
+        solution_up.block(u_block).add(1.0,delta_solution_G.block(u_block));
+    }
+    solution_update.block(u_block) = solution_up.block(u_block);
+}
 
 
 // Nonlinear system of equation iterative solver using Arc-Length method
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
+void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
+                                                                               double &lambda_delta)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Solve nonlinear system: Arc-Length");
     pcout << "Load step: " << loadstep.get_loadstep() << " "
           << " Load value: " << loadstep.current() << std::endl;
 
-    TrilinosWrappers::MPI::BlockVector newton_update(locally_owned_partitioning,
-                                                     locally_relevant_partitioning,
-                                                     mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector solution_update(locally_owned_partitioning,
+                                                       locally_relevant_partitioning,
+                                                       mpi_communicator);
     double load_parameter_update = 0.0;
 
     error_residual.reset();
@@ -1343,7 +1496,6 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
         // data stored in tangent matrix and RHS vector is not reusable so clear
         system_matrix = 0.0;
         system_rhs = 0.0;
-        D_G_lambda = 0.0;
         D_f_u = 0.0;
         D_f_lambda = 0.0;
 
@@ -1354,7 +1506,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
         // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 
-        assemble_system();
+        assemble_system(); // update to assemble additional blocks
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
@@ -1372,12 +1524,12 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
             break;
         }
 
-        // Solve linear system in two steps using static-condensation:
+        // Solve linear system in two steps using block elimination:
         // Step 1: solve for load parameter update delta_lambda
         // Step 2: Back substituion to find displacement update solution_delta
-        solve_linear_system_block_eliminaton();
+        solve_linear_system_block_eliminaton(solution_update, load_parameter_update, newton_iteration);
 
-        get_error_update(newton_update, error_update);
+        get_error_update(solution_update, error_update);
         if (newton_iteration == 0)
             error_update_0 = error_update;
 
@@ -1386,7 +1538,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method()
         error_update_norm.normalize(error_update_0);
 
         // update the solution with current solution increment
-        solution_delta += newton_update;
+        solution_delta += solution_update;
         // update the load parameter with current load increment
         lambda_delta += load_parameter_update;
         // update qph related to this new displacement and stress state
@@ -2645,8 +2797,19 @@ void MSP_Toroidal_Membrane<dim>::run ()
               solution_delta = 0.0;
               lambda_delta = 0.0;
 
-              solve_nonlinear_system_with_arc_length_method();
+              solve_nonlinear_system_with_arc_length_method(solution_delta, lambda_delta);
+              solution += solution_delta;
+
+              // Check if final load increment is equal to desired step size
+              Assert(lambda_delta == loadstep.current(), ExcInternalError());
+              compute_error ();
+              output_results(cycle, loadstep.get_loadstep());
+              loadstep.increment();
           }
+          // clear laodstep internal data for new adaptive refinement cycle
+          loadstep.reset();
+    //      postprocess_energy();
+          quadrature_point_history.clear();
       }
       else
           Assert(false, ExcMessage("Select the appropriate non-linear solution method type!"));
