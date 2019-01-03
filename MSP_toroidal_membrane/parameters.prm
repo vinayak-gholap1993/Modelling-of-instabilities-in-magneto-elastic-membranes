@@ -25,7 +25,9 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = ./mesh/2d_toroidal_membrane.inp
+  # Options: new_2d_toroidal_membrane.inp | new_2d_inc_major_radius_221118.inp | 
+  #          slender_hooped_beam_mesh.inp | crisfield_beam.inp
+  set Mesh file                   = ../../../mesh/crisfield_beam.inp
 
   # Major radius of the torus
   set Torus major radius          = 0.5
@@ -46,8 +48,8 @@ subsection Geometry
   set Magnet bounding box axial length = 0.051
 
   # Geometry selection for problem: 
-  # Options: Toroidal_tube | Beam | Patch test
-  set Geometry shape for the problem = Toroidal_tube
+  # Options: Toroidal_tube | Beam | Patch test | Hooped beam | Crisfield beam
+  set Geometry shape for the problem = Crisfield beam
 end
 
 
@@ -131,6 +133,17 @@ subsection Nonlinear solver
 
   # Absolute error force residual tolerance
   set Absolute error force tolerance = 1.0e-9
+
+  # Type of nonlinear solution method to employ
+  # Options: Newton-Raphson | Arc-Length
+  set Nonlinear solver type = Arc-Length
+
+  # User defined parameter for increments of the arc-length (delta_s^2)
+  set Increment of the arc-length = 1.0e-6
+
+  # User defined parameter (psi) in the arc-length constraint equation
+  # Eq: (u_0 - u_bar)^T(u_0 - u_bar) + psi^2 (lamda_0 - lambda_bar)(lamda_0 - lambda_bar) = delta_s^2
+  set psi = 1.0
 end
 
 subsection Problem type
