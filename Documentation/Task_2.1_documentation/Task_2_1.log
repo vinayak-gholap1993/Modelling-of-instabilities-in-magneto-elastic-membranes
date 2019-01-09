@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2018.10.15)  26 NOV 2018 19:50
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2018.10.15)  10 DEC 2018 00:04
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -941,14 +941,74 @@ File: tikzlibraryplotmarks.code.tex 2008/01/09 v3.0.1a (rcs-revision 1.1)
 (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryplotmarks.co
 de.tex
 File: pgflibraryplotmarks.code.tex 2015/08/03 v3.0.1a (rcs-revision 1.14)
-))) (/usr/share/texlive/texmf-dist/tex/latex/algorithm2e/algorithm2e.sty
+))) (/usr/share/texlive/texmf-dist/tex/latex/tools/array.sty
+Package: array 2014/10/28 v2.4c Tabular extension package (FMi)
+\col@sep=\dimen198
+\extrarowheight=\dimen199
+\NC@list=\toks39
+\extratabsurround=\skip50
+\backup@length=\skip51
+)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/multicol.sty
+Package: multicol 2015/08/19 v1.8n multicolumn formatting (FMi)
+\c@tracingmulticols=\count137
+\mult@box=\box40
+\multicol@leftmargin=\dimen256
+\c@unbalance=\count138
+\c@collectmore=\count139
+\doublecol@number=\count140
+\multicoltolerance=\count141
+\multicolpretolerance=\count142
+\full@width=\dimen257
+\page@free=\dimen258
+\premulticols=\dimen259
+\postmulticols=\dimen260
+\multicolsep=\skip52
+\multicolbaselineskip=\skip53
+\partial@page=\box41
+\last@line=\box42
+\maxbalancingoverflow=\dimen261
+\mult@rightbox=\box43
+\mult@grightbox=\box44
+\mult@gfirstbox=\box45
+\mult@firstbox=\box46
+\@tempa=\box47
+\@tempa=\box48
+\@tempa=\box49
+\@tempa=\box50
+\@tempa=\box51
+\@tempa=\box52
+\@tempa=\box53
+\@tempa=\box54
+\@tempa=\box55
+\@tempa=\box56
+\@tempa=\box57
+\@tempa=\box58
+\@tempa=\box59
+\@tempa=\box60
+\@tempa=\box61
+\@tempa=\box62
+\@tempa=\box63
+\c@columnbadness=\count143
+\c@finalcolumnbadness=\count144
+\last@try=\dimen262
+\multicolovershoot=\dimen263
+\multicolundershoot=\dimen264
+\mult@nat@firstbox=\box64
+\colbreak@box=\box65
+\mc@col@check@num=\count145
+)
+(/usr/share/texlive/texmf-dist/tex/latex/multirow/multirow.sty
+\bigstrutjot=\dimen265
+)
+(/usr/share/texlive/texmf-dist/tex/latex/algorithm2e/algorithm2e.sty
 Package: algorithm2e 2013/01/06 v5.00 algorithms environments
-\c@AlgoLine=\count137
+\c@AlgoLine=\count146
 
 (/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty
 Package: ifthen 2014/09/29 v1.1c Standard LaTeX ifthen package (DPC)
 )
-\algocf@hangindent=\skip50
+\algocf@hangindent=\skip54
 
 (/usr/share/texlive/texmf-dist/tex/latex/tools/xspace.sty
 Package: xspace 2014/10/28 v1.13 Space after command names (DPC,MH)
@@ -963,40 +1023,40 @@ Package `algorithm2e' Release 5.1 -- october 19 2015 --
 subscribe by emailing sympa@lirmm.fr with 'subscribe <list> <firstname name>'
 - Author: Christophe Fiorio (christophe.fiorio@umontpellier.fr)
 ********************************************************
-\skiptotal=\skip51
-\skiplinenumber=\skip52
-\skiprule=\skip53
-\skiphlne=\skip54
-\skiptext=\skip55
-\skiplength=\skip56
-\algomargin=\skip57
-\skipalgocfslide=\skip58
-\algowidth=\dimen198
-\inoutsize=\dimen199
-\inoutindent=\dimen256
-\interspacetitleruled=\dimen257
-\interspacealgoruled=\dimen258
-\interspacetitleboxruled=\dimen259
-\algocf@ruledwidth=\skip59
-\algocf@inoutbox=\box40
-\algocf@inputbox=\box41
-\AlCapSkip=\skip60
-\AlCapHSkip=\skip61
-\algoskipindent=\skip62
-\algocf@nlbox=\box42
-\algocf@hangingbox=\box43
-\algocf@untilbox=\box44
-\algocf@skipuntil=\skip63
-\algocf@capbox=\box45
-\algoheightruledefault=\skip64
-\algoheightrule=\skip65
-\algotitleheightruledefault=\skip66
-\algotitleheightrule=\skip67
-\c@algocfline=\count138
-\c@algocfproc=\count139
-\c@algocf=\count140
-\algocf@algoframe=\box46
-\algocf@algobox=\box47
+\skiptotal=\skip55
+\skiplinenumber=\skip56
+\skiprule=\skip57
+\skiphlne=\skip58
+\skiptext=\skip59
+\skiplength=\skip60
+\algomargin=\skip61
+\skipalgocfslide=\skip62
+\algowidth=\dimen266
+\inoutsize=\dimen267
+\inoutindent=\dimen268
+\interspacetitleruled=\dimen269
+\interspacealgoruled=\dimen270
+\interspacetitleboxruled=\dimen271
+\algocf@ruledwidth=\skip63
+\algocf@inoutbox=\box66
+\algocf@inputbox=\box67
+\AlCapSkip=\skip64
+\AlCapHSkip=\skip65
+\algoskipindent=\skip66
+\algocf@nlbox=\box68
+\algocf@hangingbox=\box69
+\algocf@untilbox=\box70
+\algocf@skipuntil=\skip67
+\algocf@capbox=\box71
+\algoheightruledefault=\skip68
+\algoheightrule=\skip69
+\algotitleheightruledefault=\skip70
+\algotitleheightrule=\skip71
+\c@algocfline=\count147
+\c@algocfproc=\count148
+\c@algocf=\count149
+\algocf@algoframe=\box72
+\algocf@algobox=\box73
 ) (/usr/share/texlive/texmf-dist/tex/latex/stmaryrd/stmaryrd.sty
 Package: stmaryrd 1994/03/03 St Mary's Road symbol package
 \symstmry=\mathgroup9
@@ -1012,7 +1072,7 @@ B)
 
 (/usr/share/texlive/texmf-dist/tex/latex/etoolbox/etoolbox.sty
 Package: etoolbox 2015/08/02 v2.2a e-TeX tools for LaTeX (JAW)
-\etb@tempcnta=\count141
+\etb@tempcnta=\count150
 )
 (/usr/share/texlive/texmf-dist/tex/latex/oberdiek/kvoptions.sty
 Package: kvoptions 2011/06/30 v3.11 Key value format for package options (HO)
@@ -1034,7 +1094,7 @@ Package etexcmds Info: Could not find \expanded.
 )))
 (/usr/share/texlive/texmf-dist/tex/latex/logreq/logreq.sty
 Package: logreq 2010/08/04 v1.0 xml request logger
-\lrq@indent=\count142
+\lrq@indent=\count151
 
 (/usr/share/texlive/texmf-dist/tex/latex/logreq/logreq.def
 File: logreq.def 2010/08/04 v1.0 logreq spec v1.0
@@ -1043,57 +1103,57 @@ File: logreq.def 2010/08/04 v1.0 logreq spec v1.0
 \Urlmuskip=\muskip11
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
-\c@tabx@nest=\count143
-\c@listtotal=\count144
-\c@listcount=\count145
-\c@liststart=\count146
-\c@liststop=\count147
-\c@citecount=\count148
-\c@citetotal=\count149
-\c@multicitecount=\count150
-\c@multicitetotal=\count151
-\c@instcount=\count152
-\c@maxnames=\count153
-\c@minnames=\count154
-\c@maxitems=\count155
-\c@minitems=\count156
-\c@citecounter=\count157
-\c@savedcitecounter=\count158
-\c@uniquelist=\count159
-\c@uniquename=\count160
-\c@refsection=\count161
-\c@refsegment=\count162
-\c@maxextratitle=\count163
-\c@maxextratitleyear=\count164
-\c@maxextrayear=\count165
-\c@maxextraalpha=\count166
-\c@abbrvpenalty=\count167
-\c@highnamepenalty=\count168
-\c@lownamepenalty=\count169
-\c@maxparens=\count170
-\c@parenlevel=\count171
-\blx@tempcnta=\count172
-\blx@tempcntb=\count173
-\blx@tempcntc=\count174
-\blx@maxsection=\count175
-\blx@maxsegment@0=\count176
-\blx@notetype=\count177
-\blx@parenlevel@text=\count178
-\blx@parenlevel@foot=\count179
-\blx@sectionciteorder@0=\count180
-\labelnumberwidth=\skip68
-\labelalphawidth=\skip69
-\biblabelsep=\skip70
-\bibitemsep=\skip71
-\bibnamesep=\skip72
-\bibinitsep=\skip73
-\bibparsep=\skip74
-\bibhang=\skip75
+\c@tabx@nest=\count152
+\c@listtotal=\count153
+\c@listcount=\count154
+\c@liststart=\count155
+\c@liststop=\count156
+\c@citecount=\count157
+\c@citetotal=\count158
+\c@multicitecount=\count159
+\c@multicitetotal=\count160
+\c@instcount=\count161
+\c@maxnames=\count162
+\c@minnames=\count163
+\c@maxitems=\count164
+\c@minitems=\count165
+\c@citecounter=\count166
+\c@savedcitecounter=\count167
+\c@uniquelist=\count168
+\c@uniquename=\count169
+\c@refsection=\count170
+\c@refsegment=\count171
+\c@maxextratitle=\count172
+\c@maxextratitleyear=\count173
+\c@maxextrayear=\count174
+\c@maxextraalpha=\count175
+\c@abbrvpenalty=\count176
+\c@highnamepenalty=\count177
+\c@lownamepenalty=\count178
+\c@maxparens=\count179
+\c@parenlevel=\count180
+\blx@tempcnta=\count181
+\blx@tempcntb=\count182
+\blx@tempcntc=\count183
+\blx@maxsection=\count184
+\blx@maxsegment@0=\count185
+\blx@notetype=\count186
+\blx@parenlevel@text=\count187
+\blx@parenlevel@foot=\count188
+\blx@sectionciteorder@0=\count189
+\labelnumberwidth=\skip72
+\labelalphawidth=\skip73
+\biblabelsep=\skip74
+\bibitemsep=\skip75
+\bibnamesep=\skip76
+\bibinitsep=\skip77
+\bibparsep=\skip78
+\bibhang=\skip79
 \blx@bcfin=\read2
 \blx@bcfout=\write4
-\c@mincomprange=\count181
-\c@maxcomprange=\count182
-\c@mincompwidth=\count183
+\c@mincomprange=\count190
+\c@maxcomprange=\count191
+\c@mincompwidth=\count192
 Package biblatex Info: Trying to load biblatex default data model...
 Package biblatex Info: ... file 'blx-dm.def' found.
 
@@ -1102,78 +1162,78 @@ Package biblatex Info: Trying to load biblatex style data model...
 Package biblatex Info: ... file 'numeric.dbx' not found.
 Package biblatex Info: Trying to load biblatex custom data model...
 Package biblatex Info: ... file 'biblatex-dm.cfg' not found.
-\c@afterword=\count184
-\c@savedafterword=\count185
-\c@annotator=\count186
-\c@savedannotator=\count187
-\c@author=\count188
-\c@savedauthor=\count189
-\c@bookauthor=\count190
-\c@savedbookauthor=\count191
-\c@commentator=\count192
-\c@savedcommentator=\count193
-\c@editor=\count194
-\c@savededitor=\count195
-\c@editora=\count196
-\c@savededitora=\count197
-\c@editorb=\count198
-\c@savededitorb=\count199
-\c@editorc=\count266
-\c@savededitorc=\count267
-\c@foreword=\count268
-\c@savedforeword=\count269
-\c@holder=\count270
-\c@savedholder=\count271
-\c@introduction=\count272
-\c@savedintroduction=\count273
-\c@namea=\count274
-\c@savednamea=\count275
-\c@nameb=\count276
-\c@savednameb=\count277
-\c@namec=\count278
-\c@savednamec=\count279
-\c@translator=\count280
-\c@savedtranslator=\count281
-\c@shortauthor=\count282
-\c@savedshortauthor=\count283
-\c@shorteditor=\count284
-\c@savedshorteditor=\count285
-\c@labelname=\count286
-\c@savedlabelname=\count287
-\c@institution=\count288
-\c@savedinstitution=\count289
-\c@lista=\count290
-\c@savedlista=\count291
-\c@listb=\count292
-\c@savedlistb=\count293
-\c@listc=\count294
-\c@savedlistc=\count295
-\c@listd=\count296
-\c@savedlistd=\count297
-\c@liste=\count298
-\c@savedliste=\count299
-\c@listf=\count300
-\c@savedlistf=\count301
-\c@location=\count302
-\c@savedlocation=\count303
-\c@organization=\count304
-\c@savedorganization=\count305
-\c@origlocation=\count306
-\c@savedoriglocation=\count307
-\c@origpublisher=\count308
-\c@savedorigpublisher=\count309
-\c@publisher=\count310
-\c@savedpublisher=\count311
-\c@language=\count312
-\c@savedlanguage=\count313
-\c@pageref=\count314
-\c@savedpageref=\count315
-\shorthandwidth=\skip76
-\shortjournalwidth=\skip77
-\shortserieswidth=\skip78
-\shorttitlewidth=\skip79
-\shortauthorwidth=\skip80
-\shorteditorwidth=\skip81
+\c@afterword=\count193
+\c@savedafterword=\count194
+\c@annotator=\count195
+\c@savedannotator=\count196
+\c@author=\count197
+\c@savedauthor=\count198
+\c@bookauthor=\count199
+\c@savedbookauthor=\count266
+\c@commentator=\count267
+\c@savedcommentator=\count268
+\c@editor=\count269
+\c@savededitor=\count270
+\c@editora=\count271
+\c@savededitora=\count272
+\c@editorb=\count273
+\c@savededitorb=\count274
+\c@editorc=\count275
+\c@savededitorc=\count276
+\c@foreword=\count277
+\c@savedforeword=\count278
+\c@holder=\count279
+\c@savedholder=\count280
+\c@introduction=\count281
+\c@savedintroduction=\count282
+\c@namea=\count283
+\c@savednamea=\count284
+\c@nameb=\count285
+\c@savednameb=\count286
+\c@namec=\count287
+\c@savednamec=\count288
+\c@translator=\count289
+\c@savedtranslator=\count290
+\c@shortauthor=\count291
+\c@savedshortauthor=\count292
+\c@shorteditor=\count293
+\c@savedshorteditor=\count294
+\c@labelname=\count295
+\c@savedlabelname=\count296
+\c@institution=\count297
+\c@savedinstitution=\count298
+\c@lista=\count299
+\c@savedlista=\count300
+\c@listb=\count301
+\c@savedlistb=\count302
+\c@listc=\count303
+\c@savedlistc=\count304
+\c@listd=\count305
+\c@savedlistd=\count306
+\c@liste=\count307
+\c@savedliste=\count308
+\c@listf=\count309
+\c@savedlistf=\count310
+\c@location=\count311
+\c@savedlocation=\count312
+\c@organization=\count313
+\c@savedorganization=\count314
+\c@origlocation=\count315
+\c@savedoriglocation=\count316
+\c@origpublisher=\count317
+\c@savedorigpublisher=\count318
+\c@publisher=\count319
+\c@savedpublisher=\count320
+\c@language=\count321
+\c@savedlanguage=\count322
+\c@pageref=\count323
+\c@savedpageref=\count324
+\shorthandwidth=\skip80
+\shortjournalwidth=\skip81
+\shortserieswidth=\skip82
+\shorttitlewidth=\skip83
+\shortauthorwidth=\skip84
+\shorteditorwidth=\skip85
 Package biblatex Info: Trying to load compatibility code...
 Package biblatex Info: ... file 'blx-compat.def' found.
 
@@ -1185,13 +1245,13 @@ Package biblatex Info: ... file 'biblatex_.def' found.
 
 (/usr/share/texlive/texmf-dist/tex/latex/biblatex/biblatex_.def
 File: biblatex_.def 
-\c@textcitecount=\count316
-\c@textcitetotal=\count317
-\c@textcitemaxnames=\count318
-\c@biburlnumpenalty=\count319
-\c@biburlucpenalty=\count320
-\c@biburllcpenalty=\count321
-\c@smartand=\count322
+\c@textcitecount=\count325
+\c@textcitetotal=\count326
+\c@textcitemaxnames=\count327
+\c@biburlnumpenalty=\count328
+\c@biburlucpenalty=\count329
+\c@biburllcpenalty=\count330
+\c@smartand=\count331
 )
 Package biblatex Info: Trying to load bibliography style 'numeric'...
 Package biblatex Info: ... file 'numeric.bbx' found.
@@ -1203,8 +1263,8 @@ Package biblatex Info: ... file 'standard.bbx' found.
 
 (/usr/share/texlive/texmf-dist/tex/latex/biblatex/bbx/standard.bbx
 File: standard.bbx 2016/03/03 v3.3 biblatex bibliography style (PK/JW/AB)
-\c@bbx:relatedcount=\count323
-\c@bbx:relatedtotal=\count324
+\c@bbx:relatedcount=\count332
+\c@bbx:relatedtotal=\count333
 ))
 Package biblatex Info: Trying to load citation style 'numeric'...
 Package biblatex Info: ... file 'numeric.cbx' found.
@@ -1235,37 +1295,37 @@ Package biblatex Info: ... file 'english.lbx' found.
 (/usr/share/texlive/texmf-dist/tex/latex/biblatex/lbx/english.lbx
 File: english.lbx 2016/03/03 v3.3 biblatex localization (PK/JW/AB)
 )
-\@quotelevel=\count325
-\@quotereset=\count326
+\@quotelevel=\count334
+\@quotereset=\count335
 
 (./Task_2_1.aux)
 \openout1 = `Task_2_1.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 34.
-LaTeX Font Info:    ... okay on input line 34.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
  (/usr/share/texlive/texmf-dist/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count327
-\scratchdimen=\dimen260
-\scratchbox=\box48
-\nofMPsegments=\count328
-\nofMParguments=\count329
-\everyMPshowfont=\toks39
-\MPscratchCnt=\count330
-\MPscratchDim=\dimen261
-\MPnumerator=\count331
-\makeMPintoPDFobject=\count332
-\everyMPtoPDFconversion=\toks40
+\scratchcounter=\count336
+\scratchdimen=\dimen272
+\scratchbox=\box74
+\nofMPsegments=\count337
+\nofMParguments=\count338
+\everyMPshowfont=\toks40
+\MPscratchCnt=\count339
+\MPscratchDim=\dimen273
+\MPnumerator=\count340
+\makeMPintoPDFobject=\count341
+\everyMPtoPDFconversion=\toks41
 ) (/usr/share/texlive/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
 Package: pdftexcmds 2011/11/29 v0.20 Utility functions of pdfTeX for LuaTeX (HO
 )
@@ -1353,58 +1413,64 @@ Package biblatex Warning: Biber reported the following issues
 (biblatex)                - Overwriting field 'year' with year value from field
  'date' for entry 'EdwinK.P.Chong2013'.
 
+
+Package biblatex Warning: Biber reported the following issues
+(biblatex)                with 'Zienkiewicz2013':
+(biblatex)                - Overwriting field 'year' with year value from field
+ 'date' for entry 'Zienkiewicz2013'.
+
 )
-Package biblatex Info: Reference section=0 on input line 34.
-Package biblatex Info: Reference segment=0 on input line 34.
-LaTeX Font Info:    Try loading font information for U+msa on input line 52.
+Package biblatex Info: Reference section=0 on input line 38.
+Package biblatex Info: Reference segment=0 on input line 38.
+LaTeX Font Info:    Try loading font information for U+msa on input line 56.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 52.
+LaTeX Font Info:    Try loading font information for U+msb on input line 56.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Try loading font information for U+stmry on input line 52.
+LaTeX Font Info:    Try loading font information for U+stmry on input line 56.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stmaryrd/Ustmry.fd)
 
 LaTeX Font Warning: Font shape `U/stmry/b/n' undefined
-(Font)              using `U/stmry/m/n' instead on input line 56.
+(Font)              using `U/stmry/m/n' instead on input line 60.
 
 [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
-LaTeX Font Info:    Try loading font information for U+euf on input line 149.
+LaTeX Font Info:    Try loading font information for U+euf on input line 154.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/ueuf.fd
 File: ueuf.fd 2013/01/14 v3.01 Euler Fraktur
 ) [3] [4] [5] [6]
 [7]
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
+Underfull \hbox (badness 10000) in paragraph at lines 324--325
 
  []
 
 [8]
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 400.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 405.
 
  (/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 400.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 405.
 
-Overfull \hbox (67.19543pt too wide) detected at line 402
+Overfull \hbox (67.19543pt too wide) detected at line 407
 [][] 
  []
 
-[9] [10]
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 410.
+[9] [10] [11] [12]
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 498.
 
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
-) [11]
-(./Task_2_1.aux)
+)
+[13] (./Task_2_1.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
@@ -1413,13 +1479,13 @@ Package logreq Info: Writing requests to 'Task_2_1.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 31135 strings out of 493888
- 716734 string characters out of 6155024
- 1184013 words of memory out of 5000000
- 34062 multiletter control sequences out of 15000+600000
- 20222 words of font info for 58 fonts, out of 8000000 for 9000
+ 31328 strings out of 493888
+ 719505 string characters out of 6155024
+ 1191398 words of memory out of 5000000
+ 34239 multiletter control sequences out of 15000+600000
+ 22223 words of font info for 66 fonts, out of 8000000 for 9000
  600 hyphenation exceptions out of 8191
- 55i,17n,84p,1565b,994s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 55i,17n,84p,1565b,992s stack positions out of 5000i,500n,10000p,200000b,80000s
  </home/vinayak/.texmf-var/fonts/pk/ljfour/jknappen/ec/ectt1095.600pk> </home
 /vinayak/.texmf-var/fonts/pk/ljfour/jknappen/ec/eccc1095.600pk> </home/vinayak/
 .texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm0800.600pk> </home/vinayak/.texmf-va
@@ -1442,10 +1508,10 @@ cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cms
 y8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/euler/eufm10.
 pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.p
 fb>
-Output written on Task_2_1.pdf (11 pages, 253700 bytes).
+Output written on Task_2_1.pdf (13 pages, 276757 bytes).
 PDF statistics:
- 411 PDF objects out of 1000 (max. 8388607)
- 106 compressed objects within 2 object streams
+ 444 PDF objects out of 1000 (max. 8388607)
+ 111 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -126,4 +126,34 @@
   pages   = {24/1--24/27},
 }
 
+@InProceedings{Hrinda2010,
+  author    = {Hrinda, Glenn},
+  title     = {Snap-through instability patterns in truss structures},
+  booktitle = {51st AIAA/ASME/ASCE/AHS/ASC Structures, Structural Dynamics, and Materials Conference 18th AIAA/ASME/AHS Adaptive Structures Conference 12th},
+  year      = {2010},
+  pages     = {2611},
+}
+
+@Article{Reddy2018,
+  author        = {Reddy, Narravula Harshavardhan and Saxena, Prashant},
+  title         = {Instabilities in the axisymmetric magnetoelastic deformation of a cylindrical membrane},
+  journal       = {International Journal of Solids and Structures},
+  year          = {2018},
+  volume        = {136},
+  pages         = {203--219},
+  __markedentry = {[vinayak:]},
+  publisher     = {Elsevier},
+}
+
+@Article{Reddy2017,
+  author        = {Reddy, Narravula Harshavardhan and Saxena, Prashant},
+  title         = {Limit points in the free inflation of a magnetoelastic toroidal membrane},
+  journal       = {International Journal of Non-Linear Mechanics},
+  year          = {2017},
+  volume        = {95},
+  pages         = {248--263},
+  __markedentry = {[vinayak:6]},
+  publisher     = {Elsevier},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}

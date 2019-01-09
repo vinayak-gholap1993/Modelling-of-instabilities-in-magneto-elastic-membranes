@@ -26,6 +26,10 @@
                     tick label style={font=\small}
                     }}
 
+\usepackage{array}                            % better table support
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{multicol}                         % spanning columns
+\usepackage{multirow}                         % spanning rows
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{stmaryrd} % for jump in gradient symbol
 \usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
@@ -122,6 +126,7 @@ A Neo-Hookean solid is a hyperelastic material model that can be used for predic
 where $\mu$ and $\lambda$ are the Lam\'e parameters. For the magneto-elastic material of our interest we augment the Neo-Hookean material law with a term which takes into account the energy stored in the body due to applied external magnetic field $\mathbb{H}$ as 
 \begin{equation}
 \Psi \equiv \dfrac{\mu}{2} [\mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} - 2 \ln J] + \dfrac{\lambda}{2} (\ln J)^2 - \frac{\mu_0 \mu_r}{2} [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}].
+\label{eq:1.2.2}
 \end{equation}
 For the considered S.E.F. for the Neo-Hookean material as stated in Equation \eqref{eq:1.2}, the second Piola-Kirchhoff stress is:
 \begin{align}
@@ -401,9 +406,92 @@ With the updated displacements, the residuum $R$ is computed again and the proce
 \label{alg:1}
 \end{algorithm} \par 
 
-The rate of convergence of the Newton-Raphson method is given by the inequality $\norm{\mathbf{U}_{i+1} - \mathbf{U}} \leq C \norm{\mathbf{U}_i - \mathbf{U}}^2$, where $\mathbf{U}$ is the actual solution of $R(\mathbf{U}) = 0$ and $C$ is a positive constant. The quadratic convergence of this scheme is only valid near the solution point. An advantage of this property is a converged solution is obtained within a few iterations. As a disadvantage, as one can observe in the Algorithmic steps in Algorithm \eqref{alg:1}, one needs to assemble the tangent matrix $\mathbf{K}$ and solve the linear system of equations at each iteration step. This can be time consuming and also computationally expensive for a system with large number of unknowns.  
+The rate of convergence of the Newton-Raphson method is given by the inequality $\norm{\mathbf{U}_{i+1} - \mathbf{U}} \leq C \norm{\mathbf{U}_i - \mathbf{U}}^2$, where $\mathbf{U}$ is the actual solution of $R(\mathbf{U}) = 0$ and $C$ is a positive constant. The quadratic convergence of this scheme is only valid near the solution point. An advantage of this property is a converged solution is obtained within a few iterations. As a disadvantage, as one can observe in the Algorithmic steps in Algorithm \eqref{alg:1}, one needs to assemble the tangent matrix $\mathbf{K}$ and solve the linear system of equations at each iteration step. This can be time consuming and also computationally expensive for a system with large number of unknowns. \par 
 
-\section{Results}
+\subsection{Transformations needed for axisymmetric problem}
+The three-dimensional problem can be reduced to a two-dimensional problem if the loading, geometry and material behaviour do not change with a third coordinate. Such a class of problems is called \textit{axisymmetric} where the analysis domain is a three-dimensional body of revolution defined in cylindrical coordinates ($r, z, \theta$) but the deformations are two-dimensional functions of $r, z$ only \cite{Zienkiewicz2013}. The body is three-dimensional but defined by a surface of revolution such that the properties and boundaries are independent of $\theta$ coordinate. For the chosen cylindrical coordinate system in the reference configuration
+\begin{equation}
+\mathbf{X} = \begin{bmatrix}
+X \\
+Y \\
+Z
+\end{bmatrix} = \begin{bmatrix}
+R \\
+\Theta \\
+Z
+\end{bmatrix},
+\end{equation}
+the displacement field for the (torsionless) axisymmetric problem may be taken as 
+\begin{equation}
+\mathbf{U} = \begin{bmatrix}
+U_R \\
+U_Z
+\end{bmatrix}.
+\label{eq:1.25}
+\end{equation}
+The rules for coordinate transformation between Cartesian and Cylindrical coordinate system are:
+\begin{align}
+X &= R \cos \Theta, \ Y = R \sin \Theta, \ Z = Z, \nonumber \\
+\mathrm{d}X &= \mathrm{d}R, \ \mathrm{d}Y = R \ \mathrm{d} \Theta, \ \mathrm{d}Z = \mathrm{d}Z, \nonumber \\
+\text{with} \ R &= \sqrt{X^2 + Y^2} \ \text{and} \ \tan \Theta = \frac{Y}{X}.
+\end{align}
+The 3D volume integral is then transformed for an axisymmetric formulation as
+\begin{align}
+\int\limits_{\mathcal{B}_0} \mathrm{d} V &= \int\limits_{X} \mathrm{d} X \int\limits_{Y} \mathrm{d} Y \int\limits_{Z} \mathrm{d} Z = \int\limits_{R} \mathrm{d} R \ \int\limits_{\Theta} R \mathrm{d} \Theta \int\limits_{Z} \mathrm{d} Z \nonumber \\
+\text{with} \ \int\limits_{\Theta} \mathrm{d} \Theta &= 2 \pi \ \text{(independent of $\Theta$ coordinate)} \nonumber \\
+\int\limits_{\mathcal{B}_0} \mathrm{d} V &= \int\limits_{R} \int\limits_{Z} 2 \pi \ R \ \mathrm{d} R \ \mathrm{d} Z. 
+\end{align}
+For the (torsionless) axisymmetric problem with the given displacement field as in Equation \eqref{eq:1.25}, the required deformation gradient (a $2^{nd}$ order tensor) is given as \cite{Zienkiewicz2013}
+\begin{equation}
+\mathbf{F} = \begin{bmatrix}
+r_{, R} & r_{, Z} & 0 \\
+z_{, R} & z_{, Z} & 0 \\
+0 & 0 & r/R
+\end{bmatrix} = \begin{bmatrix}
+(1 + u_{r, R}) & u_{r, Z} & 0 \\
+u_{z, R} & (1 + u_{z, Z}) & 0 \\
+0 & 0 & (1 + u_r / R)
+\end{bmatrix}.
+\label{eq:1.26}
+\end{equation}
+This results in a $2^{nd}$ order $[(dim + 1) \times (dim + 1)] \ \mathbf{F}$ in a $dim = 2$ dimensional problem.  Further, the derived quantities using the deformation gradient $\mathbf{F}$ such as $2^{nd}$ Piola-Kirchhoff stress $\mathbf{S}$, $4^{th}$ order material elasticity tensor $\mathfrak{C}$ and Green-Lagrange strain $\mathbf{E}$ are also $3 \times 3$ tensors in a 2D axisymmetric problem.
+
+\subsection{Data structures employed}
+\subsubsection{Constitutive material model (CMM)}
+As described in depth in Section \eqref{sec:const_law}, we consider the entire continuum body to be composed of a compressible hyperelastic material. The corresponding Neo-Hookean strain energy density function were stated in Equation \eqref{eq:1.2} for a purely non-linear compressible hyperelastic material and \eqref{eq:1.2.2} for the considered magneto-elastic materials. We implement this material model using a data structure which is stored at each local quadrature point of the cell / element. Within each object of this data structure we store the current state characterized by the values of solution fields and use these current state values to compute the Kinematic, Kinetic quantities and the resulting stresses at the given load/ time step.\par 
+The quantities stored within an object of this material model data structure are as given in Table \eqref{tab:1}. This data structure is provided with two functionalities: to update the material quantities such as the Jacobian $J$ using the deformation dependent data such as deformation gradient $\mathbf{F}$, and to compute the values of the different quantities such as $2^{nd}$ Piola-Kirchhoff stress $\mathbf{S}$ and the $4^{th}$ order material elasticity tensor $\mathfrak{C}$ at the current load/ time step. This data structure also has a consistency check for a positive value of the bulk modulus $\kappa$ and positive Jacobian (to avoid material self-penetration) for each deformation state of the body. \par 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}[c]{|C{4cm}|C{2cm}|C{2cm}|}
+\hline
+\textbf{Quantity} & \textbf{Symbol} & \textbf{SI Unit} \\
+\hline
+Shear modulus & $\mu$ & Pascal \\
+\hline
+Bulk modulus & $\kappa$ & Pascal \\
+\hline
+Poisson's ratio & $\nu$ & - \\
+\hline
+Lam\'e 1st parameter & $\lambda$ & Pascal \\
+\hline 
+Jacobian & $J$ & - \\
+\hline 
+\end{tabular} 
+\caption{Material quantities stored at each local quadrature point}
+\label{tab:1}
+\end{table}
+
+\subsubsection{Local Quadrature point history data (LQPH)}
+A data structure to store data items at each local quadrature point was used and adapted to our needs using  \cite{Pelteret2012}. This data structure stores a pointer (in our case a smart std$::$shared\_ptr) to the CMM object at each quadrature point. It also stores the material quantities evaluated at the quadrature point such as the deformation gradient $\mathbf{F}$, $2^{nd}$ Piola-Kirchhoff stress and $4^{th}$ order material elasticity tensor $\mathfrak{C}$. This data structure is provided with two functionalities: first, to initialize each cell of $q$ number of quadrature points with $q$ copies of this object and set-up the CMM object data at each of these $q$ points with user input material quantities such as shear modulus $\mu$ and Poisson's ratio $\nu$. Secondly, update the CMM object using the computed Kinematic quantity such as $\mathbf{F}$ from the current solution state. The LQPH data structure also provides getter functions to access the current values of quantities such as $\mathbf{F}, \mathbf{S} \ \text{and} \ \mathfrak{C}$ that can be directly accessed, for e.g., during the assembly of the system matrix and R.H.S. vector.\par 
+Using a generic data structure implementation one can have different material models with individual material property values for $\mu$ and $\nu$ in different regions of the simulation domain. For e.g., in our modelling case for the quasi-static compressible finite strain elasticity problem, we model the torus-shaped magneto-elastic membrane along with the surrounding free space (through which the magnetic field permeates). Both, the free space and membrane, are considered to be composed of an elastic material. In this scenario one can employ separate material models for the free space and the magneto-elastic membrane and also use comparative values for the material parameters $\mu$ and $\nu$ (e.g. use low stiffness parameter to idealize the free space as a fluid region). 
+
+\subsubsection{Load step}
+Within the scope of finite strain elasticity, in order to capture the non-linear material behaviour undergoing finite deformations for large loads using a non-linear solver such as Newton Raphson method, it is necessary to apply the total load in small increments considering the quadratic convergence of the Newton Raphson method when near the solution point. Thus, one needs to control the applied load in each load step and such a method is called a load controlled Newton Raphson method. Here, we consider a uniformly increasing load in each load step with a constant load step size. User input parameters taken are the total load $\mathbf{F}_{ext}$ to be applied at the end of the load cycle and the load step size $\Delta \mathbf{F}_{ext}$ that is applied in each of these load steps. \par 
+The data structure implemented for the load stepping stores the current load step number, current load value, final/ total load to be applied $\mathbf{F}_{ext}$ and the increment of the load $\Delta \mathbf{F}_{ext}$ in each load cycle. Use of this data structure can be observed in Algorithm \eqref{alg:1} at the first algorithmic loop. Once the Newton Raphson solver has converged (arrived at the equilibrium state of the continuum body) for the applied load increment, the load step data structure increments the current load step number and the current applied load.
+ 
+\section{Test models \& Results}
+
 
 
 \newpage

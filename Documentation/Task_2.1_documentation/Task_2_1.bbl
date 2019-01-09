@@ -103,6 +103,49 @@
       \endverb
       \warn{\item Overwriting field 'year' with year value from field 'date' for entry 'EdwinK.P.Chong2013'}
     \endentry
+    \entry{Zienkiewicz2013}{book}{}
+      \name{author}{4}{}{%
+        {{hash=f78ed66e944228d5902508ae1db82473}{%
+           family={Zienkiewicz},
+           family_i={Z\bibinitperiod},
+           given={O.\bibnamedelimi C.},
+           given_i={O\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+        {{hash=b7245abba7900bdf851a002493694200}{%
+           family={Taylor},
+           family_i={T\bibinitperiod},
+           given={Robert\bibnamedelima L.},
+           given_i={R\bibinitperiod\bibinitdelim L\bibinitperiod}}}%
+        {{hash=2ccb5acd21fdfe5a04c0cb4a57a66628}{%
+           family={Fox},
+           family_i={F\bibinitperiod},
+           given={David\bibnamedelima A.},
+           given_i={D\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=e629d5ba9eae0bcc8791659d7b3f1cbd}{%
+           family={Zienkiewicz},
+           family_i={Z\bibinitperiod},
+           given={Olek\bibnamedelima C.},
+           given_i={O\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Elsevier LTD, Oxford}%
+      }
+      \strng{namehash}{3024ef621d73fb54d892ae78ea3236ed}
+      \strng{fullhash}{7e98b07d0026cdb48b3e3a9f801c2f8a}
+      \field{sortinit}{2}
+      \field{sortinithash}{8343b463aacf48517c044b4d2c9c45ed}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{12}
+      \field{isbn}{1856176347}
+      \field{month}{11}
+      \field{pagetotal}{768}
+      \field{title}{The Finite Element Method for Solid and Structural Mechanics}
+      \field{year}{2013}
+      \verb{url}
+      \verb https://www.ebook.de/de/product/21021815/o_c_zienkiewicz_robert_l_taylor_david_a_fox_olek_c_zienkiewicz_the_finite_element_method_for_solid_and_structural_mechanics.html
+      \endverb
+      \warn{\item Overwriting field 'year' with year value from field 'date' for entry 'Zienkiewicz2013'}
+    \endentry
     \entry{Pelteret2016a}{misc}{}
       \name{author}{2}{}{%
         {{hash=4baae6166d1287a0be1e03293b0e7f8d}{%
