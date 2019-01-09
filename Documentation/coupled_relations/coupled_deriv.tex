@@ -1,0 +1,217 @@
+\documentclass[11pt,a4paper,final]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{bm,bbm}
+\usepackage[final]{graphicx}
+\graphicspath{{./images/}}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[usenames, dvipsnames]{color}
+\usepackage[margin=1in]{geometry} % to adjust the page margins
+%\pagenumbering{gobble} % To suppress page numbering 
+
+\DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
+\newcommand{\seminorm}[1]{\left\lvert #1 \right\rvert}
+
+\usepackage{breqn}
+\usepackage{empheq}
+\usepackage[most]{tcolorbox}
+
+\usepackage{tikz,pgfplots}
+\pgfplotsset{table/search path={./data}} %checks in data folder
+\pgfplotsset{compat=newest}	%mention version to avoid warnings
+\pgfplotsset{every axis/.append style={
+                    label style={font=\small},
+                    legend style={font=\small, draw=none, fill=none},
+                    tick label style={font=\small}
+                    }}
+
+\usepackage{array}                            % better table support
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{multicol}                         % spanning columns
+\usepackage{multirow}                         % spanning rows
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{stmaryrd} % for jump in gradient symbol
+\usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
+\addbibresource{task2_ref.bib}
+
+
+\begin{document}
+\begin{center}
+\textbf{\Large Master thesis: documentation}\\ \vspace{0.25cm}
+\textbf{\large Vinayak Gholap}
+\end{center}
+
+\section{Constitutive relations for coupled magneto-elastic material}
+Neo-Hookean hyperelastic material model for coupled magneto-elastic material:
+\begin{empheq}[box=\tcbhighmath]{equation}
+\Psi = \Psi (J, \mathbf{C}, \mathbb{H}) = \dfrac{\mu}{2} \left[ \mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} -2 \ln J \right] + \dfrac{\lambda}{2} (\ln J)^2 - \frac{\mu_0 \mu_r}{2} [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]
+\label{eq:1.1}
+\end{empheq}
+
+\noindent where $J$: Jacobian,\\ $\mathbf{C}$: Right Cauchy-Green deformation tensor,\\ $\mathbb{H}$: Applied magnetic vector field, \\
+$\mu$: Shear modulus,\\ $\lambda$: Lam\'e $1^{st}$ parameter,\\ $\mu_0$: vacuum magnetic permeability, \\
+$\mu_r$: relative magnetic permeability of magneto-elastic material. \newline
+
+\subsection{$2^{nd}$ Piola-Kirchhoff stress}
+\begin{align*}
+\mathbf{S} &= 2 \dfrac{\partial \Psi}{\partial \mathbf{C}} \\
+&= 2 \left[ \dfrac{\mu}{2} \left\lbrace \dfrac{\partial [\mathbf{C} : \mathbf{I}]}{\partial \mathbf{C}} - 2 \dfrac{\partial \ln J}{\partial \mathbf{C}} \right\rbrace + \dfrac{\lambda}{2} \dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} - \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}} \right]
+\end{align*}
+Side calculation:
+\begin{align*}
+\dfrac{\partial [\mathbf{C} : \mathbf{I}]}{\partial \mathbf{C}} &= \mathbf{I} \\ 
+\dfrac{\partial \ln J}{\partial \mathbf{C}} &= \dfrac{1}{J} \dfrac{\partial J}{\partial \mathbf{C}} \\
+\dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} &= 2 \ \ln J \ \dfrac{\partial \ln J}{\partial \mathbf{C}} \\
+\dfrac{\partial J}{\partial \mathbf{C}} &= \dfrac{1}{2} J \mathbf{C}^{-1} \ \  \text{c.f. \cite[see][page 46 Equation (3.124)]{Wriggers2008}}
+\end{align*}
+\begin{align*}
+\mathbf{S} &= \mu \mathbf{I} -  \mu \mathbf{C}^{-1} + \lambda \ln J \mathbf{C}^{-1} - \mu_0 \mu_r \dfrac{\partial [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}}
+\end{align*}
+Side calculation: Note $\mathbf{C} := \mathbf{F}^T \mathbf{F} \ $ is symmetric $\implies \mathbf{C}^{-1}$ is also symmetric 
+\begin{align*}
+\dfrac{\partial [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}} &= \dfrac{\partial [J C^{-1}_{IJ} H_I H_J]}{\partial C_{KL}} \ \mathbf{E}_K \otimes \mathbf{E}_L \\
+&= \dfrac{\partial J}{\partial C_{KL}} \ C^{-1}_{IJ} \ H_I \ H_J \ \mathbf{E}_K \otimes \mathbf{E}_L + J \ \dfrac{\partial C^{-1}_{IJ}}{\partial C_{KL}} \ H_I \ H_J \ \mathbf{E}_K \otimes \mathbf{E}_L \\
+&= \dfrac{J}{2} \ C^{-1}_{KL} \ C^{-1}_{IJ} \ H_I \ H_J \ \mathbf{E}_K \otimes \mathbf{E}_L + J \ \dfrac{\partial C^{-1}_{IJ}}{\partial C_{KL}} \ H_I \ H_J \ \mathbf{E}_K \otimes \mathbf{E}_L
+\end{align*}
+c.f. \cite[see][page 519]{Wriggers2008}: 
+\begin{align*}
+\dfrac{\partial C^{-1}_{IJ}}{\partial C_{KL}} = -\dfrac{1}{2} [C^{-1}_{IK} \ C^{-1}_{LJ} + C^{-1}_{IL} \ C^{-1}_{KJ}]
+\end{align*}
+\begin{align*}
+\dfrac{\partial [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}} &= \dfrac{J}{2} \ C^{-1}_{KL} \ C^{-1}_{IJ} \ H_I \ H_J \ \mathbf{E}_K \otimes \mathbf{E}_L + \dfrac{-J}{2} \left[ C^{-1}_{IK} \ C^{-1}_{LJ} \ H_I \ H_J + C^{-1}_{IL} \ C^{-1}_{KJ}  \ H_I \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \\
+&= \dfrac{J}{2} \ C^{-1}_{IJ} \ H_I \ H_J \ C^{-1}_{KL} \ \mathbf{E}_K \otimes \mathbf{E}_L - \dfrac{J}{2} \left[ C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J + C^{-1}_{LI} \ H_I \ C^{-1}_{KJ} \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \\
+&= \dfrac{J}{2} \ C^{-1}_{IJ} \ H_I \ H_J \ C^{-1}_{KL} \ \mathbf{E}_K \otimes \mathbf{E}_L - J [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym} \ \mathbf{E}_K \otimes \mathbf{E}_L \\
+&= \dfrac{J}{2} [ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \mathbf{C}^{-1} - J [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H})]^{sym}
+\end{align*}
+\begin{empheq}[box=\tcbhighmath]{equation*}
+\mathbf{S} = \mu \mathbf{I} - [\mu - \lambda \ln J] \mathbf{C}^{-1} - \dfrac{\mu_0 \mu_r}{2} \ J \ [ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \mathbf{C}^{-1} + \mu_0 \mu_r \ J \ [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H})]^{sym}
+\end{empheq}
+
+\subsection{$4^{th}$ order material elasticity tensor}
+\begin{align*}
+\mathfrak{C} &= 2 \dfrac{\partial \mathbf{S}}{\partial \mathbf{C}} \\
+&= 2 \dfrac{\partial S_{KL}}{\partial C_{MN}} \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+\begin{split}
+=\ & 2 \left\lbrace - \dfrac{\partial [\mu - \lambda \ln J]}{\partial \mathbf{C}} \mathbf{C}^{-1} - [\mu - \lambda \ln J] \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} - \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial J}{\partial \mathbf{C}}[\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \mathbf{C}^{-1} \right\rbrace \\
+&+ 2 \left\lbrace - \dfrac{\mu_0 \mu_r}{2} \ J \ \dfrac{\partial [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}} \mathbf{C}^{-1} - \dfrac{\mu_0 \mu_r}{2} \ J \ [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} \right\rbrace \\
+&+ 2 \left\lbrace \mu_0 \mu_r \dfrac{\partial J}{\partial \mathbf{C}} [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H})]^{sym} + \mu_0 \mu_r \ J \ \dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H})]^{sym}}{\partial \mathbf{C}} \right\rbrace
+\end{split} \\
+\begin{split}
+=\ & 2 \left\lbrace \dfrac{\lambda}{J} \dfrac{\partial J}{\partial C_{MN}} \ C^{-1}_{KL} - [\mu - \lambda \ln J] \left\lbrace \dfrac{-1}{2} \left( C^{-1}_{KM} \ C^{-1}_{NL} + C^{-1}_{KN} \ C^{-1}_{ML} \right) \right\rbrace \right\rbrace \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N\\
+&+ 2 \left\lbrace - \dfrac{\mu_0 \mu_r}{2} \dfrac{1}{2} \ J \ C^{-1}_{MN} \ [C^{-1}_{IJ} \ H_I \ H_J] C^{-1}_{KL} - \dfrac{\mu_0 \mu_r}{2} J \ \dfrac{\partial [C^{-1}_{IJ} \ H_I \ H_J]}{\partial C_{MN}} C^{-1}_{KL} \right\rbrace \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+&+ 2 \left\lbrace - \dfrac{\mu_0 \mu_r}{2} \ J \ [C^{-1}_{IJ} \ H_I \ H_J] \left\lbrace \dfrac{-1}{2} (C^{-1}_{KM} \ C^{-1}_{NL} + C^{-1}_{KN} \ C^{-1}_{ML}) \right\rbrace \right\rbrace \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+&+ 2 \left\lbrace \dfrac{\mu_0 \mu_r}{2} \ J \ C^{-1}_{MN} [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym} + \mu_0 \mu_r \ J \ \dfrac{\partial [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym}}{\partial C_{MN}} \right\rbrace \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N
+\end{split}\\
+\begin{split}
+=\ & \lambda \ C^{-1}_{MN} \ C^{-1}_{KL} + [\mu - \lambda \ln J] \left( C^{-1}_{KM} \ C^{-1}_{NL} + C^{-1}_{KN} \ C^{-1}_{ML} \right) - \dfrac{\mu_0 \mu_r}{2} \ J \ C^{-1}_{MN} \ [C^{-1}_{IJ} \ H_I \ H_J] C^{-1}_{KL} \\
+&- \mu_0 \mu_r J \ \dfrac{\partial [C^{-1}_{IJ} \ H_I \ H_J]}{\partial C_{MN}} \ C^{-1}_{KL} + \dfrac{\mu_0 \mu_r}{2} \ J \ [C^{-1}_{IJ} \ H_I \ H_J] (C^{-1}_{KM} \ C^{-1}_{NL} + C^{-1}_{KN} \ C^{-1}_{ML}) \\
+&+ \mu_0 \mu_r \ J \ C^{-1}_{MN} [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym} + 2 \mu_0 \mu_r \ J \ \dfrac{\partial [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym}}{\partial C_{MN}} \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N
+\end{split}\\
+\end{align*}
+\newline
+Side calculation 1:
+\begin{align*}
+\dfrac{\partial [C^{-1}_{IJ} \ H_I \ H_J]}{\partial C_{MN}} &= \dfrac{\partial C^{-1}_{IJ}}{\partial C_{MN}} \ H_I \ H_J \ \mathbf{E}_M \otimes \mathbf{E}_N \\
+&= \dfrac{-1}{2} [C^{-1}_{IM} \ C^{-1}_{NJ} + C^{-1}_{IN} \ C^{-1}_{MJ}] \ H_I \ H_J \ \mathbf{E}_M \otimes \mathbf{E}_N \\
+&= \dfrac{-1}{2} [C^{-1}_{MI} \ H_I \ C^{-1}_{NJ} \ H_J + C^{-1}_{NI} \ H_I \ C^{-1}_{MJ} \ H_J] \ \mathbf{E}_M \otimes \mathbf{E}_N \\
+&= - [C^{-1}_{MI} \ H_I \ C^{-1}_{NJ} \ H_J]^{sym} \ \mathbf{E}_M \otimes \mathbf{E}_N \\
+&= - [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}
+\end{align*}
+Side calculation 2:
+\begin{align*}
+\dfrac{\partial [C^{-1}_{KI} \ H_I \ C^{-1}_{LJ} \ H_J]^{sym}}{\partial C_{MN}} &= \left[ \dfrac{\partial C^{-1}_{KI}}{\partial C_{MN}} \ H_I \ C^{-1}_{LJ} \ H_J  + C^{-1}_{KI} \ H_I \  \dfrac{\partial C^{-1}_{LJ}}{\partial C_{MN}} \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+\begin{split}
+= &- \dfrac{1}{2} \left[ (C^{-1}_{KM} \ C^{-1}_{NI} + C^{-1}_{KN} \ C^{-1}_{MI}) \ H_I \ C^{-1}_{LJ} \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+&- \dfrac{1}{2} \left[ C^{-1}_{KI} \ H_I \ (C^{-1}_{LM} \ C^{-1}_{NJ} + C^{-1}_{LN} \ C^{-1}_{MJ}) \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+\end{split}\\
+\begin{split}
+= &- \dfrac{1}{2} \left[ C^{-1}_{KM} \ C^{-1}_{NI} \ H_I \ C^{-1}_{LJ} \ H_J + C^{-1}_{KN} \ C^{-1}_{MI} \ H_I \ C^{-1}_{LJ} \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+&- \dfrac{1}{2} \left[ C^{-1}_{KI} \ H_I \ C^{-1}_{LM} \ C^{-1}_{NJ} \ H_J + C^{-1}_{KI} \ H_I \ C^{-1}_{LN} \ C^{-1}_{MJ} \ H_J \right] \ \mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N \\
+\end{split} \\
+\begin{split}
+= &- \dfrac{1}{2} \left[ \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) +  \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \right] \\
+&- \dfrac{1}{2} \left[ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \right]
+\end{split}\\
+&= - [\mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]
+\end{align*}
+\begin{align*}
+\mathfrak{C} =  & \ \lambda \ \mathbf{C}^{-1} \otimes \mathbf{C}^{-1} -2 [\mu - \lambda \ln J] \ \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} \\
+&- \dfrac{\mu_0 \mu_r}{2} \ J \ [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] (\mathbf{C}^{-1} \otimes \mathbf{C}^{-1}) + \mu_0 \mu_r \ J \ [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym} \otimes \mathbf{C}^{-1} \\
+&- \mu_0 \mu_r \ J \ [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \ \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} + \mu_0 \mu_r \ J \ (\mathbf{C}^{-1} \otimes [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}) \\
+&- 2 \mu_0 \mu_r \ J \ [\mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]
+\end{align*}
+For given symmetric rank 2 tensors $\mathbf{A}$ and $\mathbf{B}$, we know:
+\begin{equation*}
+\mathbf{A} \otimes \mathbf{B} = \mathbf{B} \otimes \mathbf{A}.
+\end{equation*}
+Moreover, any general tensor $\mathbf{A}$ can be uniquely decomposed into symmetric and skew-symmetric parts, $\mathbf{A} = \mathbf{A}^{sym} + \mathbf{A}^{skw}$ where, 
+\begin{align*}
+\mathbf{A}^{sym} = \dfrac{1}{2} [\mathbf{A} + \mathbf{A}^T],\\
+\mathbf{A}^{skw} = \dfrac{1}{2} [\mathbf{A} - \mathbf{A}^T].
+\end{align*}
+\begin{empheq}[box=\tcbhighmath]{align*}
+\mathfrak{C} = & \ \lambda \ \mathbf{C}^{-1} \otimes \mathbf{C}^{-1} -2 [\mu - \lambda \ln J] \ \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} \\
+&- \dfrac{\mu_0 \mu_r}{2} \ J \ [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] (\mathbf{C}^{-1} \otimes \mathbf{C}^{-1}) - \mu_0 \mu_r \ J \ [\mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}] \ \dfrac{\partial \mathbf{C}^{-1}}{\partial \mathbf{C}} \\
+&- 2 \mu_0 \mu_r \ J \ (\mathbf{C}^{-1} \otimes [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{skw}) - 2 \mu_0 \mu_r \ J \ [(\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H})]
+\end{empheq}
+
+\subsection{Magnetic induction vector}
+\begin{align*}
+\mathbb{B} &= - \dfrac{\partial \Psi}{\partial \mathbb{H}} \\
+&= \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbb{H}} \\
+&= \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \ C^{-1}_{IJ} \ H_I \ H_J	]}{\partial H_K} \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{IJ} \dfrac{\partial H_I}{\partial H_K} \ H_J + J \ C^{-1}_{IJ} \ H_I \dfrac{\partial H_J}{\partial H_K} \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{IJ} \ \delta_{IK} \ H_J + J \ C^{-1}_{IJ} \ H_I \ \delta_{JK} \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{JI} \ \delta_{IK} \ H_J + J \ C^{-1}_{IJ} \ \delta_{JK} \ H_I \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{JK} \ H_J + J \ C^{-1}_{IK} \ H_I \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{KJ} \ H_J + J \ C^{-1}_{KI} \ H_I \right] \mathbf{E}_K \\
+\mathbb{B} &= \mu_0 \mu_r \ J \ [\mathbf{C}^{-1} \cdot \mathbb{H}]
+\end{align*}
+
+\subsection{Magneto-elasticity tensor}
+\begin{align*}
+\mathbf{D} &= \dfrac{\partial \mathbb{B}}{\partial \mathbb{H}} \\
+&= \dfrac{\partial [\mu_0 \mu_r \ J \ (\mathbf{C}^{-1} \cdot \mathbb{H})]}{\partial \mathbb{H}} \\
+&= \mu_0 \mu_r \ J \ \dfrac{\partial (C^{-1}_{IJ} \ H_J)}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IJ} \ \dfrac{\partial H_J}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IJ} \ \delta_{JK} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IK} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+\mathbf{D} &= \mu_0 \mu_r \ J \ \mathbf{C}^{-1}
+\end{align*}
+
+\subsection{Coupling tensor between magnetic and elastic fields}
+This quantity defines the sensitivity of $2^{nd}$ Piola-Kirchhoff stress $\mathbf{S}$ w.r.t. the applied magnetic field $\mathbb{H}$.
+\begin{align*}
+\mathbb{P} &= \dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = \dfrac{\partial}{\partial \mathbb{H}} \left( 2 \dfrac{\partial \Psi}{\partial \mathbf{C}} \right) = 2 \ \dfrac{\partial^2 \Psi}{\partial \mathbf{C} \otimes \partial \mathbb{H}}\\
+&= - \dfrac{\mu_0 \mu_r}{2} \ J \ \left[ \mathbf{C}^{-1} \otimes \dfrac{\partial}{\partial \mathbb{H}} \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right) \right] + \mu_0 \mu_r \ J \ \dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}}
+\end{align*}
+Side calculation 1:
+\begin{align*}
+\dfrac{\partial \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right)}{\partial \mathbb{H}} &= \dfrac{\partial \left( C^{-1}_{IJ} \ H_I \ H_J \right)}{\partial H_K} \mathbf{E}_K \\
+&= \left[ C^{-1}_{IJ} \ \delta_{IK} \ H_J + C^{-1}_{IJ} \ H_I \ \delta_{JK} \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{JI} \ \delta_{IK} \ H_J + C^{-1}_{IJ} \ \delta_{JK} \ H_I \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{JK} \ H_J + C^{-1}_{IK} \ H_I \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{KJ} \ H_J + C^{-1}_{KI} \ H_I \right] \ \mathbf{E}_K \\
+&= 2 [\mathbf{C}^{-1} \cdot \mathbb{H}]
+\end{align*}
+Side calculation 2:
+\begin{align*}
+\dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}} &= \dfrac{\partial \left[ C^{-1}_{IM} \ H_M \ C^{-1}_{JN} \ H_N \right]}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+&= \left[ C^{-1}_{IM} \ \delta_{MK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JN} \ \delta_{NK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+&= \left[ C^{-1}_{IK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+&= \left[ \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \right]
+\end{align*}
+\newline
+\begin{align*}
+\mathbb{P} &= - \mu_0 \mu_r \ J \ \left[  \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \right] +  \mu_0 \mu_r \ J \ \left[ \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \right]\\
+&= \mu_0 \mu_r \ J \ \left[ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \right]
+\end{align*}
+
+\newpage
+\printbibliography
+\end{document}
