@@ -652,6 +652,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
     std::vector<Tensor<2, dim> > solution_grads_u_total;
     std::vector<Tensor<1, dim> > solution_values_u_total;
     std::vector<double> solution_values_phi_total;
+    std::vector<Tensor<1, dim> > solution_grads_phi_total;
 
     hp::FEValues<dim> hp_fe_values (mapping_collection,
                                     fe_collection,
@@ -675,9 +676,11 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             solution_grads_u_total.clear();
             solution_values_u_total.clear();
             solution_values_phi_total.clear();
+            solution_grads_phi_total.clear();
             solution_grads_u_total.resize(n_q_points, Tensor<2, dim>());
             solution_values_u_total.resize(n_q_points, Tensor<1, dim>());
             solution_values_phi_total.resize(n_q_points);
+            solution_grads_phi_total.resize(n_q_points, Tensor<1, dim>());
 
             const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
                     quadrature_point_history.get_data(cell);
@@ -689,6 +692,9 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                                                 solution_values_u_total);
             fe_values[phi_fe].get_function_values(solution_total,
                                                   solution_values_phi_total);
+            // Evaluate Grad(phi), required is H = -Grad(phi)
+            fe_values[phi_fe].get_function_gradients(solution_total,
+                                                     solution_grads_phi_total);
 
             // need to apply transformation here before sending the soln grads u total
             // to transform 2*2 tensor to 3*3 since it is used to calculate F
@@ -719,6 +725,9 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                     }
                     // u_theta,theta = u_r / R
                     solution_grads_u_total_transformed[q_point][dim][dim] = solution_values_u_total[q_point][0] / radial_distance;
+
+                    // H = -Grad(phi)
+                    solution_grads_phi_total *= -1.0;
                 }
 
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
@@ -726,7 +735,8 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                     Assert(lqph[q_point], ExcInternalError());
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
-                                                 solution_values_phi_total[q_point]);
+                                                 solution_values_phi_total[q_point],
+                                                 solution_grads_phi_total[q_point]);
                 }
             }
             // for 3D simulation proceed normally

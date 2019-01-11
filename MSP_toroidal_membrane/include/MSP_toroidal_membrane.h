@@ -932,16 +932,22 @@ public:
     }
 
     // Get 2nd Piola-Kirchoff stress tensor
-    SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
+    SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F,
+                                                                 const Tensor<1, dim> &H) const
     {
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
+
         return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
-                ( (mu_ - lambda * std::log(det_F) ) * C_inv ));
+                 ( (mu_ - lambda * std::log(det_F) ) * C_inv ) -
+                 (0.5 * Coefficient::mu_membrane * det_F * (scalar_product(C_inv, outer_product(H, H))) * C_inv) +
+                 (Coefficient::mu_membrane * det_F * symmetrize(outer_product(C_inv * H, C_inv * H)))
+               );
     }
 
     // Get the 4th order material elasticity tensor
-    SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F) const
+    SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F,
+                                                                     const Tensor<1, dim> &H) const
     {
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
@@ -977,7 +983,8 @@ class PointHistory
         :
           F_inv(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
           second_Piola_Kirchoff_stress(SymmetricTensor<2, dim_Tensor>()),
-          fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>())
+          fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>()),
+          H(Tensor<1, dim>())
     {}
 
     virtual ~PointHistory(){}
@@ -987,18 +994,20 @@ class PointHistory
 //        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
         Assert(material, ExcInternalError());
-        update_values(Tensor<2, dim_Tensor>(), 0.0);
+        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim>());
     }
 
     void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
-                       const double phi)
+                       const double phi,
+                       const Tensor<1, dim> &H)
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         F_inv = invert(F);
+        H = H;
         Assert(material, ExcInternalError());
         material->update_material_data(F, phi);
-        second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
-        fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F);
+        second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F, H);
+        fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F, H);
 //        std::cout << "F: " << F << "\n" << "S: " << second_Piola_Kirchoff_stress << std::endl;
     }
 
@@ -1027,11 +1036,17 @@ class PointHistory
         return material->get_phi();
     }
 
+    const Tensor<1, dim> &get_H() const
+    {
+      return H;
+    }
+
 private:
     std::shared_ptr<Material_Neo_Hookean_Two_Field<dim,dim_Tensor> > material;
     Tensor<2, dim_Tensor> F_inv;
     SymmetricTensor<2, dim_Tensor> second_Piola_Kirchoff_stress;
     SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
+    Tensor<1, dim> H; // Referential Magnetic field
 };
 
 // Class to store load step data
