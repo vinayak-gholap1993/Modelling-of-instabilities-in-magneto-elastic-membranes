@@ -701,6 +701,13 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
 
             std::vector<Tensor<2, dim_Tensor> > solution_grads_u_total_transformed(n_q_points,
                                                                                    Tensor<2, dim_Tensor>());
+
+            // need to apply transformation here before sending the soln grads phi total
+            // to transform dim = 2 vector to dim + 1 vector
+            // with last component to be zero
+            std::vector<Tensor<1, dim_Tensor> > solution_grads_phi_total_transformed(n_q_points,
+                                                                                     Tensor<1, dim_Tensor>());
+
             // if axisymmetric simulation, need this transformation of
             // gradient of 2D shape functions to get dim 3 gradient of shape functions Tensor
             // accounting for the circumferential strain i.e. hoop stress
@@ -717,17 +724,28 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                      * | u_r,r  u_r,z | ->  | u_r,r  u_r,z   0    |
                      * | u_z,r  u_z,z | ->  | u_z,r  u_z,z   0    |
                      *                      | 0      0      u_r/R |
+                     *
+                     * dim 2 vector mapped to dim 3 vector
+                     * | H_r | -> | H_r |
+                     * | H_z | -> | H_z |
+                     *         -> | 0   |
                      * */
+
                     for(unsigned int i = 0; i < dim; ++i)
-                        for(unsigned int j = 0; j < dim; ++j)
                     {
-                        solution_grads_u_total_transformed[q_point][i][j] = solution_grads_u_total[q_point][i][j];
+                        for(unsigned int j = 0; j < dim; ++j)
+                        {
+                            solution_grads_u_total_transformed[q_point][i][j] = solution_grads_u_total[q_point][i][j];
+                        }
+                        solution_grads_phi_total_transformed[q_point][i] = solution_grads_phi_total[q_point][i];
                     }
                     // u_theta,theta = u_r / R
                     solution_grads_u_total_transformed[q_point][dim][dim] = solution_values_u_total[q_point][0] / radial_distance;
 
+                    solution_grads_phi_total_transformed[q_point][dim] = 0.0;
+
                     // H = -Grad(phi)
-                    solution_grads_phi_total *= -1.0;
+                    solution_grads_phi_total_transformed *= -1.0;
                 }
 
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
@@ -736,7 +754,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point],
-                                                 solution_grads_phi_total[q_point]);
+                                                 solution_grads_phi_total_transformed[q_point]);
                 }
             }
             // for 3D simulation proceed normally
@@ -875,7 +893,14 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
         {
           Assert(lqph[q_index], ExcInternalError());
           const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
-          const SymmetricTensor<4, dim_Tensor> C = lqph[q_index]->get_4th_order_material_elasticity();
+          const SymmetricTensor<4, dim_Tensor> C_4th_order = lqph[q_index]->get_4th_order_material_elasticity();
+          const Tensor<1, dim_Tensor> H = lqph[q_index]->get_H();
+          const Tensor<2, dim_Tensor> F_inv = lqph[q_index]->get_F_inv();
+          const double Jacobian = lqph[q_index]->get_det_F();
+
+          const Tensor<2, dim_Tensor> F = invert(F_inv);
+          const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
+          const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
           const double mu_r_mu_0 = coefficient_values[q_index];
           // Get the x co-ord to the quadrature point
@@ -904,7 +929,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       // material contribution
                       // dE: variation or increment of Green-Lagrange strain
                       // C: 4th order material elasticity tensor
-                      cell_matrix(i,j) += dE[q_index][i] * C
+                      cell_matrix(i,j) += dE[q_index][i] * C_4th_order
                                           * dE[q_index][j] * fe_values.JxW(q_index)
                                           * coord_transformation_scaling;
 
@@ -944,12 +969,36 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   // Purely magnetic contributions K_phiphi
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
-                      cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
+                      // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
+                      cell_matrix(i,j) -= fe_values[phi_fe].gradient(i,q_index) *
                                           mu_r_mu_0*
                                           coord_transformation_scaling *
+                                          Jacobian *
+                                          C_inv *
                                           fe_values[phi_fe].gradient(j,q_index) *
                                           fe_values.JxW(q_index);
                   }
+
+                  else if(i_group != j_group)
+                  {
+                      // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
+                      const Tensor<3, dim_Tensor> P = mu_r_mu_0 * Jacobian * outer_product((C_inv * H), C_inv);
+
+                      // \delta H \cdot P : \delta E
+                      if ((i_group == phi_block) && (j_group == u_block))
+                        cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
+                                            coord_transformation_scaling *
+                                            scalar_product(P, dE[q_index][j]) *
+                                            fe_values.JxW(q_index);
+
+                      // \delta E : P^T \cdot \delta H
+                      else if ((i_group == u_block) && (j_group == phi_block))
+                        cell_matrix(i,j) += scalar_product(dE[q_index][i], transpose(P)) *
+                                            coord_transformation_scaling *
+                                            fe_values[phi_fe].gradient(j,q_index) *
+                                            fe_values.JxW(q_index);
+                  }
+
                   else
                       Assert((i_group <= u_block) && (j_group <= u_block),
                              ExcInternalError());
@@ -966,8 +1015,13 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               if (i_group == u_block)
                   cell_rhs(i) -= scalar_product(S, dE[q_index][i]) * fe_values.JxW(q_index)
                                  * coord_transformation_scaling;
+
+              // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
               else if (i_group == phi_block)
-                  cell_rhs(i) -= 0.0;
+                  cell_rhs(i) -= fe_values[phi_fe].gradient(i, q_index) *
+                                 mu_r_mu_0 * Jacobian * C_inv * H *
+                                 coord_transformation_scaling *
+                                 fe_values.JxW(q_index);
               else
                   Assert(i_group <= u_block, ExcInternalError());
           }

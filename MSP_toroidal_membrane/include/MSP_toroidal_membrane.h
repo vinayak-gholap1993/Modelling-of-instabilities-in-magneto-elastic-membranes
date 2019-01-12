@@ -933,7 +933,7 @@ public:
 
     // Get 2nd Piola-Kirchoff stress tensor
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F,
-                                                                 const Tensor<1, dim> &H) const
+                                                                 const Tensor<1, dim_Tensor> &H) const
     {
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
@@ -947,7 +947,7 @@ public:
 
     // Get the 4th order material elasticity tensor
     SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F,
-                                                                     const Tensor<1, dim> &H) const
+                                                                     const Tensor<1, dim_Tensor> &H) const
     {
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
@@ -984,7 +984,7 @@ class PointHistory
           F_inv(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
           second_Piola_Kirchoff_stress(SymmetricTensor<2, dim_Tensor>()),
           fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>()),
-          H(Tensor<1, dim>())
+          H(Tensor<1, dim_Tensor>())
     {}
 
     virtual ~PointHistory(){}
@@ -994,12 +994,12 @@ class PointHistory
 //        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
         Assert(material, ExcInternalError());
-        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim>());
+        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim_Tensor>());
     }
 
     void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
                        const double phi,
-                       const Tensor<1, dim> &H)
+                       const Tensor<1, dim_Tensor> &H)
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         F_inv = invert(F);
@@ -1036,7 +1036,7 @@ class PointHistory
         return material->get_phi();
     }
 
-    const Tensor<1, dim> &get_H() const
+    const Tensor<1, dim_Tensor> &get_H() const
     {
       return H;
     }
@@ -1046,7 +1046,7 @@ private:
     Tensor<2, dim_Tensor> F_inv;
     SymmetricTensor<2, dim_Tensor> second_Piola_Kirchoff_stress;
     SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
-    Tensor<1, dim> H; // Referential Magnetic field
+    Tensor<1, dim_Tensor> H; // Referential Magnetic field
 };
 
 // Class to store load step data
