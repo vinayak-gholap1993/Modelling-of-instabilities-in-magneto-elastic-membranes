@@ -46,7 +46,9 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
 #include <deal.II/lac/sparsity_tools.h>
-#include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/sparse_direct.h>
+#include <deal.II/lac/schur_complement.h>
+#include <deal.II/lac/precondition_selector.h>
 
 #include <deal.II/numerics/vector_tools.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -940,8 +942,8 @@ public:
 
         return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
                  ( (mu_ - lambda * std::log(det_F) ) * C_inv ) -
-                 (0.5 * Coefficient::mu_membrane * det_F * (scalar_product(C_inv, outer_product(H, H))) * C_inv) +
-                 (Coefficient::mu_membrane * det_F * symmetrize(outer_product(C_inv * H, C_inv * H)))
+                 (0.5 * Coefficient<dim>::mu_membrane * det_F * (scalar_product(C_inv, outer_product(H, H))) * C_inv) +
+                 (Coefficient<dim>::mu_membrane * det_F * symmetrize(outer_product(C_inv * H, C_inv * H)))
                );
     }
 
@@ -953,9 +955,20 @@ public:
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
+        const Tensor<2, dim_Tensor> temp = outer_product((C_inv * H), (C_inv * H));
+        const Tensor<2, dim_Tensor> skw_temp = 0.5 * (temp - transpose(temp));
+
         return ( (lambda * C_inv_C_inv) +
                  ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
-                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) ) );
+                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) ) -
+                 (0.5 * Coefficient<dim>::mu_membrane * det_F *
+                  (scalar_product(C_inv, outer_product(H, H)) * C_inv_C_inv) ) -
+                 (Coefficient<dim>::mu_membrane * det_F * (scalar_product( C_inv, outer_product(H, H))) *
+                  (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F))) -
+                 (2.0 * Coefficient<dim>::mu_membrane * det_F * outer_product( (C_inv * H),
+                                                                          outer_product(C_inv,
+                                                                                        C_inv * H))) -
+                 (2.0 * Coefficient<dim>::mu_membrane * det_F * outer_product(C_inv, skw_temp)) );
 
     }
 
@@ -1003,7 +1016,7 @@ class PointHistory
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         F_inv = invert(F);
-        H = H;
+        this->H = H;
         Assert(material, ExcInternalError());
         material->update_material_data(F, phi);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F, H);

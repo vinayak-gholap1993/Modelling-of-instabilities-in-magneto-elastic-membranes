@@ -745,7 +745,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                     solution_grads_phi_total_transformed[q_point][dim] = 0.0;
 
                     // H = -Grad(phi)
-                    solution_grads_phi_total_transformed *= -1.0;
+                    solution_grads_phi_total_transformed[q_point] *= -1.0;
                 }
 
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
@@ -839,6 +839,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       std::vector<std::vector<SymmetricTensor<2, dim_Tensor> > > dE(n_q_points,
                                                                     std::vector<SymmetricTensor<2, dim_Tensor> >(n_dofs_per_cell));
 
+      // shape function gradients for magnetic potential component
+      std::vector<std::vector<Tensor<1, dim> > > Grad_N_phi(n_q_points,
+                                                            std::vector<Tensor<1, dim> >(n_dofs_per_cell));
+      std::vector<std::vector<Tensor<1, dim_Tensor> > > Grad_N_phi_transformed(n_q_points,
+                                                                               std::vector<Tensor<1, dim_Tensor> >(n_dofs_per_cell));
+
       for(unsigned int q_index=0; q_index<n_q_points; ++q_index)
       {
           Assert(lqph[q_index], ExcInternalError());
@@ -883,6 +889,24 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   }*/
                   else
                       Assert(false, ExcInternalError());
+              }
+              else if (k_group == phi_block)
+              {
+                  Grad_N_phi[q_index][k] = fe_values[phi_fe].gradient(k, q_index);
+
+                  // Need to apply transformation here
+                  // to transform dim = 2 vector to dim + 1 vector
+                  // with last component to be zero
+                  /*
+                   * dim = 2 vector mapped to dim = 3 vector
+                     * | Grad_N_phi_r | -> | Grad_N_phi_r |
+                     * | Grad_N_phi_z | -> | Grad_N_phi_z |
+                     *                  -> | 0            |
+                     * */
+                  for (unsigned int i = 0; i < dim; ++i)
+                      Grad_N_phi_transformed[q_index][k][i] = Grad_N_phi[q_index][k][i];
+
+                  Grad_N_phi_transformed[q_index][k][dim] = 0.0;
               }
               else
                   Assert(k_group <= u_block, ExcInternalError());
@@ -970,32 +994,34 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
                       // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
-                      cell_matrix(i,j) -= fe_values[phi_fe].gradient(i,q_index) *
+                      cell_matrix(i,j) -= Grad_N_phi_transformed[q_index][i] *
                                           mu_r_mu_0*
                                           coord_transformation_scaling *
                                           Jacobian *
-                                          C_inv *
-                                          fe_values[phi_fe].gradient(j,q_index) *
+                                          (C_inv * Grad_N_phi_transformed[q_index][j] ) *
                                           fe_values.JxW(q_index);
                   }
 
                   else if(i_group != j_group)
-                  {
+                  {                      
                       // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
                       const Tensor<3, dim_Tensor> P = mu_r_mu_0 * Jacobian * outer_product((C_inv * H), C_inv);
 
+                      // K_phi_u
                       // \delta H \cdot P : \delta E
                       if ((i_group == phi_block) && (j_group == u_block))
-                        cell_matrix(i,j) += fe_values[phi_fe].gradient(i,q_index) *
+                        cell_matrix(i,j) += Grad_N_phi_transformed[q_index][i] *
                                             coord_transformation_scaling *
-                                            scalar_product(P, dE[q_index][j]) *
+                                            double_contract(P, static_cast<SymmetricTensor<2, dim_Tensor> >(dE[q_index][j])) *
                                             fe_values.JxW(q_index);
 
+                      // K_u_phi
                       // \delta E : P^T \cdot \delta H
                       else if ((i_group == u_block) && (j_group == phi_block))
-                        cell_matrix(i,j) += scalar_product(dE[q_index][i], transpose(P)) *
+                        cell_matrix(i,j) += double_contract(static_cast<SymmetricTensor<2, dim_Tensor> >(dE[q_index][i]),
+                                                            transpose(P)) *
                                             coord_transformation_scaling *
-                                            fe_values[phi_fe].gradient(j,q_index) *
+                                            Grad_N_phi_transformed[q_index][j] *
                                             fe_values.JxW(q_index);
                   }
 
@@ -1011,14 +1037,16 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           {
               const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
 
+              // F_u
               // RHS is negative residual term
               if (i_group == u_block)
                   cell_rhs(i) -= scalar_product(S, dE[q_index][i]) * fe_values.JxW(q_index)
                                  * coord_transformation_scaling;
 
+              // F_phi
               // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
               else if (i_group == phi_block)
-                  cell_rhs(i) -= fe_values[phi_fe].gradient(i, q_index) *
+                  cell_rhs(i) -= Grad_N_phi_transformed[q_index][i] *
                                  mu_r_mu_0 * Jacobian * C_inv * H *
                                  coord_transformation_scaling *
                                  fe_values.JxW(q_index);
@@ -1179,104 +1207,174 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
                                                           mpi_communicator);
   distributed_solution = newton_update;
 
-  // Block to solve for: either displacement block or magnetic scalar potential block
-  // will have to change for a coupled problem in future
-  unsigned int solution_block;
-  if(parameters.problem_type == "Purely magnetic")
-      solution_block = phi_block;
-  else if (parameters.problem_type == "Purely elastic")
-      solution_block = u_block;
-  else
-      Assert(false, ExcMessage("Coupled linear solver not implemented!"));
+  // For single field solution i.e. uncoupled problem
+  if ((parameters.problem_type =="Purely magnetic")
+          ||
+      (parameters.problem_type =="Purely elastic"))
+  {
+      // Block to solve for: either displacement block or magnetic scalar potential block
+      unsigned int solution_block;
+      if(parameters.problem_type == "Purely magnetic")
+          solution_block = phi_block;
+      else if (parameters.problem_type == "Purely elastic")
+          solution_block = u_block;
 
-  // Need to update for considered block we are solving? Eg. system_matrix.block(u_block,  u_block).m()
-  // and similar way for linear solver tolerance?
-  SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(solution_block, solution_block).m(),
-                                parameters.lin_slvr_tol);
-  if (parameters.lin_slvr_type == "Iterative")
-    {
-
-      TrilinosWrappers::SolverCG solver (solver_control);
-
-      // Default settings for AMG preconditioner are
-      // good for a Laplace problem
-      std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner;
-      if (parameters.preconditioner_type == "jacobi")
+      SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(solution_block, solution_block).m(),
+                                    parameters.lin_slvr_tol);
+      if (parameters.lin_slvr_type == "Iterative")
         {
-          TrilinosWrappers::PreconditionJacobi *ptr_prec
-            = new TrilinosWrappers::PreconditionJacobi ();
 
-          TrilinosWrappers::PreconditionJacobi::AdditionalData
-          additional_data (parameters.preconditioner_relaxation);
+          TrilinosWrappers::SolverCG solver (solver_control);
 
-          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
-                               additional_data);
-          preconditioner.reset(ptr_prec);
-        }
-      else if (parameters.preconditioner_type == "ssor")
-        {
-          TrilinosWrappers::PreconditionSSOR *ptr_prec
-            = new TrilinosWrappers::PreconditionSSOR ();
-
-          TrilinosWrappers::PreconditionSSOR::AdditionalData
-          additional_data (parameters.preconditioner_relaxation);
-
-          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
-                               additional_data);
-          preconditioner.reset(ptr_prec);
-        }
-      else // AMG
-        {
-          TrilinosWrappers::PreconditionAMG *ptr_prec
-            = new TrilinosWrappers::PreconditionAMG ();
-
-          TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
-
-          typename hp::DoFHandler<dim>::active_cell_iterator
-          cell = hp_dof_handler.begin_active(),
-          endc = hp_dof_handler.end();
-          for (; cell!=endc; ++cell)
+          // Default settings for AMG preconditioner are
+          // good for a Laplace problem
+          std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner;
+          if (parameters.preconditioner_type == "jacobi")
             {
-              if (cell->subdomain_id() != this_mpi_process) continue;
+              TrilinosWrappers::PreconditionJacobi *ptr_prec
+                = new TrilinosWrappers::PreconditionJacobi ();
 
-              const unsigned int cell_fe_idx = cell->active_fe_index();
-              const unsigned int cell_poly = cell_fe_idx + 1;
-              if (cell_poly > 1)
-                {
-                  additional_data.higher_order_elements = true;
-                  break;
-                }
+              TrilinosWrappers::PreconditionJacobi::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
+                                   additional_data);
+              preconditioner.reset(ptr_prec);
             }
-          {
-            const int hoe = additional_data.higher_order_elements;
-            additional_data.higher_order_elements
-              = Utilities::MPI::max(hoe, mpi_communicator);
-          }
-          ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
-                               additional_data);
-          preconditioner.reset(ptr_prec);
+          else if (parameters.preconditioner_type == "ssor")
+            {
+              TrilinosWrappers::PreconditionSSOR *ptr_prec
+                = new TrilinosWrappers::PreconditionSSOR ();
+
+              TrilinosWrappers::PreconditionSSOR::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
+                                   additional_data);
+              preconditioner.reset(ptr_prec);
+            }
+          else // AMG
+            {
+              TrilinosWrappers::PreconditionAMG *ptr_prec
+                = new TrilinosWrappers::PreconditionAMG ();
+
+              TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
+
+              typename hp::DoFHandler<dim>::active_cell_iterator
+              cell = hp_dof_handler.begin_active(),
+              endc = hp_dof_handler.end();
+              for (; cell!=endc; ++cell)
+                {
+                  if (cell->subdomain_id() != this_mpi_process) continue;
+
+                  const unsigned int cell_fe_idx = cell->active_fe_index();
+                  const unsigned int cell_poly = cell_fe_idx + 1;
+                  if (cell_poly > 1)
+                    {
+                      additional_data.higher_order_elements = true;
+                      break;
+                    }
+                }
+              {
+                const int hoe = additional_data.higher_order_elements;
+                additional_data.higher_order_elements
+                  = Utilities::MPI::max(hoe, mpi_communicator);
+              }
+              ptr_prec->initialize(system_matrix.block(solution_block,solution_block),
+                                   additional_data);
+              preconditioner.reset(ptr_prec);
+            }
+
+          solver.solve (system_matrix.block(solution_block,solution_block),
+                        distributed_solution.block(solution_block),
+                        system_rhs.block(solution_block),
+                        *preconditioner);
+        }
+      else // Direct
+        {
+          TrilinosWrappers::SolverDirect solver (solver_control);
+          solver.solve (system_matrix.block(solution_block,solution_block),
+                        distributed_solution.block(solution_block),
+                        system_rhs.block(solution_block));
         }
 
-      solver.solve (system_matrix.block(solution_block,solution_block),
-                    distributed_solution.block(solution_block),
-                    system_rhs.block(solution_block),
-                    *preconditioner);
-    }
-  else // Direct
-    {
-      TrilinosWrappers::SolverDirect solver (solver_control);
-      solver.solve (system_matrix.block(solution_block,solution_block),
-                    distributed_solution.block(solution_block),
-                    system_rhs.block(solution_block));
-    }
+      pcout
+          << std::fixed << std::setprecision(3) << std::scientific
+          << solver_control.last_step()
+          << "\t" << solver_control.last_value();
+  }
+
+  // For coupled problem solution
+  else if (parameters.problem_type == "Coupled magnetoelastic")
+  {
+      if (parameters.lin_slvr_type == "Iterative")
+      {
+          const auto A = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
+                         (system_matrix.block(phi_block, phi_block));
+
+          // For positive definite matrix block
+          const auto op_A = -1.0 * A;
+          const auto B = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
+                         (system_matrix.block(phi_block, u_block));
+          const auto op_B = -1.0 * B;
+
+          const auto op_C = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
+                            (system_matrix.block(u_block, phi_block));
+          const auto op_D = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
+                            (system_matrix.block(u_block, u_block));
+
+          auto d_phi = distributed_solution.block(phi_block);
+          auto d_u = distributed_solution.block(u_block);
+
+          TrilinosWrappers::MPI::Vector f = -1.0 * system_rhs.block(phi_block);
+          TrilinosWrappers::MPI::Vector g = system_rhs.block(u_block);
+
+          PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
+          preconditioner_A ("jacobi");
+          preconditioner_A.use_matrix(op_A);
+
+          SolverControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
+                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+          TrilinosWrappers::SolverCG solver_A_inv (solver_control_A_inv);
+
+          const auto A_inv = inverse_operator(op_A,
+                                              solver_A_inv,
+                                              preconditioner_A);
+
+          const auto S = schur_complement(A_inv, op_B, op_C, op_D);
+
+          PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
+          preconditioner_S ("jacobi");
+          preconditioner_S.use_matrix(op_D);
+
+          SolverControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
+                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+          TrilinosWrappers::SolverCG solver_S_inv (solver_control_S_inv);
+
+          const auto S_inv = inverse_operator(S,
+                                              solver_S_inv,
+                                              preconditioner_S);
+
+          // Solve reduced block system
+          // g' = g - C * A_inv * f
+          auto rhs = condense_schur_rhs(A_inv, op_C, f, g);
+          d_u = S_inv * rhs;
+          d_phi = postprocess_schur_solution(A_inv, op_B, d_u, f);
+
+          distributed_solution.block(phi_block) = d_phi;
+          distributed_solution.block(u_block) = d_u;
+      }
+
+      else // Direct monolithic solver for complete system
+      {
+          SparseDirectUMFPACK A_direct;
+          A_direct.initialize(system_matrix);
+          A_direct.vmult(distributed_solution, system_rhs);
+      }
+  }
 
   constraints.distribute (distributed_solution);
   newton_update = distributed_solution;
-
-  pcout
-      << std::fixed << std::setprecision(3) << std::scientific
-      << solver_control.last_step()
-      << "\t" << solver_control.last_value();
 }
 
 // Newton-Raphson scheme to solve nonlinear system of equation iteratively
