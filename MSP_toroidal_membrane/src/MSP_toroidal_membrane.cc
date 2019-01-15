@@ -1452,14 +1452,17 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
                               parameters.delta_s);
 
         // Step 1: Compute load parameter update
-        load_parameter_update -= ( (f_i +
-                                   D_f_u.block(u_block) * delta_solution_G.block(u_block)) /
-                                   (D_f_lambda +
-                                    D_f_u.block(u_block) * delta_solution_P.block(u_block)) );
+        const double delta_load_update = -1.0 * ( (f_i +
+                                                   D_f_u.block(u_block) * delta_solution_G.block(u_block)) /
+                                                  (D_f_lambda +
+                                                   D_f_u.block(u_block) * delta_solution_P.block(u_block)) );
+
+        // Update load parameter
+        load_parameter_update += delta_load_update;
 
         // Step 2: Compute displacement update
-        delta_solution_G.block(u_block).sadd(1.0, load_parameter_update, delta_solution_P.block(u_block));
-        solution_up.block(u_block).add(1.0,delta_solution_G.block(u_block));
+        solution_up.block(u_block) += ( (delta_load_update * delta_solution_P.block(u_block))  +
+                                        delta_solution_G.block(u_block));
     }
     solution_update.block(u_block) = solution_up.block(u_block);
 }
