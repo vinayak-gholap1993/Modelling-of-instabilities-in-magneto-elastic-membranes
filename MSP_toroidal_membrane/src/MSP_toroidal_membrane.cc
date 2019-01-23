@@ -672,6 +672,9 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
             const unsigned int  &n_q_points = fe_values.n_quadrature_points;
             const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
+            std::vector<double>    coefficient_values (n_q_points);
+            function_material_coefficients.value_list (fe_values.get_quadrature_points(),
+                                                       coefficient_values);
 
             solution_grads_u_total.clear();
             solution_values_u_total.clear();
@@ -751,10 +754,12 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
                 {
                     Assert(lqph[q_point], ExcInternalError());
+                    const double mu_r_mu_0 = coefficient_values[q_point];
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point],
-                                                 solution_grads_phi_total_transformed[q_point]);
+                                                 solution_grads_phi_total_transformed[q_point],
+                                                 mu_r_mu_0);
                 }
             }
             // for 3D simulation proceed normally
@@ -994,34 +999,48 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
                       // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
-                      cell_matrix(i,j) -= Grad_N_phi_transformed[q_index][i] *
-                                          mu_r_mu_0*
+                      cell_matrix(i,j) -= mu_r_mu_0 *
                                           coord_transformation_scaling *
                                           Jacobian *
-                                          (C_inv * Grad_N_phi_transformed[q_index][j] ) *
+                                          contract3(Grad_N_phi_transformed[q_index][i],
+                                                    C_inv,
+                                                    Grad_N_phi_transformed[q_index][j] ) *
                                           fe_values.JxW(q_index);
                   }
 
                   else if(i_group != j_group)
                   {                      
                       // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
-                      const Tensor<3, dim_Tensor> P = mu_r_mu_0 * Jacobian * outer_product((C_inv * H), C_inv);
+
+                      // y = C_inv \cdot H
+                      Tensor<1, dim_Tensor> y;
+                      for (unsigned int k = 0; k < dim_Tensor; ++k)
+                          for (unsigned int l = 0; l < dim_Tensor; ++l)
+                             y[k] += C_inv[k][l] * H[l];
+
+                      // outer_product(y, C_inv)
+                      Tensor<3, dim_Tensor> P;
+                      for (unsigned int k = 0; k < dim_Tensor; ++k)
+                          for (unsigned int m = 0; m < dim_Tensor; ++m)
+                              for (unsigned int n = 0; n < dim_Tensor; ++n)
+                                  P[k][m][n] = mu_r_mu_0 * Jacobian * y[k] * C_inv[m][n];
 
                       // K_phi_u
                       // \delta H \cdot P : \delta E
                       if ((i_group == phi_block) && (j_group == u_block))
-                        cell_matrix(i,j) += Grad_N_phi_transformed[q_index][i] *
+                        cell_matrix(i,j) += contract3(Grad_N_phi_transformed[q_index][i],
+                                                      P,
+                                                      dE[q_index][j]) *
                                             coord_transformation_scaling *
-                                            double_contract(P, static_cast<SymmetricTensor<2, dim_Tensor> >(dE[q_index][j])) *
                                             fe_values.JxW(q_index);
 
                       // K_u_phi
                       // \delta E : P^T \cdot \delta H
                       else if ((i_group == u_block) && (j_group == phi_block))
-                        cell_matrix(i,j) += double_contract(static_cast<SymmetricTensor<2, dim_Tensor> >(dE[q_index][i]),
-                                                            transpose(P)) *
+                        cell_matrix(i,j) += contract3(Grad_N_phi_transformed[q_index][j],
+                                                      P,
+                                                      dE[q_index][i]) *
                                             coord_transformation_scaling *
-                                            Grad_N_phi_transformed[q_index][j] *
                                             fe_values.JxW(q_index);
                   }
 
@@ -1307,10 +1326,15 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
   // For coupled problem solution
   else if (parameters.problem_type == "Coupled magnetoelastic")
   {
+      // Solution of a saddle point coupled problem by schur complement method
       if (parameters.lin_slvr_type == "Iterative")
       {
           const auto A = linear_operator<TrilinosWrappers::MPI::Vector, TrilinosWrappers::MPI::Vector>
                          (system_matrix.block(phi_block, phi_block));
+
+          TrilinosWrappers::SparseMatrix copy_A;
+          copy_A.copy_from(system_matrix.block(phi_block, phi_block));
+          copy_A *= -1.0; // negative A
 
           // For positive definite matrix block
           const auto op_A = -1.0 * A;
@@ -1331,11 +1355,14 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
           PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
           preconditioner_A ("jacobi");
-          preconditioner_A.use_matrix(op_A);
+          preconditioner_A.use_matrix(copy_A);
 
           SolverControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
                                               parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
-          TrilinosWrappers::SolverCG solver_A_inv (solver_control_A_inv);
+//          TrilinosWrappers::SolverCG solver_A_inv (solver_control_A_inv);
+          SolverSelector<TrilinosWrappers::MPI::Vector> solver_A_inv;
+          solver_A_inv.select("cg");
+          solver_A_inv.set_control(solver_control_A_inv);
 
           const auto A_inv = inverse_operator(op_A,
                                               solver_A_inv,
@@ -1345,11 +1372,14 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
           PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
           preconditioner_S ("jacobi");
-          preconditioner_S.use_matrix(op_D);
+          preconditioner_S.use_matrix(system_matrix.block(u_block, u_block));
 
           SolverControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
                                               parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
-          TrilinosWrappers::SolverCG solver_S_inv (solver_control_S_inv);
+//          TrilinosWrappers::SolverCG solver_S_inv (solver_control_S_inv);
+          SolverSelector<TrilinosWrappers::MPI::Vector> solver_S_inv;
+          solver_S_inv.select("cg");
+          solver_S_inv.set_control(solver_control_S_inv);
 
           const auto S_inv = inverse_operator(S,
                                               solver_S_inv,
@@ -1364,13 +1394,14 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           distributed_solution.block(phi_block) = d_phi;
           distributed_solution.block(u_block) = d_u;
       }
-
-      else // Direct monolithic solver for complete system
+      // Solution by a monolithic direct solver
+ /*     else // Direct monolithic solver for complete system
       {
           SparseDirectUMFPACK A_direct;
           A_direct.initialize(system_matrix);
           A_direct.vmult(distributed_solution, system_rhs);
       }
+*/
   }
 
   constraints.distribute (distributed_solution);
