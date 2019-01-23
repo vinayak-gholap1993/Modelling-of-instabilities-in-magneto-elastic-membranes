@@ -549,6 +549,32 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     locally_relevant_partitioning.push_back(locally_relevant_dofs.get_view(0,n_phi));
     locally_relevant_partitioning.push_back(locally_relevant_dofs.get_view(n_phi, n_phi + n_u));
 
+    // For SparseDirectUMFPACK need global block system matrix and global block vectors
+    // No MPI or parallel data structure needed
+    tangent_matrix.clear();
+    BlockSparsityPattern global_sparsity_pattern;
+    {
+        BlockDynamicSparsityPattern dsp(n_blocks, n_blocks);
+
+        dsp.block(phi_block, phi_block).reinit(n_phi, n_phi);
+        dsp.block(phi_block, u_block).reinit(n_phi, n_u);
+        dsp.block(u_block, phi_block).reinit(n_u, n_phi);
+        dsp.block(u_block, u_block).reinit(n_u, n_u);
+
+        dsp.collect_sizes();
+
+        DoFTools::make_sparsity_pattern (hp_dof_handler,
+                                         dsp,
+                                         hanging_node_constraints,
+                                         /* keep constrained dofs */ false);
+        global_sparsity_pattern.copy_from(dsp);
+    }
+    tangent_matrix.reinit(global_sparsity_pattern);
+    global_system_rhs.reinit(dofs_per_block);
+    global_system_rhs.collect_sizes();
+    global_solution.reinit(dofs_per_block);
+    global_solution.collect_sizes();
+
     TrilinosWrappers::BlockSparsityPattern sp (locally_owned_partitioning,
                                                locally_owned_partitioning,
                                                locally_relevant_partitioning,
@@ -793,6 +819,8 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
   system_matrix = 0.0;
   system_rhs = 0.0;
+  tangent_matrix = 0.0;
+  global_system_rhs = 0.0;
 
   hp::FEValues<dim> hp_fe_values (mapping_collection,
                                   fe_collection,
@@ -1208,10 +1236,21 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                               system_matrix,
                                               system_rhs,
                                               true);
+
+      // Copy cell data to global block matrix and global block rhs vector
+      constraints.distribute_local_to_global (cell_matrix,
+                                              cell_rhs,
+                                              local_dof_indices,
+                                              tangent_matrix,
+                                              global_system_rhs,
+                                              true);
     }
 
   system_matrix.compress(VectorOperation::add);
   system_rhs.compress(VectorOperation::add);
+
+  tangent_matrix.compress(VectorOperation::add);
+  global_system_rhs.compress(VectorOperation::add);
 }
 
 
@@ -1353,9 +1392,18 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           TrilinosWrappers::MPI::Vector f = -1.0 * system_rhs.block(phi_block);
           TrilinosWrappers::MPI::Vector g = system_rhs.block(u_block);
 
-          PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
-          preconditioner_A ("jacobi");
-          preconditioner_A.use_matrix(copy_A);
+          std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner_A;
+          // use jacobi
+            {
+              TrilinosWrappers::PreconditionJacobi *ptr_prec
+                = new TrilinosWrappers::PreconditionJacobi ();
+
+              TrilinosWrappers::PreconditionJacobi::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(copy_A, additional_data);
+              preconditioner_A.reset(ptr_prec);
+            }
 
           SolverControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
                                               parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
@@ -1366,13 +1414,23 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
           const auto A_inv = inverse_operator(op_A,
                                               solver_A_inv,
-                                              preconditioner_A);
+                                              *preconditioner_A);
 
           const auto S = schur_complement(A_inv, op_B, op_C, op_D);
 
-          PreconditionSelector<TrilinosWrappers::SparseMatrix, TrilinosWrappers::MPI::Vector>
-          preconditioner_S ("jacobi");
-          preconditioner_S.use_matrix(system_matrix.block(u_block, u_block));
+          std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner_S;
+          // use jacobi
+            {
+              TrilinosWrappers::PreconditionJacobi *ptr_prec
+                = new TrilinosWrappers::PreconditionJacobi ();
+
+              TrilinosWrappers::PreconditionJacobi::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(system_matrix.block(u_block, u_block),
+                                   additional_data);
+              preconditioner_S.reset(ptr_prec);
+            }
 
           SolverControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
                                               parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
@@ -1383,7 +1441,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
           const auto S_inv = inverse_operator(S,
                                               solver_S_inv,
-                                              preconditioner_S);
+                                              *preconditioner_S);
 
           // Solve reduced block system
           // g' = g - C * A_inv * f
@@ -1395,13 +1453,15 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           distributed_solution.block(u_block) = d_u;
       }
       // Solution by a monolithic direct solver
- /*     else // Direct monolithic solver for complete system
+      else // Direct monolithic solver for complete system
       {
           SparseDirectUMFPACK A_direct;
-          A_direct.initialize(system_matrix);
-          A_direct.vmult(distributed_solution, system_rhs);
+          A_direct.initialize(tangent_matrix);
+          A_direct.vmult(global_solution, global_system_rhs);
+
+          distributed_solution = global_solution;
       }
-*/
+
   }
 
   constraints.distribute (distributed_solution);
@@ -1439,6 +1499,8 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         // data stored in tangent matrix and RHS vector is not reusable so clear
         system_matrix = 0.0;
         system_rhs = 0.0;
+        tangent_matrix = 0.0;
+        global_system_rhs = 0.0;
 
         // impose the DBC for displacement
         make_constraints(constraints, newton_iteration); // need to update the function for

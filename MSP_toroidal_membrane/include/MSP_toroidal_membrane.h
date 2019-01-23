@@ -1209,6 +1209,11 @@ private:
   TrilinosWrappers::MPI::BlockVector  system_rhs;
   TrilinosWrappers::MPI::BlockVector  solution;
 
+  // For monolithic Direct solver UMFPACK
+  BlockSparseMatrix<double> tangent_matrix;
+  BlockVector<double>       global_system_rhs;
+  BlockVector<double>       global_solution;
+
   Vector<float>        estimated_error_per_cell; // For Kelly error estimator
 
   Coefficient<dim>     function_material_coefficients;
