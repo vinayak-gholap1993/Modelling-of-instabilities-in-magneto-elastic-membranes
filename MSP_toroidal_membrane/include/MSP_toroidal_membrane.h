@@ -966,20 +966,45 @@ public:
         // y = C_inv \cdot H
         const Tensor<1, dim_Tensor> y = C_inv * H;
 
-        // outer_product(C_inv, y)
-        // Tensor<3> = SymmTensor<2> \otimes Tensor<1>
-        Tensor<3, dim_Tensor> temp_2;
+        // C_inv \cdot H \otimes C_inv \otimes C_inv \cdot H
+        SymmetricTensor<4, dim_Tensor> temp_2;
         for(unsigned int i = 0; i < dim_Tensor; ++i)
-            for(unsigned int j = 0; j < dim_Tensor; ++j)
+            for(unsigned int j = 0; j <= i; ++j)
                 for(unsigned int k = 0; k < dim_Tensor; ++k)
-                    temp_2[i][j][k] = C_inv[i][j] * y[k];
+                    for(unsigned int l = 0; l <= k; ++l)
+                        temp_2[i][j][k][l] = 0.25 * ( (y[i] * C_inv[j][k] * y[l]) +
+                                                      (y[i] * C_inv[j][l] * y[k]) +
+                                                      (y[j] * C_inv[i][k] * y[l]) +
+                                                      (y[j] * C_inv[i][l] * y[k])
+                                                     );
+
+        // C_inv \otimes (C_inv \cdot H) \otimes (C_inv \cdot H)
+        SymmetricTensor<4, dim_Tensor> temp_3;
+        for(unsigned int i = 0; i < dim_Tensor; ++i)
+            for(unsigned int j = 0; j <= i; ++j)
+                for(unsigned int k = 0; k < dim_Tensor; ++k)
+                    for(unsigned int l = 0; l <= k; ++l)
+                        temp_3[i][j][k][l] = 0.25 * ( (C_inv[i][k] * y[l] * y[j]) +
+                                                      (C_inv[i][l] * y[k] * y[j]) +
+                                                      (C_inv[j][k] * y[l] * y[i]) +
+                                                      (C_inv[j][l] * y[k] * y[i])
+                                                     );
+
+        // y \otimes y
+        SymmetricTensor<2, dim_Tensor> y_dyad_y;
+        for(unsigned int i = 0; i < dim_Tensor; ++i)
+            for(unsigned int j = 0; j <= i; ++j)
+                y_dyad_y[i][j] = y[i] * y[j];
 
         return ( (lambda * C_inv_C_inv) +
                  ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
                  (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) ) -
-                 (0.5 * mu_r_mu_0 * det_F * temp_1 * C_inv_C_inv) -
-                 (mu_r_mu_0 * det_F * temp_1 * Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) -
-                 (2.0 * mu_r_mu_0 * det_F * outer_product(y, temp_2))
+                 (0.5 * mu_r_mu_0 * det_F * temp_1 * C_inv_C_inv) +
+                 (mu_r_mu_0 * det_F * (outer_product(y_dyad_y, C_inv))) -
+                 (mu_r_mu_0 * det_F * temp_1 * Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) +
+                 (mu_r_mu_0 * det_F * (outer_product(C_inv, y_dyad_y))) -
+                 (2.0 * mu_r_mu_0 * det_F * temp_2) -
+                 (2.0 * mu_r_mu_0 * det_F * temp_3)
                );
 
     }
@@ -1210,6 +1235,7 @@ private:
   TrilinosWrappers::MPI::BlockVector  solution;
 
   // For monolithic Direct solver UMFPACK
+  BlockSparsityPattern global_sparsity_pattern;
   BlockSparseMatrix<double> tangent_matrix;
   BlockVector<double>       global_system_rhs;
   BlockVector<double>       global_solution;

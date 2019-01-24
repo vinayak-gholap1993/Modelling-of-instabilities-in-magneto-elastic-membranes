@@ -552,7 +552,6 @@ void MSP_Toroidal_Membrane<dim>::setup_system ()
     // For SparseDirectUMFPACK need global block system matrix and global block vectors
     // No MPI or parallel data structure needed
     tangent_matrix.clear();
-    BlockSparsityPattern global_sparsity_pattern;
     {
         BlockDynamicSparsityPattern dsp(n_blocks, n_blocks);
 
@@ -1041,10 +1040,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
 
                       // y = C_inv \cdot H
-                      Tensor<1, dim_Tensor> y;
-                      for (unsigned int k = 0; k < dim_Tensor; ++k)
-                          for (unsigned int l = 0; l < dim_Tensor; ++l)
-                             y[k] += C_inv[k][l] * H[l];
+                      Tensor<1, dim_Tensor> y = C_inv * H;
 
                       // outer_product(y, C_inv)
                       Tensor<3, dim_Tensor> P;
@@ -2739,10 +2735,10 @@ void MSP_Toroidal_Membrane<dim>::run ()
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
 
-      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
+//      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
       // Create postprocessor object for load displacement data
       // Hooped beam
-      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
+//      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
       // Crisfield beam
 //      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
       // Toroidal_tube
@@ -2757,17 +2753,17 @@ void MSP_Toroidal_Membrane<dim>::run ()
           // update the total solution for current load step
           solution += solution_delta;
 
-          BlockVector<double> total_solution (solution);
-          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
-                  solution_function(hp_dof_handler, total_solution);
+//          BlockVector<double> total_solution (solution);
+//          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
+//                  solution_function(hp_dof_handler, total_solution);
           // Evaluate and fill the load disp data
           // since our FEFieldFunction knows solution at all dofs (global solution)
-          if (this_mpi_process == 0)
-          {
-              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
+//          if (this_mpi_process == 0)
+//          {
+//              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
     //          crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
     //          torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep);
-          }
+//          }
 
           compute_error ();
           output_results(cycle, loadstep.get_loadstep());
@@ -2775,12 +2771,12 @@ void MSP_Toroidal_Membrane<dim>::run ()
       }
 
       // Write load disp data to an output file for given point
-      if (this_mpi_process == 0)
-      {
-          hooped_beam_point.write_load_disp_data(cycle);
+//      if (this_mpi_process == 0)
+//      {
+//          hooped_beam_point.write_load_disp_data(cycle);
 //          crisfield_beam_point.write_load_disp_data(cycle);
 //          torus_point_1.write_load_disp_data(cycle);
-      }
+//      }
 
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
