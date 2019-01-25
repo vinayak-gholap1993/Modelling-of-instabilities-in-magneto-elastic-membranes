@@ -796,49 +796,86 @@ template <int dim>
 class LinearScalarPotential : public Function<dim>
 {
 public:
-  LinearScalarPotential (const double potential_difference_per_unit_length)
-    : potential_difference_per_unit_length (potential_difference_per_unit_length)
+  LinearScalarPotential (const double potential_difference_per_unit_length,
+                         const unsigned int n_components,
+                         const unsigned int component)
+    : Function<dim>(n_components),
+      potential_difference_per_unit_length (potential_difference_per_unit_length),
+      n_components(n_components),
+      component(component)
   { }
 
   virtual ~LinearScalarPotential () {}
-
+/*
   virtual double
   value (const Point<dim> &p,
          const unsigned int component = 0) const;
-
+*/
+  virtual void
+  vector_value (const Point<dim> &p,
+                Vector<double>   &values) const;
+/*
   virtual void
   value_list (const std::vector<Point<dim> > &points,
               std::vector<double>            &values,
               const unsigned int              component = 0) const;
+*/
+  virtual void
+  vector_value_list (const std::vector<Point<dim> > &point_list,
+                     std::vector<Vector<double> >   &value_list) const;
 
   const double potential_difference_per_unit_length;
+  const unsigned int n_components;
+  const unsigned int component;
 };
-
-
-
+/*
 template <int dim>
 double LinearScalarPotential<dim>::value (const Point<dim> &p,
                                           const unsigned int) const
 {
-  return -p[1]*potential_difference_per_unit_length;
+    return  -p[1]*potential_difference_per_unit_length;
+}
+*/
+template <int dim>
+void LinearScalarPotential<dim>::vector_value (const Point<dim> &p,
+                                               Vector<double>   &values) const
+{
+    Assert(values.size() == this->n_components,
+           ExcDimensionMismatch(values.size(), this->n_components));
+
+    values = 0.0;
+    // phi_component
+    values(this->component) = -p[1]*potential_difference_per_unit_length;
 }
 
-
-
+/*
 template <int dim>
 void LinearScalarPotential<dim>::value_list (const std::vector<Point<dim> > &points,
                                              std::vector<double>            &values,
                                              const unsigned int              component) const
 {
-  const unsigned int n_points = points.size();
+    const unsigned int n_points = points.size();
 
-  Assert (values.size() == n_points,
-          ExcDimensionMismatch (values.size(), n_points));
-  Assert (component == 0,
-          ExcIndexRange (component, 0, 1));
+    Assert (values.size() == n_points,
+            ExcDimensionMismatch (values.size(), n_points));
+    Assert(component == 0,
+           ExcIndexRange(component, 0, 1));
+
+    for (unsigned int i=0; i<n_points; ++i)
+        values[i] = value(points[i], component);
+}
+*/
+template <int dim>
+void LinearScalarPotential<dim>::vector_value_list (const std::vector<Point<dim> > &point_list,
+                                                    std::vector<Vector<double> >   &value_list) const
+{
+  const unsigned int n_points = point_list.size();
+
+  Assert (value_list.size() == n_points,
+          ExcDimensionMismatch (value_list.size(), n_points));
 
   for (unsigned int i=0; i<n_points; ++i)
-    values[i] = value(points[i],component);
+      LinearScalarPotential<dim>::vector_value(point_list[i],value_list[i]);
 }
 
 
@@ -991,10 +1028,7 @@ public:
                                                      );
 
         // y \otimes y
-        SymmetricTensor<2, dim_Tensor> y_dyad_y;
-        for(unsigned int i = 0; i < dim_Tensor; ++i)
-            for(unsigned int j = 0; j <= i; ++j)
-                y_dyad_y[i][j] = y[i] * y[j];
+        SymmetricTensor<2, dim_Tensor> y_dyad_y = symmetrize(outer_product(y,y));
 
         return ( (lambda * C_inv_C_inv) +
                  ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
@@ -1007,6 +1041,51 @@ public:
                  (2.0 * mu_r_mu_0 * det_F * temp_3)
                );
 
+    }
+
+    // Magnetic induction vector B = -\dfrac{ \partial \Psi }{ \ partial H }
+    // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
+    Tensor<1, dim_Tensor> get_magnetic_induction(const Tensor<2, dim_Tensor> &F,
+                                                 const Tensor<1, dim_Tensor> &H,
+                                                 const double mu_r_mu_0) const
+    {
+        const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
+        const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
+
+        return (mu_r_mu_0 * det_F * C_inv * H);
+    }
+
+    // Magnetic tensor D = \dfrac{ \partial B }{ \partial H }
+    // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
+    SymmetricTensor<2, dim_Tensor> get_magnetic_tensor(const Tensor<2, dim_Tensor> &F,
+                                                       const double mu_r_mu_0) const
+    {
+        const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
+        const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
+
+        return (mu_r_mu_0 * det_F * C_inv);
+    }
+
+    // Fully referential Magneto-elasticity tensor P = \dfrac{ \partial S }{ \partial H }
+    Tensor<3, dim_Tensor> get_magneto_elasticity_tensor(const Tensor<2, dim_Tensor> &F,
+                                                        const Tensor<1, dim_Tensor> &H,
+                                                        const double mu_r_mu_0) const
+    {
+        const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
+        const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
+
+        const Tensor<1, dim_Tensor> y = C_inv * H;
+
+        Tensor<3, dim_Tensor> P;
+        for (unsigned int k = 0; k < dim_Tensor; ++k)
+            for (unsigned int l = 0; l < dim_Tensor; ++l)
+                for (unsigned int m = 0; m < dim_Tensor; ++m)
+                    P[k][l][m] = ( (-mu_r_mu_0 * det_F * C_inv[k][l] * y[m]) +
+                                   (mu_r_mu_0 * det_F * C_inv[k][m] * y[l]) +
+                                   (mu_r_mu_0 * det_F * y[k] * C_inv[l][m])
+                                  );
+
+        return P;
     }
 
     double get_phi() const
@@ -1034,7 +1113,10 @@ class PointHistory
           F_inv(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
           second_Piola_Kirchoff_stress(SymmetricTensor<2, dim_Tensor>()),
           fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>()),
-          H(Tensor<1, dim_Tensor>())
+          H(Tensor<1, dim_Tensor>()),
+          B(Tensor<1, dim_Tensor>()),
+          D(SymmetricTensor<2, dim_Tensor>()),
+          P(Tensor<3, dim_Tensor>())
     {}
 
     virtual ~PointHistory(){}
@@ -1059,6 +1141,9 @@ class PointHistory
         material->update_material_data(F, phi);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F, H, mu_r_mu_0);
         fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F, H, mu_r_mu_0);
+        B = material->get_magnetic_induction(F, H, mu_r_mu_0);
+        D = material->get_magnetic_tensor(F, mu_r_mu_0);
+        P = material->get_magneto_elasticity_tensor(F, H, mu_r_mu_0);
 //        std::cout << "F: " << F << "\n" << "S: " << second_Piola_Kirchoff_stress << std::endl;
     }
 
@@ -1082,6 +1167,21 @@ class PointHistory
         return fourth_order_material_elasticity;
     }
 
+    const Tensor<1, dim_Tensor> &get_magnetic_induction() const
+    {
+        return B;
+    }
+
+    const SymmetricTensor<2, dim_Tensor> &get_magnetic_tensor() const
+    {
+        return D;
+    }
+
+    const Tensor<3, dim_Tensor> &get_magneto_elasticity_tensor() const
+    {
+        return P;
+    }
+
     double get_phi() const
     {
         return material->get_phi();
@@ -1098,6 +1198,9 @@ private:
     SymmetricTensor<2, dim_Tensor> second_Piola_Kirchoff_stress;
     SymmetricTensor<4, dim_Tensor> fourth_order_material_elasticity;
     Tensor<1, dim_Tensor> H; // Referential Magnetic field
+    Tensor<1, dim_Tensor> B; // Magnetic induction
+    SymmetricTensor<2, dim_Tensor> D; // Magnetic tensor
+    Tensor<3, dim_Tensor> P; // Magneto-elasticity tensor
 };
 
 // Class to store load step data

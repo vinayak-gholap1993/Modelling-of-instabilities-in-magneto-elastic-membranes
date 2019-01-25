@@ -117,7 +117,10 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
         {
             // applying inhomogeneous DBC for the scalar magnetic potential field
             // New implementation
-            LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length);
+            /*
+            LinearScalarPotential<dim> linear_scalar_potential(parameters.potential_difference_per_unit_length,
+                                                               n_components,
+                                                               phi_component);
             hp::FEValues<dim> hp_fe_values (mapping_collection,
                                             fe_collection,
                                             qf_collection_cell,
@@ -171,6 +174,29 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                     }
                 }
               }
+              */
+            // Lower bottom boundary
+            {
+                const int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                    n_components,
+                                                                                    phi_component),
+                                                         constraints,
+                                                         fe_collection.component_mask(phi_fe));
+            }
+            // Upper top boundary
+            {
+                const int boundary_id = 3;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                    n_components,
+                                                                                    phi_component),
+                                                         constraints,
+                                                         fe_collection.component_mask(phi_fe));
+            }
         }
 
         if (parameters.geometry_shape == "Beam" ||
@@ -300,6 +326,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     {
         // set homogeneous DBC for scalar magnetic potential field at itr_nr > 0
         // New implementation
+        /*
         Functions::ZeroFunction<dim> zero_function(1);
         hp::FEValues<dim> hp_fe_values (mapping_collection,
                                         fe_collection,
@@ -354,6 +381,25 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 }
             }
           }
+        */
+        // Lower bottom boundary
+        {
+            const int boundary_id = 2;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(phi_fe));
+        }
+        // Upper top boundary
+        {
+            const int boundary_id = 3;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(phi_fe));
+        }
 
         if (parameters.geometry_shape == "Beam" ||
             parameters.geometry_shape == "Patch test")
@@ -852,10 +898,6 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       FullMatrix<double>   cell_matrix (n_dofs_per_cell, n_dofs_per_cell);
       Vector<double>       cell_rhs (n_dofs_per_cell);
       std::vector<types::global_dof_index> local_dof_indices (n_dofs_per_cell);
-      std::vector<double>    coefficient_values (n_q_points);
-
-      function_material_coefficients.value_list (fe_values.get_quadrature_points(),
-                                                 coefficient_values);
 
       const std::vector<std::shared_ptr<PointHistory<dim,dim_Tensor> > > lqph =
               quadrature_point_history.get_data(cell);
@@ -950,15 +992,10 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           Assert(lqph[q_index], ExcInternalError());
           const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
           const SymmetricTensor<4, dim_Tensor> C_4th_order = lqph[q_index]->get_4th_order_material_elasticity();
-          const Tensor<1, dim_Tensor> H = lqph[q_index]->get_H();
-          const Tensor<2, dim_Tensor> F_inv = lqph[q_index]->get_F_inv();
-          const double Jacobian = lqph[q_index]->get_det_F();
+          const Tensor<1, dim_Tensor> B = lqph[q_index]->get_magnetic_induction();
+          const SymmetricTensor<2, dim_Tensor> D = lqph[q_index]->get_magnetic_tensor();
+          const Tensor<3, dim_Tensor> P = lqph[q_index]->get_magneto_elasticity_tensor();
 
-          const Tensor<2, dim_Tensor> F = invert(F_inv);
-          const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
-          const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
-
-          const double mu_r_mu_0 = coefficient_values[q_index];
           // Get the x co-ord to the quadrature point
           const double radial_distance = quadrature_points[q_index][0];
           // If dim == 2, assembly using axisymmetric formulation
@@ -1026,44 +1063,31 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
                       // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
-                      cell_matrix(i,j) -= mu_r_mu_0 *
-                                          coord_transformation_scaling *
-                                          Jacobian *
+                      cell_matrix(i,j) -= coord_transformation_scaling *
                                           contract3(Grad_N_phi_transformed[q_index][i],
-                                                    C_inv,
+                                                    D,
                                                     Grad_N_phi_transformed[q_index][j] ) *
                                           fe_values.JxW(q_index);
                   }
 
                   else if(i_group != j_group)
-                  {                      
+                  {
                       // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
-
-                      // y = C_inv \cdot H
-                      Tensor<1, dim_Tensor> y = C_inv * H;
-
-                      // outer_product(y, C_inv)
-                      Tensor<3, dim_Tensor> P;
-                      for (unsigned int k = 0; k < dim_Tensor; ++k)
-                          for (unsigned int m = 0; m < dim_Tensor; ++m)
-                              for (unsigned int n = 0; n < dim_Tensor; ++n)
-                                  P[k][m][n] = mu_r_mu_0 * Jacobian * y[k] * C_inv[m][n];
-
                       // K_phi_u
                       // \delta H \cdot P : \delta E
                       if ((i_group == phi_block) && (j_group == u_block))
-                        cell_matrix(i,j) += contract3(Grad_N_phi_transformed[q_index][i],
+                        cell_matrix(i,j) += contract3(dE[q_index][j],
                                                       P,
-                                                      dE[q_index][j]) *
+                                                      Grad_N_phi_transformed[q_index][i]) *
                                             coord_transformation_scaling *
                                             fe_values.JxW(q_index);
 
                       // K_u_phi
                       // \delta E : P^T \cdot \delta H
                       else if ((i_group == u_block) && (j_group == phi_block))
-                        cell_matrix(i,j) += contract3(Grad_N_phi_transformed[q_index][j],
+                        cell_matrix(i,j) += contract3(dE[q_index][i],
                                                       P,
-                                                      dE[q_index][i]) *
+                                                      Grad_N_phi_transformed[q_index][j]) *
                                             coord_transformation_scaling *
                                             fe_values.JxW(q_index);
                   }
@@ -1090,7 +1114,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
               else if (i_group == phi_block)
                   cell_rhs(i) -= Grad_N_phi_transformed[q_index][i] *
-                                 mu_r_mu_0 * Jacobian * C_inv * H *
+                                 B *
                                  coord_transformation_scaling *
                                  fe_values.JxW(q_index);
               else
@@ -2466,7 +2490,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           {
               // adaptively refine the torus membrane
               if (cell->material_id() == material_id_toroid)
-                  cell->set_refine_flag();              
+                  cell->set_refine_flag();
           }
           triangulation.execute_coarsening_and_refinement();
       }
@@ -2509,7 +2533,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       for (; cell!=endc; ++cell)
       {
           const Point<dim> &cell_center = cell->center();
-          unsigned int vertex_count = 0;
+          /*unsigned int vertex_count = 0;
           for (unsigned int vertex = 0; vertex < GeometryInfo<dim>::vertices_per_cell; ++vertex)
           {
               if (std::abs(cell->vertex(vertex)[0]) <= parameters.bounding_box_r &&
@@ -2528,7 +2552,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
           }
 
           if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
-              cell->set_material_id(material_id_bar_magnet);
+              cell->set_material_id(material_id_bar_magnet);*/
 
           // set material id vacuum to cells enclosed within the torus
           if (cell_center.distance(membrane_minor_radius_center) < parameters.torus_minor_radius_inner * parameters.grid_scale
