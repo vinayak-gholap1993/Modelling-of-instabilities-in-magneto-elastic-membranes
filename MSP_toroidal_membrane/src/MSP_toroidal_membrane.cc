@@ -284,6 +284,17 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             }
         }
 
+        if (parameters.geometry_shape == "Coupled problem test")
+        {
+            // applying zero DBC on left borundary (0th face) i.e. u_x = u_y = u_z = 0
+            const unsigned int boundary_id = 0;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(u_fe));
+        }
+
         if (parameters.geometry_shape == "Toroidal_tube")
         {
             {
@@ -485,6 +496,17 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
             }
         }
 
+        if (parameters.geometry_shape == "Coupled problem test")
+        {
+            // applying zero DBC on left borundary (0th face) i.e. u_x = u_y = u_z = 0
+            const unsigned int boundary_id = 0;
+            VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                     boundary_id,
+                                                     Functions::ZeroFunction<dim>(n_components),
+                                                     constraints,
+                                                     fe_collection.component_mask(u_fe));
+        }
+
         if (parameters.geometry_shape == "Toroidal_tube")
         {
             {
@@ -684,6 +706,10 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
                   quadrature_point_history.get_data(cell);
           Assert(lqph.size() == n_q_points, ExcInternalError());
 
+          std::vector<double>    coefficient_values (n_q_points);
+          function_material_coefficients.value_list (fe_values.get_quadrature_points(),
+                                                     coefficient_values);
+
           // setup the material parameters depending on
           // the material and parse it to the PointHistory class function
           double mu_ = parameters.mu;
@@ -706,7 +732,7 @@ void MSP_Toroidal_Membrane<dim>::setup_quadrature_point_history()
           for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
           {
               Assert(lqph[q_point], ExcInternalError());
-              lqph[q_point]->setup_lqp(mu_, nu_);
+              lqph[q_point]->setup_lqp(mu_, nu_, coefficient_values[q_point]);
           }
       }
 }
@@ -827,12 +853,11 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 for(unsigned int q_point = 0; q_point < n_q_points; ++q_point)
                 {
                     Assert(lqph[q_point], ExcInternalError());
-                    const double mu_r_mu_0 = coefficient_values[q_point];
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point],
                                                  solution_grads_phi_total_transformed[q_point],
-                                                 mu_r_mu_0);
+                                                 coefficient_values[q_point]);
                 }
             }
             // for 3D simulation proceed normally
@@ -1074,7 +1099,6 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
                   else if(i_group != j_group)
                   {
-                      // mathbb{P} = \mu_0 * \mu_r * J * outer_product((C_inv \cdot H), C_inv)
                       // K_phi_u
                       // \delta H \cdot P : \delta E
                       if ((i_group == phi_block) && (j_group == u_block))
@@ -1477,6 +1501,15 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
       // Solution by a monolithic direct solver
       else // Direct monolithic solver for complete system
       {
+          Assert(!tangent_matrix.empty(), ExcInternalError());
+          global_solution = 0.0;
+          Assert(system_matrix.block(phi_block, phi_block).l1_norm() ==
+                 tangent_matrix.block(phi_block, phi_block).l1_norm(),
+                 ExcInternalError());
+          Assert(system_matrix.block(u_block, u_block).l1_norm() ==
+                 tangent_matrix.block(u_block, u_block).l1_norm(),
+                 ExcInternalError());
+
           SparseDirectUMFPACK A_direct;
           A_direct.initialize(tangent_matrix);
           A_direct.vmult(global_solution, global_system_rhs);
@@ -1488,6 +1521,10 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
   constraints.distribute (distributed_solution);
   newton_update = distributed_solution;
+
+  pcout
+      << std::fixed << std::setprecision(1) << std::scientific
+      << 1.0 << "   " << 0.0;
 }
 
 // Newton-Raphson scheme to solve nonlinear system of equation iteratively
@@ -2432,6 +2469,27 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       triangulation.refine_global(parameters.n_global_refinements);
 
       GridTools::distort_random(0.25, triangulation, /*keep boundary*/ true);
+  }
+
+  // Coupled problem test model
+  // Axisymmetric unit cube
+  else if (parameters.geometry_shape == "Coupled problem test")
+  {
+      std::vector<unsigned int> repetitions;
+      repetitions.push_back(3); // 3 blocks in x direction
+      if(dim >= 2)
+          repetitions.push_back(3); // 3 blocks in y direction
+      if(dim >= 3)
+          repetitions.push_back(1); // 1 block in z direction
+
+      GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                                repetitions,
+                                                (dim == 3 ? Point<dim>(0.0, -0.5, 0.0) : Point<dim>(0.0, -0.5)),
+                                                (dim == 3 ? Point<dim>(1.0, 0.5, 0.25) : Point<dim>(1.0, 0.5)),
+                                                true);
+
+      GridTools::scale(parameters.grid_scale, triangulation);
+      triangulation.refine_global(parameters.n_global_refinements);
   }
 
   // For our geometry of interest for coupled problem

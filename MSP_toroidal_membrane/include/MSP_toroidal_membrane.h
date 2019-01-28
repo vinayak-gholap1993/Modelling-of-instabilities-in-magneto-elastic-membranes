@@ -314,7 +314,8 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
                         "Permanent magnet region axial (z) length");
 
       prm.declare_entry("Geometry shape for the problem", "Toroidal_tube",
-                        Patterns::Selection("Toroidal_tube | Beam | Patch test | Hooped beam | Crisfield beam"),
+                        Patterns::Selection("Toroidal_tube | Beam | Patch test | Hooped beam | Crisfield beam"
+                                            "| Coupled problem test"),
                         "Geometry selection for problem");
     }
     prm.leave_subsection();
@@ -1118,18 +1119,18 @@ class PointHistory
           fourth_order_material_elasticity(SymmetricTensor<4, dim_Tensor>()),
           H(Tensor<1, dim_Tensor>()),
           B(Tensor<1, dim_Tensor>()),
-          D(SymmetricTensor<2, dim_Tensor>()),
+          D(Physics::Elasticity::StandardTensors<dim_Tensor>::I),
           P(Tensor<3, dim_Tensor>())
     {}
 
     virtual ~PointHistory(){}
 
-    void setup_lqp (const double mu, const double nu)
+    void setup_lqp (const double mu, const double nu, const double mu_r_mu_0)
     {
 //        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
         Assert(material, ExcInternalError());
-        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim_Tensor>(), 0.0);
+        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim_Tensor>(), mu_r_mu_0);
     }
 
     void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
