@@ -113,7 +113,7 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
     if(apply_dirichlet_bc)
     {
         // apply magnetic potential field at 1st loadstep only
-        if (loadstep.get_loadstep() == 1)
+//        if (loadstep.get_loadstep() == 1)
         {
             // applying inhomogeneous DBC for the scalar magnetic potential field
             // New implementation
@@ -182,7 +182,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
                                                                                     n_components,
-                                                                                    phi_component),
+                                                                                    phi_component,
+                                                                                    loadstep.get_delta_load()),
                                                          constraints,
                                                          fe_collection.component_mask(phi_fe));
             }
@@ -193,7 +194,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                                                          boundary_id,
                                                          LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
                                                                                     n_components,
-                                                                                    phi_component),
+                                                                                    phi_component,
+                                                                                    loadstep.get_delta_load()),
                                                          constraints,
                                                          fe_collection.component_mask(phi_fe));
             }

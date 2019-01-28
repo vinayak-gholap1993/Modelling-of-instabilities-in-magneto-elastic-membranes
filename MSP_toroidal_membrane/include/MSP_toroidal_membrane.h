@@ -798,11 +798,13 @@ class LinearScalarPotential : public Function<dim>
 public:
   LinearScalarPotential (const double potential_difference_per_unit_length,
                          const unsigned int n_components,
-                         const unsigned int component)
+                         const unsigned int component,
+                         const double delta_load)
     : Function<dim>(n_components),
       potential_difference_per_unit_length (potential_difference_per_unit_length),
       n_components(n_components),
-      component(component)
+      component(component),
+      delta_load(delta_load)
   { }
 
   virtual ~LinearScalarPotential () {}
@@ -827,6 +829,7 @@ public:
   const double potential_difference_per_unit_length;
   const unsigned int n_components;
   const unsigned int component;
+  const double delta_load;
 };
 /*
 template <int dim>
@@ -845,7 +848,7 @@ void LinearScalarPotential<dim>::vector_value (const Point<dim> &p,
 
     values = 0.0;
     // phi_component
-    values(this->component) = -p[1]*potential_difference_per_unit_length;
+    values(this->component) = -p[1] * potential_difference_per_unit_length * delta_load;
 }
 
 /*
