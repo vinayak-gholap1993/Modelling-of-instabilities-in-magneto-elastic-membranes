@@ -286,13 +286,24 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
 
         if (parameters.geometry_shape == "Coupled problem test")
         {
-            // applying zero DBC on left borundary (0th face) i.e. u_x = u_y = u_z = 0
-            const unsigned int boundary_id = 0;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(u_fe));
+            {
+                // applying zero DBC on left boundary (0th face) i.e. u_x = 0
+                const unsigned int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            {
+                // applying zero DBC on bottom boundary (2nd face) i.e. u_y = 0
+                const unsigned int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }
         }
 
         if (parameters.geometry_shape == "Toroidal_tube")
@@ -498,13 +509,24 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
 
         if (parameters.geometry_shape == "Coupled problem test")
         {
-            // applying zero DBC on left borundary (0th face) i.e. u_x = u_y = u_z = 0
-            const unsigned int boundary_id = 0;
-            VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                     boundary_id,
-                                                     Functions::ZeroFunction<dim>(n_components),
-                                                     constraints,
-                                                     fe_collection.component_mask(u_fe));
+            {
+                // applying zero DBC on left boundary (0th face) i.e. u_x = 0
+                const unsigned int boundary_id = 0;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(x_displacement));
+            }
+            {
+                // applying zero DBC on bottom boundary (2nd face) i.e. u_y = 0
+                const unsigned int boundary_id = 2;
+                VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                         boundary_id,
+                                                         Functions::ZeroFunction<dim>(n_components),
+                                                         constraints,
+                                                         fe_collection.component_mask(y_displacement));
+            }
         }
 
         if (parameters.geometry_shape == "Toroidal_tube")
@@ -1179,6 +1201,60 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       // outward unit normal vector for the face
                       const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
                       const Tensor<1, dim> traction = -magnitude * N; // negative for downward force
+
+                      const double radial_distance = quadrature_points_face[f_q_point][0];
+                      // If dim == 2, assembly using axisymmetric formulation
+                      const double coord_transformation_scaling = ( dim == 2
+                                                                    ?
+                                                                      2.0 * dealii::numbers::PI * radial_distance
+                                                                    :
+                                                                      1.0);
+
+                      for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+                      {
+                          const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
+
+                          if (i_group == u_block)
+                          {
+                              const unsigned int component_i =
+                                      fe_face_values.get_fe().system_to_component_index(i).first;
+                              if ((component_i - 1) < dim)
+                              {
+                                  const double Ni = fe_face_values.shape_value(i, f_q_point);
+                                  const double JxW = fe_face_values.JxW(f_q_point);
+
+                                  cell_rhs(i) += (Ni * traction[component_i-1]) * JxW
+                                                  * coord_transformation_scaling;
+                              }
+                          }
+                      }
+                  }
+              }
+      }
+
+      // Mechanical traction load on top boundary
+      if (parameters.mechanical_boundary_condition_type == "Traction" &&
+          parameters.geometry_shape == "Coupled problem test")
+      {
+          for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+              if (cell->face(face)->at_boundary() == true
+                  &&
+                  cell->face(face)->boundary_id() == 3)
+              {
+                  hp_fe_face_values.reinit(cell, face);
+                  const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
+                  const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+                  const std::vector<Point<dim> > &quadrature_points_face = fe_face_values.get_quadrature_points();
+
+                  for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
+                  {
+                      // Traction in reference configuration
+                      const double load_ramp = (loadstep.current() / loadstep.final());
+                      const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
+
+                      // outward unit normal vector for the face
+                      const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
+                      const Tensor<1, dim> traction = magnitude * N;
 
                       const double radial_distance = quadrature_points_face[f_q_point][0];
                       // If dim == 2, assembly using axisymmetric formulation
