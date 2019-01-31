@@ -876,6 +876,29 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 {
                     Assert(lqph[q_point], ExcInternalError());
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
+/*
+                    const Tensor<2, dim_Tensor>
+                            F = Physics::Elasticity::Kinematics::F(solution_grads_u_total_transformed[q_point]);
+                    const double det_F = determinant(F);
+
+                    // Sanity check for negative Jacobian
+                    try
+                    {
+                        const bool flag = det_F > 0.0;
+                        throw flag;
+                    }
+                    catch(const bool flag)
+                    {
+                        if (!flag)
+                        {
+                            pcout << "\nFailing quadrature point with negative Jacobian!" << std::endl;
+                            // before stopping the program output the failing grid
+                            output_results(numbers::invalid_unsigned_int,
+                                           numbers::invalid_unsigned_int);
+                            Assert(false, ExcInternalError());
+                        }
+                    }
+*/
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point],
                                                  solution_grads_phi_total_transformed[q_point],
@@ -1076,7 +1099,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                           * coord_transformation_scaling;
 
                       // Add geometrical stress contribution to local matrix diagonals only
-                      if(component_i == component_j)
+//                      if(component_i == component_j)
                       {
                           // DdE: Linearisation of increment of Green-Lagrange strain tensor
                           // S: second Piola-Kirchoff stress tensor
@@ -1527,8 +1550,13 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
               preconditioner_A.reset(ptr_prec);
             }
 
-          SolverControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
-                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+//          SolverControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
+//                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+          ReductionControl solver_control_A_inv (system_matrix.block(phi_block, phi_block).m() *
+                                                 parameters.lin_slvr_max_it,
+                                                 1.0e-30,
+                                                 parameters.lin_slvr_tol);
+
 //          TrilinosWrappers::SolverCG solver_A_inv (solver_control_A_inv);
           SolverSelector<TrilinosWrappers::MPI::Vector> solver_A_inv;
           solver_A_inv.select("cg");
@@ -1554,8 +1582,13 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
               preconditioner_S.reset(ptr_prec);
             }
 
-          SolverControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
-                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+//          SolverControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
+//                                              parameters.lin_slvr_max_it, parameters.lin_slvr_tol);
+          ReductionControl solver_control_S_inv (system_matrix.block(u_block, u_block).m() *
+                                                 parameters.lin_slvr_max_it,
+                                                 1.0e-30,
+                                                 parameters.lin_slvr_tol);
+
 //          TrilinosWrappers::SolverCG solver_S_inv (solver_control_S_inv);
           SolverSelector<TrilinosWrappers::MPI::Vector> solver_S_inv;
           solver_S_inv.select("cg");
