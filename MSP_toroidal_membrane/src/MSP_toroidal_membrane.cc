@@ -175,29 +175,55 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                 }
               }
               */
-            // Lower bottom boundary
+
+            // Apply magnetic potential load in second half of total load cycle
+            if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
             {
-                const int boundary_id = 2;
-                VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                         boundary_id,
-                                                         LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
-                                                                                    n_components,
-                                                                                    phi_component,
-                                                                                    loadstep.get_delta_load()),
-                                                         constraints,
-                                                         fe_collection.component_mask(phi_fe));
+                // Lower bottom boundary
+                {
+                    const int boundary_id = 2;
+                    VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                             boundary_id,
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        2.0 * loadstep.get_delta_load()),
+                                                             constraints,
+                                                             fe_collection.component_mask(phi_fe));
+                }
+                // Upper top boundary
+                {
+                    const int boundary_id = 3;
+                    VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                             boundary_id,
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        2.0 * loadstep.get_delta_load()),
+                                                             constraints,
+                                                             fe_collection.component_mask(phi_fe));
+                }
             }
-            // Upper top boundary
+            else // Zero magnetic load for first half of total load cycle
             {
-                const int boundary_id = 3;
-                VectorTools::interpolate_boundary_values(hp_dof_handler,
-                                                         boundary_id,
-                                                         LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
-                                                                                    n_components,
-                                                                                    phi_component,
-                                                                                    loadstep.get_delta_load()),
-                                                         constraints,
-                                                         fe_collection.component_mask(phi_fe));
+                // Lower bottom boundary
+                {
+                    const int boundary_id = 2;
+                    VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                             boundary_id,
+                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             constraints,
+                                                             fe_collection.component_mask(phi_fe));
+                }
+                // Upper top boundary
+                {
+                    const int boundary_id = 3;
+                    VectorTools::interpolate_boundary_values(hp_dof_handler,
+                                                             boundary_id,
+                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             constraints,
+                                                             fe_collection.component_mask(phi_fe));
+                }
             }
         }
 
@@ -876,7 +902,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                 {
                     Assert(lqph[q_point], ExcInternalError());
 //                    pcout << "Q_point: " << quadrature_points[q_point] << std::endl;
-/*
+
                     const Tensor<2, dim_Tensor>
                             F = Physics::Elasticity::Kinematics::F(solution_grads_u_total_transformed[q_point]);
                     const double det_F = determinant(F);
@@ -898,7 +924,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                             Assert(false, ExcInternalError());
                         }
                     }
-*/
+
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
                                                  solution_values_phi_total[q_point],
                                                  solution_grads_phi_total_transformed[q_point],
@@ -1080,12 +1106,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           // Assemble system matrix aka tangent matrix
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
-              const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
+//              const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
               const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
 
               for (unsigned int j=0; j<=i; ++j)
               {
-                  const unsigned int component_j = fe_values.get_fe().system_to_component_index(j).first;
+//                  const unsigned int component_j = fe_values.get_fe().system_to_component_index(j).first;
                   const unsigned int j_group = fe_values.get_fe().system_to_base_index(j).first.first;
 
                   // K_uu contribution: comprising of material and geometrical stress contribution
@@ -1272,7 +1298,14 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
                   {
                       // Traction in reference configuration
-                      const double load_ramp = (loadstep.current() / loadstep.final());
+                      double load_ramp = 0.0;
+                      // Apply mechanical pressure load in first half of total load cycle
+                      if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                          load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+
+                      else
+                          load_ramp = 1.0;
+
                       const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
                       // outward unit normal vector for the face
@@ -1330,7 +1363,14 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
                       {
                           // Traction in reference configuration
-                          const double load_ramp = (loadstep.current() / loadstep.final());
+                          double load_ramp = 0.0;
+                          // Apply mechanical pressure load in first half of total load cycle
+                          if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                              load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+
+                          else
+                              load_ramp = 1.0;
+
                           const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
                           // outward unit normal vector for the face on inner interface
@@ -1416,7 +1456,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
       (parameters.problem_type =="Purely elastic"))
   {
       // Block to solve for: either displacement block or magnetic scalar potential block
-      unsigned int solution_block;
+      unsigned int solution_block = u_block;
       if(parameters.problem_type == "Purely magnetic")
           solution_block = phi_block;
       else if (parameters.problem_type == "Purely elastic")
@@ -1693,7 +1733,8 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
               error_update_norm.u <= parameters.tol_u) // Relative error convergence check
              ||
               (newton_iteration > 5 &&
-               error_residual.norm < parameters.abs_err_tol_f) ) // Absolute error convergence check
+               error_residual.norm < (parameters.abs_err_tol_f *
+                                      std::sqrt(hp_dof_handler.n_dofs()))) ) // Absolute error convergence check
         {
             pcout << " CONVERGED!" << std::endl;
             print_convergence_footer();
@@ -1761,6 +1802,10 @@ void MSP_Toroidal_Membrane<dim>::print_convergence_footer()
     pcout << "Relative errors:" << std::endl
           << "Displacement:\t" << error_update.u / error_update_0.u << std::endl
           << "Force:\t\t" << error_residual.u / error_residual_0.u << std::endl;
+    pcout << "Absolute errors:" << std::endl
+          << "Force:\t" << error_residual.norm << std::endl
+          << "Force_u:\t" << error_residual.u << std::endl
+          << "Force_phi:\t" << error_residual.phi << std::endl;
 }
 
 // @sect4{MSP_Toroidal_Membrane::refine_grid}
@@ -2214,6 +2259,19 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
                             solution, solution_names,
                             data_component_interpretation);
   data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
+  TrilinosWrappers::MPI::BlockVector res(locally_owned_partitioning,
+                                         mpi_communicator);
+  res = system_rhs;
+  constraints.set_zero(res);
+  std::vector<std::string> residual_names (1, "res_phi");
+  residual_names.emplace_back("res_u");
+  if (dim >= 2)
+      residual_names.emplace_back("res_u");
+  if (dim == 3)
+      residual_names.emplace_back("res_u");
+
+  data_out.add_data_vector (hp_dof_handler,
+                            res, residual_names, data_component_interpretation);
   data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);

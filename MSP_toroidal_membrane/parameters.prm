@@ -3,14 +3,14 @@
 
 subsection Boundary conditions
   # Potential difference per unit length
-  set Potential difference per unit length = 1000
+  set Potential difference per unit length = 50
 
   # Type of boundary condition to deform body by mechanical load:
   # Options: Inhomogeneous Dirichlet | Traction
   set Mechanical boundary condition type = Traction
 
   # Traction force per unit area
-  set Prescribed traction load = 1.0e-6
+  set Prescribed traction load = 0
 end
 
 
@@ -25,10 +25,12 @@ end
 
 subsection Geometry
   # Mesh file for the toroidal geometry
-  set Mesh file                   = ./mesh/2d_toroidal_membrane.inp
+  # Options: new_2d_toroidal_membrane.inp | new_2d_inc_major_radius_221118.inp | 
+  #          slender_hooped_beam_mesh.inp | crisfield_beam.inp
+  set Mesh file                   = ../../../mesh/new_2d_inc_major_radius_221118.inp
 
   # Major radius of the torus
-  set Torus major radius          = 0.5
+  set Torus major radius          = 0.9
 
   # Minor inner radius of the torus
   set Torus minor radius (inner)  = 0.195
@@ -46,7 +48,7 @@ subsection Geometry
   set Magnet bounding box axial length = 0.051
 
   # Geometry selection for problem: 
-  # Options: Toroidal_tube | Beam | Patch test
+  # Options: Toroidal_tube | Beam | Patch test | Hooped beam | Crisfield beam | Coupled problem test
   set Geometry shape for the problem = Toroidal_tube
 end
 
@@ -60,7 +62,7 @@ subsection Refinement
   set Initial global refinements  = 0
 
   # Maximum number of refinement cycles
-  set Maximum cycles              = 2
+  set Maximum cycles              = 1
 
   # Maximum number of refinement levels
   set Maximum h-level             = 20
@@ -69,7 +71,7 @@ subsection Refinement
   set Refinement fraction         = 0.25
 
   # Fraction of cells to coarsen
-  set Coarsening fraction         = 0.03
+  set Coarsening fraction         = 0.00
   
   # Force adaptive refinement at manifolds
   set Force manifold_refinement  = true
@@ -78,16 +80,16 @@ subsection Refinement
   set Initial h-adaptive refinements for torus membrane = 2
 
   # Number of initial h-adaptive refinements for permanent magnet region
-  set Initial h-adaptive refinements for permanent magnet region = 2
+  set Initial h-adaptive refinements for permanent magnet region = 0
 end
 
 
 subsection Linear solver
   # Linear solver iterations (multiples of the system matrix size)
-  set Max iteration multiplier   = 1
+  set Max iteration multiplier   = 2
 
   # Linear solver residual
-  set Residual                   = 1e-12
+  set Residual                   = 1e-6
 
   # Preconditioner type
   set Preconditioner type        = AMG
@@ -97,7 +99,7 @@ subsection Linear solver
 
   # Type of solver used to solve the linear system
   # Options: Direct ; Iterative
-  set Solver type                = Iterative
+  set Solver type                = Direct
 end
 
 
@@ -112,10 +114,10 @@ subsection Material properties
   set Poisson's ratio = 0.4
 
   # Shear modulus for free space material
-  set Free space shear modulus = 0.0003
+  set Free space shear modulus = 0.00003
 
   # Poisson's ratio for free space material
-  set Free space poisson's ratio = 0.4
+  set Free space poisson's ratio = 0.3
 end
 
 
@@ -130,19 +132,30 @@ subsection Nonlinear solver
   set Tolerance force = 1.0e-9
 
   # Absolute error force residual tolerance
-  set Absolute error force tolerance = 1.0e-9
+  set Absolute error force tolerance = 1.0e-6
+
+  # Type of nonlinear solution method to employ
+  # Options: Newton-Raphson | Arc-Length
+  #set Nonlinear solver type = Newton-Raphson
+
+  # User defined parameter for increments of the arc-length (delta_s^2)
+  #set Increment of the arc-length = 1.0e-6
+
+  # User defined parameter (psi) in the arc-length constraint equation
+  # Eq: (u_0 - u_bar)^T(u_0 - u_bar) + psi^2 (lamda_0 - lambda_bar)(lamda_0 - lambda_bar) = delta_s^2
+  #set psi = 1.0
 end
 
 subsection Problem type
   # The problem type to solve: 
   # Options: Purely magnetic | Purely elastic | Coupled magnetoelastic
-  set Problem type = Purely elastic
+  set Problem type = Coupled magnetoelastic
 end
 
 subsection Load step
   # Final load value at the end of all load steps
-  set Total load = -0.1
+  set Total load = 0.1
 
   # Load step size for each load increment cylce
-  set Load step size = -0.05
+  set Load step size = 0.001
 end
