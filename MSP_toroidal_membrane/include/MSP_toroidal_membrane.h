@@ -945,69 +945,65 @@ class Material_Neo_Hookean_Two_Field
 {
 public:
     Material_Neo_Hookean_Two_Field(const double mu, // Lame 2nd parameter: shear modulus
-                                   const double nu) // Poisson ratio
+                                   const double nu, // Poisson ratio
+                                   const double mu_r_mu_0) // Material coeff value
         :
           mu_(mu),
           nu_(nu),
+          mu_r_mu_0_(mu_r_mu_0),
           kappa((2.0 * mu * (1.0 + nu)) / (3.0 * (1.0 - 2.0 * nu))),
-          c_1(0.5 * mu),
-          lambda(kappa - ((2.0 * mu) / 3.0)),
-          det_F(1.0),
-          phi(0.0)
+          lambda(kappa - ((2.0 * mu) / 3.0))
     {
         Assert(kappa > 0.0, ExcInternalError());
     }
 
     ~Material_Neo_Hookean_Two_Field(){}
 
-    void update_material_data(const Tensor<2, dim_Tensor> &F,
-                              const double phi_in)
+    void update_material_data(const Tensor<2, dim_Tensor> &F)
     {
-        det_F = determinant(F);
+        const double det_F = determinant(F);
 //        std::cout << "det F: " << det_F << std::endl;
-        phi = phi_in;
-
         Assert(det_F > 0.0, ExcInternalError());
-    }
-
-    double get_det_F() const
-    {
-        return det_F;
     }
 
     // Get 2nd Piola-Kirchoff stress tensor
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F,
-                                                                 const Tensor<1, dim_Tensor> &H,
-                                                                 const double mu_r_mu_0) const
+                                                                 const Tensor<1, dim_Tensor> &H) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
         const Tensor<1, dim_Tensor> y = C_inv * H;
 
-        return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
-                 ( (mu_ - lambda * std::log(det_F) ) * C_inv ) -
-                 (0.5 * mu_r_mu_0 * det_F * (scalar_product(C_inv, outer_product(H, H))) * C_inv) +
-                 (mu_r_mu_0 * det_F * symmetrize(outer_product(y, y)))
-               );
+        const SymmetricTensor<2, dim_Tensor> S_elas
+                = (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I)
+                  -( (mu_ - lambda * std::log(det_F) ) * C_inv );
+
+        // Note: symmetrize(outer_product(y,y)) = symmetrize(outer_product(H,H)) : dC_inv_dC(F)
+        const SymmetricTensor<2, dim_Tensor> S_me
+                = -2.0 * mu_r_mu_0_ *
+                   ( (H * C_inv * H) * (0.5 * det_F * C_inv)
+                     - (det_F * symmetrize(outer_product(y,y))) );
+
+        return S_elas + S_me;
     }
 
     // Get the 4th order material elasticity tensor
     SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F,
-                                                                     const Tensor<1, dim_Tensor> &H,
-                                                                     const double mu_r_mu_0) const
+                                                                     const Tensor<1, dim_Tensor> &H) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
 
-        // C_inv : outer_product(H,H)
-        const double temp_1 = scalar_product(C_inv, outer_product(H, H));
-
         // y = C_inv \cdot H
         const Tensor<1, dim_Tensor> y = C_inv * H;
 
-        // C_inv \cdot H \otimes C_inv \otimes C_inv \cdot H
+        // \dfrac{ \partial [(J C_inv) : (H \otimes H)] }{\partial C} = - temp_2 - temp_3
+
+        // temp_2 = C_inv \cdot H \otimes C_inv \otimes C_inv \cdot H
         SymmetricTensor<4, dim_Tensor> temp_2;
         for(unsigned int i = 0; i < dim_Tensor; ++i)
             for(unsigned int j = 0; j <= i; ++j)
@@ -1019,7 +1015,7 @@ public:
                                                       (y[j] * C_inv[i][l] * y[k])
                                                      );
 
-        // C_inv \otimes (C_inv \cdot H) \otimes (C_inv \cdot H)
+        // temp_3 = C_inv \otimes (C_inv \cdot H) \otimes (C_inv \cdot H)
         SymmetricTensor<4, dim_Tensor> temp_3;
         for(unsigned int i = 0; i < dim_Tensor; ++i)
             for(unsigned int j = 0; j <= i; ++j)
@@ -1031,50 +1027,56 @@ public:
                                                       (C_inv[j][l] * y[k] * y[i])
                                                      );
 
-        // y \otimes y
-        SymmetricTensor<2, dim_Tensor> y_dyad_y = symmetrize(outer_product(y,y));
+        const SymmetricTensor<4, dim_Tensor> C_elas
+                = (lambda * C_inv_C_inv)
+                  + ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
+                      (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
-        return ( (lambda * C_inv_C_inv) +
-                 ( (2.0 * lambda * std::log(det_F) - 2.0 * mu_ ) *
-                 (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) ) -
-                 (0.5 * mu_r_mu_0 * det_F * temp_1 * C_inv_C_inv) +
-                 (mu_r_mu_0 * det_F * (outer_product(y_dyad_y, C_inv))) -
-                 (mu_r_mu_0 * det_F * temp_1 * Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) +
-                 (mu_r_mu_0 * det_F * (outer_product(C_inv, y_dyad_y))) -
-                 (2.0 * mu_r_mu_0 * det_F * temp_2) -
-                 (2.0 * mu_r_mu_0 * det_F * temp_3)
-               );
+        const SymmetricTensor<4, dim_Tensor> C_me
+                = - 4.0 * mu_r_mu_0_ *
+                   ( outer_product( (0.5 * det_F * C_inv),
+                                    symmetrize(outer_product(H, H)) *
+                                    Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F) )
+                     + (H * C_inv * H) * 0.5 *
+                         ( (0.5 * det_F * C_inv_C_inv) +
+                           (det_F * Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) )
+                     + ( outer_product(symmetrize(outer_product(H, H)) *
+                                       Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F),
+                                       (0.5 * det_F * C_inv))
+                         + det_F * (temp_2 + temp_3) )
+                     );
 
+        return C_elas + C_me;
     }
 
-    // Magnetic induction vector B = -\dfrac{ \partial \Psi }{ \ partial H }
-    // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
+    // Magnetic induction vector B = -2.0 * \dfrac{ \partial \Psi }{ \ partial H }
+    // \mathbb{B} = 2.0 * \mu_0 * \mu_r * J * C_inv \cdot H
     Tensor<1, dim_Tensor> get_magnetic_induction(const Tensor<2, dim_Tensor> &F,
-                                                 const Tensor<1, dim_Tensor> &H,
-                                                 const double mu_r_mu_0) const
+                                                 const Tensor<1, dim_Tensor> &H) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
-        return (mu_r_mu_0 * det_F * C_inv * H);
+        return 2.0 * (mu_r_mu_0_ * det_F * C_inv * H);
     }
 
     // Magnetic tensor D = \dfrac{ \partial B }{ \partial H }
-    // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
-    SymmetricTensor<2, dim_Tensor> get_magnetic_tensor(const Tensor<2, dim_Tensor> &F,
-                                                       const double mu_r_mu_0) const
+    // \mathbf{D} = 2.0 * \mu_0 * \mu_r * J * C_inv
+    SymmetricTensor<2, dim_Tensor> get_magnetic_tensor(const Tensor<2, dim_Tensor> &F) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
-        return (mu_r_mu_0 * det_F * C_inv);
+        return 2.0 * (mu_r_mu_0_ * det_F * C_inv);
     }
 
-    // Fully referential Magneto-elasticity tensor P = \dfrac{ \partial S }{ \partial H }
+    // Fully referential Magneto-elasticity tensor P = - \dfrac{ \partial S }{ \partial H }
     Tensor<3, dim_Tensor> get_magneto_elasticity_tensor(const Tensor<2, dim_Tensor> &F,
-                                                        const Tensor<1, dim_Tensor> &H,
-                                                        const double mu_r_mu_0) const
+                                                        const Tensor<1, dim_Tensor> &H) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
@@ -1084,27 +1086,20 @@ public:
         for (unsigned int k = 0; k < dim_Tensor; ++k)
             for (unsigned int l = 0; l < dim_Tensor; ++l)
                 for (unsigned int m = 0; m < dim_Tensor; ++m)
-                    P[k][l][m] = ( (-mu_r_mu_0 * det_F * C_inv[k][l] * y[m]) +
-                                   (mu_r_mu_0 * det_F * C_inv[k][m] * y[l]) +
-                                   (mu_r_mu_0 * det_F * y[k] * C_inv[l][m])
-                                  );
+                    P[k][l][m] = -2.0 * ( (-mu_r_mu_0_ * det_F * C_inv[k][l] * y[m]) +
+                                          (mu_r_mu_0_ * det_F * C_inv[k][m] * y[l]) +
+                                          (mu_r_mu_0_ * det_F * y[k] * C_inv[l][m])
+                                          );
 
         return P;
-    }
-
-    double get_phi() const
-    {
-        return phi;
     }
 
 private:
     const double mu_; // shear modulus
     const double nu_; // Poisson ratio
+    const double mu_r_mu_0_; // Material coeff value
     const double kappa; // bulk modulus
-    const double c_1; // material constant
     const double lambda; // Lame 1st parameter
-    double det_F;
-    double phi; // scalar magnetic potential
 };
 
 // Quadrature point history class
@@ -1128,32 +1123,25 @@ class PointHistory
     void setup_lqp (const double mu, const double nu, const double mu_r_mu_0)
     {
 //        Assert(!material, ExcInternalError());
-        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
+        material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu, mu_r_mu_0);
         Assert(material, ExcInternalError());
-        update_values(Tensor<2, dim_Tensor>(), 0.0, Tensor<1, dim_Tensor>(), mu_r_mu_0);
+        update_values(Tensor<2, dim_Tensor>(), Tensor<1, dim_Tensor>());
     }
 
     void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
-                       const double phi,
-                       const Tensor<1, dim_Tensor> &H,
-                       const double mu_r_mu_0)
+                       const Tensor<1, dim_Tensor> &H)
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         F_inv = invert(F);
         this->H = H;
         Assert(material, ExcInternalError());
-        material->update_material_data(F, phi);
-        second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F, H, mu_r_mu_0);
-        fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F, H, mu_r_mu_0);
-        B = material->get_magnetic_induction(F, H, mu_r_mu_0);
-        D = material->get_magnetic_tensor(F, mu_r_mu_0);
-        P = material->get_magneto_elasticity_tensor(F, H, mu_r_mu_0);
+        material->update_material_data(F);
+        second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F, H);
+        fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F, H);
+        B = material->get_magnetic_induction(F, H);
+        D = material->get_magnetic_tensor(F);
+        P = material->get_magneto_elasticity_tensor(F, H);
 //        std::cout << "F: " << F << "\n" << "S: " << second_Piola_Kirchoff_stress << std::endl;
-    }
-
-    double get_det_F() const
-    {
-        return material->get_det_F();
     }
 
     const Tensor<2, dim_Tensor> &get_F_inv() const
@@ -1184,11 +1172,6 @@ class PointHistory
     const Tensor<3, dim_Tensor> &get_magneto_elasticity_tensor() const
     {
         return P;
-    }
-
-    double get_phi() const
-    {
-        return material->get_phi();
     }
 
     const Tensor<1, dim_Tensor> &get_H() const

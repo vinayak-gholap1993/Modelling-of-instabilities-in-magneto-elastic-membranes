@@ -819,9 +819,6 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
             const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
             const unsigned int  &n_q_points = fe_values.n_quadrature_points;
             const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
-            std::vector<double>    coefficient_values (n_q_points);
-            function_material_coefficients.value_list (fe_values.get_quadrature_points(),
-                                                       coefficient_values);
 
             solution_grads_u_total.clear();
             solution_values_u_total.clear();
@@ -918,6 +915,9 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                         if (!flag)
                         {
                             pcout << "\nFailing quadrature point with negative Jacobian!" << std::endl;
+                            // Accept the failing solution for visualization
+                            solution += solution_delta;
+
                             // before stopping the program output the failing grid
                             output_results(numbers::invalid_unsigned_int,
                                            numbers::invalid_unsigned_int);
@@ -926,9 +926,7 @@ MSP_Toroidal_Membrane<dim>::update_qph_incremental(const TrilinosWrappers::MPI::
                     }
 
                     lqph[q_point]->update_values(solution_grads_u_total_transformed[q_point],
-                                                 solution_values_phi_total[q_point],
-                                                 solution_grads_phi_total_transformed[q_point],
-                                                 coefficient_values[q_point]);
+                                                 solution_grads_phi_total_transformed[q_point]);
                 }
             }
             // for 3D simulation proceed normally
@@ -1160,7 +1158,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   // Purely magnetic contributions K_phiphi
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
-                      // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
+                      // \mathbf{D} = 2.0 * \mu_0 * \mu_r * J * C_inv
                       cell_matrix(i,j) -= coord_transformation_scaling *
                                           contract3(Grad_N_phi_transformed[q_index][i],
                                                     D,
@@ -1208,7 +1206,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                  * coord_transformation_scaling;
 
               // F_phi
-              // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
+              // \mathbb{B} = 2.0 * \mu_0 * \mu_r * J * C_inv \cdot H
               else if (i_group == phi_block)
                   cell_rhs(i) -= Grad_N_phi_transformed[q_index][i] *
                                  B *
