@@ -1158,7 +1158,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   // Purely magnetic contributions K_phiphi
                   else if((i_group == j_group) && (i_group == phi_block))
                   {
-                      // \mathbf{D} = 2.0 * \mu_0 * \mu_r * J * C_inv
+                      // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
                       cell_matrix(i,j) -= coord_transformation_scaling *
                                           contract3(Grad_N_phi_transformed[q_index][i],
                                                     D,
@@ -1206,7 +1206,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                  * coord_transformation_scaling;
 
               // F_phi
-              // \mathbb{B} = 2.0 * \mu_0 * \mu_r * J * C_inv \cdot H
+              // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
               else if (i_group == phi_block)
                   cell_rhs(i) -= Grad_N_phi_transformed[q_index][i] *
                                  B *
@@ -2257,7 +2257,7 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
                             solution, solution_names,
                             data_component_interpretation);
   data_out.add_data_vector (estimated_error_per_cell, "estimated_error");
-  TrilinosWrappers::MPI::BlockVector res(locally_owned_partitioning,
+/*  TrilinosWrappers::MPI::BlockVector res(locally_owned_partitioning,
                                          mpi_communicator);
   res = system_rhs;
   constraints.set_zero(res);
@@ -2269,7 +2269,7 @@ void MSP_Toroidal_Membrane<dim>::output_results (const unsigned int cycle,
       residual_names.emplace_back("res_u");
 
   data_out.add_data_vector (hp_dof_handler,
-                            res, residual_names, data_component_interpretation);
+                            res, residual_names, data_component_interpretation);*/
   data_out.add_data_vector (solution, mag_field_bar_magnet);
   data_out.add_data_vector (solution, mag_field_toroid);
   data_out.add_data_vector (solution, mag_field_vacuum);

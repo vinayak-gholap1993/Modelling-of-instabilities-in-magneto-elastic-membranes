@@ -929,7 +929,7 @@ private:
 /*
  * Used strain energy function here:
  * Psi(C) = Psi = mu * [C : I - I : I - 2 * ln(J)] / 2 + lambda * (ln(J))^2 / 2     // Elasticity contribution
- *                - mu_0 * mu_r * [J * C_inv : outer_product(H, H)]                 // Magnetic contribution
+ *                - mu_0 * mu_r * [J * C_inv : outer_product(H, H)] / 2             // Magnetic contribution
  *
  * Parameters: mu: shear modulus,
  *             mu_0: free space permeability
@@ -982,7 +982,7 @@ public:
 
         // Note: symmetrize(outer_product(y,y)) = symmetrize(outer_product(H,H)) : dC_inv_dC(F)
         const SymmetricTensor<2, dim_Tensor> S_me
-                = -2.0 * mu_r_mu_0_ *
+                = -mu_r_mu_0_ *
                    ( (H * C_inv * H) * (0.5 * det_F * C_inv)
                      - (det_F * symmetrize(outer_product(y,y))) );
 
@@ -1033,7 +1033,7 @@ public:
                       (Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F)) );
 
         const SymmetricTensor<4, dim_Tensor> C_me
-                = - 4.0 * mu_r_mu_0_ *
+                = - 2.0 * mu_r_mu_0_ *
                    ( outer_product( (0.5 * det_F * C_inv),
                                     symmetrize(outer_product(H, H)) *
                                     Physics::Elasticity::StandardTensors<dim_Tensor>::dC_inv_dC(F) )
@@ -1049,8 +1049,8 @@ public:
         return C_elas + C_me;
     }
 
-    // Magnetic induction vector B = -2.0 * \dfrac{ \partial \Psi }{ \ partial H }
-    // \mathbb{B} = 2.0 * \mu_0 * \mu_r * J * C_inv \cdot H
+    // Magnetic induction vector B = -\dfrac{ \partial \Psi }{ \ partial H }
+    // \mathbb{B} = \mu_0 * \mu_r * J * C_inv \cdot H
     Tensor<1, dim_Tensor> get_magnetic_induction(const Tensor<2, dim_Tensor> &F,
                                                  const Tensor<1, dim_Tensor> &H) const
     {
@@ -1058,18 +1058,18 @@ public:
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
-        return 2.0 * (mu_r_mu_0_ * det_F * C_inv * H);
+        return (mu_r_mu_0_ * det_F * C_inv * H);
     }
 
     // Magnetic tensor D = \dfrac{ \partial B }{ \partial H }
-    // \mathbf{D} = 2.0 * \mu_0 * \mu_r * J * C_inv
+    // \mathbf{D} = \mu_0 * \mu_r * J * C_inv
     SymmetricTensor<2, dim_Tensor> get_magnetic_tensor(const Tensor<2, dim_Tensor> &F) const
     {
         const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
 
-        return 2.0 * (mu_r_mu_0_ * det_F * C_inv);
+        return (mu_r_mu_0_ * det_F * C_inv);
     }
 
     // Fully referential Magneto-elasticity tensor P = - \dfrac{ \partial S }{ \partial H }
@@ -1086,10 +1086,10 @@ public:
         for (unsigned int k = 0; k < dim_Tensor; ++k)
             for (unsigned int l = 0; l < dim_Tensor; ++l)
                 for (unsigned int m = 0; m < dim_Tensor; ++m)
-                    P[k][l][m] = -2.0 * ( (-mu_r_mu_0_ * det_F * C_inv[k][l] * y[m]) +
-                                          (mu_r_mu_0_ * det_F * C_inv[k][m] * y[l]) +
-                                          (mu_r_mu_0_ * det_F * y[k] * C_inv[l][m])
-                                          );
+                    P[k][l][m] = -( (-mu_r_mu_0_ * det_F * C_inv[k][l] * y[m]) +
+                                    (mu_r_mu_0_ * det_F * C_inv[k][m] * y[l]) +
+                                    (mu_r_mu_0_ * det_F * y[k] * C_inv[l][m])
+                                   );
 
         return P;
     }
