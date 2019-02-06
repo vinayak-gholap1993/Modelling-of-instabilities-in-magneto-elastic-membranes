@@ -1576,7 +1576,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           TrilinosWrappers::MPI::Vector g = system_rhs.block(u_block);
 
           std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner_A;
-          // use jacobi
+          if (parameters.preconditioner_type == "jacobi")
             {
               TrilinosWrappers::PreconditionJacobi *ptr_prec
                 = new TrilinosWrappers::PreconditionJacobi ();
@@ -1584,6 +1584,47 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
               TrilinosWrappers::PreconditionJacobi::AdditionalData
               additional_data (parameters.preconditioner_relaxation);
 
+              ptr_prec->initialize(copy_A, additional_data);
+              preconditioner_A.reset(ptr_prec);
+            }
+          else if (parameters.preconditioner_type == "ssor")
+            {
+              TrilinosWrappers::PreconditionSSOR *ptr_prec
+                = new TrilinosWrappers::PreconditionSSOR ();
+
+              TrilinosWrappers::PreconditionSSOR::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(copy_A, additional_data);
+              preconditioner_A.reset(ptr_prec);
+            }
+          else // AMG
+            {
+              TrilinosWrappers::PreconditionAMG *ptr_prec
+                = new TrilinosWrappers::PreconditionAMG ();
+
+              TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
+
+              typename hp::DoFHandler<dim>::active_cell_iterator
+              cell = hp_dof_handler.begin_active(),
+              endc = hp_dof_handler.end();
+              for (; cell!=endc; ++cell)
+                {
+                  if (cell->subdomain_id() != this_mpi_process) continue;
+
+                  const unsigned int cell_fe_idx = cell->active_fe_index();
+                  const unsigned int cell_poly = cell_fe_idx + 1;
+                  if (cell_poly > 1)
+                    {
+                      additional_data.higher_order_elements = true;
+                      break;
+                    }
+                }
+              {
+                const int hoe = additional_data.higher_order_elements;
+                additional_data.higher_order_elements
+                  = Utilities::MPI::max(hoe, mpi_communicator);
+              }
               ptr_prec->initialize(copy_A, additional_data);
               preconditioner_A.reset(ptr_prec);
             }
@@ -1607,7 +1648,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
           const auto S = schur_complement(A_inv, op_B, op_C, op_D);
 
           std::unique_ptr<TrilinosWrappers::PreconditionBase> preconditioner_S;
-          // use jacobi
+          if (parameters.preconditioner_type == "jacobi")
             {
               TrilinosWrappers::PreconditionJacobi *ptr_prec
                 = new TrilinosWrappers::PreconditionJacobi ();
@@ -1615,6 +1656,49 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
               TrilinosWrappers::PreconditionJacobi::AdditionalData
               additional_data (parameters.preconditioner_relaxation);
 
+              ptr_prec->initialize(system_matrix.block(u_block, u_block),
+                                   additional_data);
+              preconditioner_S.reset(ptr_prec);
+            }
+          else if (parameters.preconditioner_type == "ssor")
+            {
+              TrilinosWrappers::PreconditionSSOR *ptr_prec
+                = new TrilinosWrappers::PreconditionSSOR ();
+
+              TrilinosWrappers::PreconditionSSOR::AdditionalData
+              additional_data (parameters.preconditioner_relaxation);
+
+              ptr_prec->initialize(system_matrix.block(u_block, u_block),
+                                   additional_data);
+              preconditioner_S.reset(ptr_prec);
+            }
+          else // AMG
+            {
+              TrilinosWrappers::PreconditionAMG *ptr_prec
+                = new TrilinosWrappers::PreconditionAMG ();
+
+              TrilinosWrappers::PreconditionAMG::AdditionalData additional_data;
+
+              typename hp::DoFHandler<dim>::active_cell_iterator
+              cell = hp_dof_handler.begin_active(),
+              endc = hp_dof_handler.end();
+              for (; cell!=endc; ++cell)
+                {
+                  if (cell->subdomain_id() != this_mpi_process) continue;
+
+                  const unsigned int cell_fe_idx = cell->active_fe_index();
+                  const unsigned int cell_poly = cell_fe_idx + 1;
+                  if (cell_poly > 1)
+                    {
+                      additional_data.higher_order_elements = true;
+                      break;
+                    }
+                }
+              {
+                const int hoe = additional_data.higher_order_elements;
+                additional_data.higher_order_elements
+                  = Utilities::MPI::max(hoe, mpi_communicator);
+              }
               ptr_prec->initialize(system_matrix.block(u_block, u_block),
                                    additional_data);
               preconditioner_S.reset(ptr_prec);
