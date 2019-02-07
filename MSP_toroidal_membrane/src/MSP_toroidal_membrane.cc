@@ -2930,6 +2930,61 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
       AssertThrow(false, ExcInternalError());
 }
 
+// Fill in data for given point's displacement components
+// and current load value
+template<int dim>
+void MSP_Toroidal_Membrane<dim>::postprocess_point_displacement(Postprocess_point_displacement<dim> &p,
+                                                                const BlockVector<double> &total_solution)
+{
+    typename hp::DoFHandler<dim>::active_cell_iterator
+            cell = hp_dof_handler.begin_active(),
+            endc = hp_dof_handler.end();
+    for (; cell != endc; ++cell)
+        if (cell->material_id() == material_id_toroid)
+        {
+            for (unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; ++v)
+                if (cell->vertex(v).distance(p.point_of_interest) < 1e-6)
+                {
+                    p.disp_r[loadstep.get_loadstep()-1] = total_solution(cell->vertex_dof_index(v,
+                                                                                                displacement_r_component,
+                                                                                                cell->active_fe_index()));
+                    p.disp_z[loadstep.get_loadstep()-1] = total_solution(cell->vertex_dof_index(v,
+                                                                                                displacement_z_component,
+                                                                                                cell->active_fe_index()));
+                    p.load_values[loadstep.get_loadstep()-1] = loadstep.current();
+                }
+        }
+}
+
+// Write to a file point displacement data for given refinement cycle
+template<int dim>
+void MSP_Toroidal_Membrane<dim>::write_point_displacement(const Postprocess_point_displacement<dim> &p,
+                                                          const unsigned int cycle,
+                                                          const unsigned int point_number)
+{
+    // Write the vector data to an output file
+        const std::string base_filename =
+                "point_" + dealii::Utilities::to_string(point_number) +
+                "_" + dealii::Utilities::int_to_string(dim) + "d" + "_cycle" +
+                dealii::Utilities::int_to_string(cycle);
+        const std::string filename = base_filename + ".dat";
+        std::ofstream f(filename.c_str());
+
+        f << "# Point: " << p.point_of_interest << std::endl;
+        f << "# phi_prescribed: " << parameters.potential_difference_per_unit_length <<
+             "\t" << "p0: " << parameters.prescribed_traction_load << std::endl;
+        f << "Disp_r \t Disp_z \t Load_value" << std::endl;
+
+        AssertDimension (p.disp_r.size(), p.disp_z.size());
+        AssertDimension (p.load_values.size(), p.disp_r.size());
+        for (unsigned int i = 0; i < p.load_values.size(); ++i)
+            f << std::fixed << std::setprecision(3) << std::scientific <<
+                 p.disp_r[i] << "\t" << p.disp_z[i] << "\t" <<
+                 p.load_values[i] << std::endl;
+
+        f << std::flush;
+}
+
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::postprocess_energy()
 {
@@ -3068,7 +3123,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
 
-//      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
+      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
       // Create postprocessor object for load displacement data
       // Hooped beam
 //      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
@@ -3076,6 +3131,9 @@ void MSP_Toroidal_Membrane<dim>::run ()
 //      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
       // Toroidal_tube
 //      Postprocess_load_displacement torus_point_1 (Point<dim>(0.695, 0.0), total_num_loadsteps);
+      Postprocess_point_displacement<dim> torus_p1 (Point<dim>(1.095, 0.0), total_num_loadsteps);
+      Postprocess_point_displacement<dim> torus_p2 (Point<dim>(0.9, 0.195), total_num_loadsteps);
+      Postprocess_point_displacement<dim> torus_p3 (Point<dim>(0.705, 0.0), total_num_loadsteps);
 
       // Can add a loop over load domain here later
       // currently single load step taken
@@ -3086,7 +3144,13 @@ void MSP_Toroidal_Membrane<dim>::run ()
           // update the total solution for current load step
           solution += solution_delta;
 
-//          BlockVector<double> total_solution (solution);
+          BlockVector<double> total_solution (solution);
+          // Fill in the data for given point's displacement
+          {
+              postprocess_point_displacement(torus_p1, total_solution);
+              postprocess_point_displacement(torus_p2, total_solution);
+              postprocess_point_displacement(torus_p3, total_solution);
+          }
 //          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
 //                  solution_function(hp_dof_handler, total_solution);
           // Evaluate and fill the load disp data
@@ -3103,14 +3167,21 @@ void MSP_Toroidal_Membrane<dim>::run ()
           loadstep.increment();
       }
 
+      // Write point displacement data to individual files
+      if (this_mpi_process == 0)
+      {
+          write_point_displacement(torus_p1, cycle, 1);
+          write_point_displacement(torus_p2, cycle, 2);
+          write_point_displacement(torus_p3, cycle, 3);
+      }
       // Write load disp data to an output file for given point
-//      if (this_mpi_process == 0)
-//      {
-//          hooped_beam_point.write_load_disp_data(cycle);
-//          crisfield_beam_point.write_load_disp_data(cycle);
-//          torus_point_1.write_load_disp_data(cycle);
-//      }
-
+/*      if (this_mpi_process == 0)
+      {
+          hooped_beam_point.write_load_disp_data(cycle);
+          crisfield_beam_point.write_load_disp_data(cycle);
+          torus_point_1.write_load_disp_data(cycle);
+      }
+*/
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
 //      postprocess_energy();

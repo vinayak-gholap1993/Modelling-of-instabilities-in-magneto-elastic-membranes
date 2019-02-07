@@ -1245,6 +1245,29 @@ private:
     const double delta_load;
 };
 
+// Data structure for a given point to store displacements and
+// load values at each load step
+template<int dim>
+struct Postprocess_point_displacement
+{
+    Postprocess_point_displacement(const Point<dim> &point_of_interest,
+                                   const unsigned int total_load_steps)
+        :
+          point_of_interest(point_of_interest),
+          total_load_steps(total_load_steps)
+    {
+        disp_r.resize(this->total_load_steps);
+        disp_z.resize(this->total_load_steps);
+        load_values.resize(this->total_load_steps);
+    }
+
+    const Point<dim> point_of_interest;
+    const unsigned int total_load_steps;
+    std::vector<double> disp_r;
+    std::vector<double> disp_z;
+    std::vector<double> load_values;
+};
+
 // @sect3{The <code>MSP_Toroidal_Membrane</code> class template}
 
 template <int dim>
@@ -1277,6 +1300,11 @@ private:
   void print_convergence_header();
   void print_convergence_footer();
   void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
+  void postprocess_point_displacement(Postprocess_point_displacement<dim> &,
+                                      const BlockVector<double> &);
+  void write_point_displacement(const Postprocess_point_displacement<dim> &,
+                                const unsigned int cycle,
+                                const unsigned int);
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
