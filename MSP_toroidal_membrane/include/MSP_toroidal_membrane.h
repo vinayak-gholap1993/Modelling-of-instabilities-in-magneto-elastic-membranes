@@ -300,7 +300,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
 
       prm.declare_entry("Grid scale", "1.0",
                         Patterns::Double(0.0),
-                        "Global grid scaling factor");      
+                        "Global grid scaling factor");
 
       prm.declare_entry("Magnet bounding box radial length", "0.035",
                         Patterns::Double(0.0),
@@ -1172,7 +1172,7 @@ private:
 
   Coefficient<dim>     function_material_coefficients;
 
-  mutable ConvergenceTable     convergence_table;  
+  mutable ConvergenceTable     convergence_table;
 
   std::vector<IndexSet> locally_owned_partitioning, locally_relevant_partitioning;
   static const unsigned int n_blocks = 2;
@@ -1257,13 +1257,19 @@ private:
 
       void evaluate_data_and_fill_vectors(const Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
                                           &solution_function,
-                                          const LoadStep &loadstep_)
+                                          const LoadStep &loadstep_,
+                                          const double prescribed_traction_load)
       {
           // Evaluate point data and fill in the vectors
           Vector<double> solution_at_point(n_components);
           bool point_found = true;
 
-          load_values[loadstep_.get_loadstep()-1] = loadstep_.current();
+          // Traction magnitude in reference configuration
+          const double load_ramp = (loadstep_.current() / loadstep_.final());
+          const double magnitude = prescribed_traction_load * load_ramp;
+
+//          load_values[loadstep_.get_loadstep()-1] = loadstep_.current();
+          load_values[loadstep_.get_loadstep()-1] = magnitude;
           double norm_disp = 0.0;
 
           try

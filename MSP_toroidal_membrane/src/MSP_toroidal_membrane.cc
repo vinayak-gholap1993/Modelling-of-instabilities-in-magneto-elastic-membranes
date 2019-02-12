@@ -864,7 +864,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
           Assert(lqph[q_index], ExcInternalError());
-          const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
+          const SymmetricTensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
           const SymmetricTensor<4, dim_Tensor> C = lqph[q_index]->get_4th_order_material_elasticity();
 
           const double mu_r_mu_0 = coefficient_values[q_index];
@@ -880,12 +880,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           // Assemble system matrix aka tangent matrix
           for (unsigned int i=0; i<n_dofs_per_cell; ++i)
             {
-              const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
+//              const unsigned int component_i = fe_values.get_fe().system_to_component_index(i).first;
               const unsigned int i_group = fe_values.get_fe().system_to_base_index(i).first.first;
 
               for (unsigned int j=0; j<=i; ++j)
               {
-                  const unsigned int component_j = fe_values.get_fe().system_to_component_index(j).first;
+//                  const unsigned int component_j = fe_values.get_fe().system_to_component_index(j).first;
                   const unsigned int j_group = fe_values.get_fe().system_to_base_index(j).first.first;
 
                   // K_uu contribution: comprising of material and geometrical stress contribution
@@ -899,7 +899,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                                           * coord_transformation_scaling;
 
                       // Add geometrical stress contribution to local matrix diagonals only
-                      if(component_i == component_j)
+//                      if(component_i == component_j)
                       {
                           // DdE: Linearisation of increment of Green-Lagrange strain tensor
                           // S: second Piola-Kirchoff stress tensor
@@ -1117,7 +1117,7 @@ void MSP_Toroidal_Membrane<dim>::solve (TrilinosWrappers::MPI::BlockVector &newt
 
   // Block to solve for: either displacement block or magnetic scalar potential block
   // will have to change for a coupled problem in future
-  unsigned int solution_block;
+  unsigned int solution_block = u_block;
   if(parameters.problem_type == "Purely magnetic")
       solution_block = phi_block;
   else if (parameters.problem_type == "Purely elastic")
@@ -2072,11 +2072,11 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   if (parameters.mechanical_boundary_condition_type == "Traction")
                   {
                       if (cell->face(face)->center()[0] > 0.0 &&
-                          cell->face(face)->center()[0] < 0.05 &&
+                          cell->face(face)->center()[0] < 0.5 &&
                           cell->face(face)->center()[1] > 0.47)
                       {
                           cell->face(face)->set_boundary_id(6);
-                          cell->set_material_id(6);
+//                          cell->set_material_id(6);
                           break;
                       }
                   }
@@ -2120,11 +2120,11 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   if (parameters.mechanical_boundary_condition_type == "Traction")
                   {
                       if (cell->face(face)->center()[0] > 0.0 &&
-                          cell->face(face)->center()[0] < 2.5 &&
-                          cell->face(face)->center()[1] > 102.7)
+                          cell->face(face)->center()[0] < 27.0 &&
+                          cell->face(face)->center()[1] > 99.0)
                       {
                           cell->face(face)->set_boundary_id(6);
-                          cell->set_material_id(6);
+//                          cell->set_material_id(6);
                           break;
                       }
                   }
@@ -2484,10 +2484,10 @@ void MSP_Toroidal_Membrane<dim>::run ()
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
 
-      const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
+      const unsigned int total_num_loadsteps = (loadstep.final()/loadstep.get_delta_load())-1;
       // Create postprocessor object for load displacement data
       // Hooped beam
-      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
+//      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
       // Crisfield beam
 //      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
       // Toroidal_tube
@@ -2507,12 +2507,15 @@ void MSP_Toroidal_Membrane<dim>::run ()
                   solution_function(hp_dof_handler, total_solution);
           // Evaluate and fill the load disp data
           // since our FEFieldFunction knows solution at all dofs (global solution)
-          if (this_mpi_process == 0)
-          {
-              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
-    //          crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep);
-    //          torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep);
-          }
+//          if (this_mpi_process == 0)
+//          {
+//              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep,
+//                                                               parameters.prescribed_traction_load);
+//              crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep,
+//                                                                  parameters.prescribed_traction_load);
+//              torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep,
+//                                                           parameters.prescribed_traction_load);
+//          }
 
           compute_error ();
           output_results(cycle, loadstep.get_loadstep());
@@ -2520,12 +2523,12 @@ void MSP_Toroidal_Membrane<dim>::run ()
       }
 
       // Write load disp data to an output file for given point
-      if (this_mpi_process == 0)
-      {
-          hooped_beam_point.write_load_disp_data(cycle);
+//      if (this_mpi_process == 0)
+//      {
+//          hooped_beam_point.write_load_disp_data(cycle);
 //          crisfield_beam_point.write_load_disp_data(cycle);
 //          torus_point_1.write_load_disp_data(cycle);
-      }
+//      }
 
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
