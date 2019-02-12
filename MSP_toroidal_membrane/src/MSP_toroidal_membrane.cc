@@ -1086,7 +1086,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
       for (unsigned int q_index=0; q_index<n_q_points; ++q_index)
         {
           Assert(lqph[q_index], ExcInternalError());
-          const Tensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
+          const SymmetricTensor<2, dim_Tensor> S = lqph[q_index]->get_second_Piola_Kirchoff_stress();
           const SymmetricTensor<4, dim_Tensor> C_4th_order = lqph[q_index]->get_4th_order_material_elasticity();
           const Tensor<1, dim_Tensor> B = lqph[q_index]->get_magnetic_induction();
           const SymmetricTensor<2, dim_Tensor> D = lqph[q_index]->get_magnetic_tensor();
