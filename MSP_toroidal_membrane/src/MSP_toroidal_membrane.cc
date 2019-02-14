@@ -1270,7 +1270,8 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
               error_update_norm.u <= parameters.tol_u) // Relative error convergence check
              ||
               (newton_iteration > 5 &&
-               error_residual.norm < parameters.abs_err_tol_f) ) // Absolute error convergence check
+               error_residual.norm < (parameters.abs_err_tol_f *
+                                      std::sqrt(hp_dof_handler.n_dofs()))) ) // Absolute error convergence check
         {
             pcout << " CONVERGED!" << std::endl;
             print_convergence_footer();
@@ -1338,6 +1339,10 @@ void MSP_Toroidal_Membrane<dim>::print_convergence_footer()
     pcout << "Relative errors:" << std::endl
           << "Displacement:\t" << error_update.u / error_update_0.u << std::endl
           << "Force:\t\t" << error_residual.u / error_residual_0.u << std::endl;
+    pcout << "Absolute errors:" << std::endl
+          << "Force:\t" << error_residual.norm << std::endl
+          << "Force_u:\t" << error_residual.u << std::endl
+          << "Force_phi:\t" << error_residual.phi << std::endl;
 }
 
 // @sect4{MSP_Toroidal_Membrane::refine_grid}
@@ -2056,7 +2061,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                           cell->face(face)->center()[0] < 2.0)
                       cell->face(face)->set_boundary_id(2);
 
-                  else if(cell->face(face)->center()[1] > 0.25 &&
+                  else if(cell->face(face)->center()[1] > 0.1 &&
                           cell->face(face)->center()[0] > 0.0 &&
                           cell->face(face)->center()[0] < 2.0)
                       cell->face(face)->set_boundary_id(3);
@@ -2073,7 +2078,7 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   {
                       if (cell->face(face)->center()[0] > 0.0 &&
                           cell->face(face)->center()[0] < 0.5 &&
-                          cell->face(face)->center()[1] > 0.47)
+                          cell->face(face)->center()[1] > 0.35)
                       {
                           cell->face(face)->set_boundary_id(6);
 //                          cell->set_material_id(6);
@@ -2121,10 +2126,11 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   {
                       if (cell->face(face)->center()[0] > 0.0 &&
                           cell->face(face)->center()[0] < 27.0 &&
-                          cell->face(face)->center()[1] > 99.0)
+                          cell->face(face)->center()[1] > 97.0 &&
+                          cell->material_id() == 2)
                       {
                           cell->face(face)->set_boundary_id(6);
-//                          cell->set_material_id(6);
+                          cell->set_material_id(1);
                           break;
                       }
                   }
@@ -2276,8 +2282,8 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                   vertex_count++;
           }
 
-          if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
-              cell->set_material_id(material_id_bar_magnet);
+          /*if(vertex_count >= (GeometryInfo<dim>::vertices_per_cell))
+              cell->set_material_id(material_id_bar_magnet);*/
 
           // set material id vacuum to cells enclosed within the torus
           if (cell_center.distance(membrane_minor_radius_center) < parameters.torus_minor_radius_inner * parameters.grid_scale
@@ -2489,7 +2495,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       // Hooped beam
 //      Postprocess_load_displacement hooped_beam_point (Point<dim>(0.0, 0.27), total_num_loadsteps);
       // Crisfield beam
-//      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
+      Postprocess_load_displacement crisfield_beam_point (Point<dim>(0.0, 100.0), total_num_loadsteps);
       // Toroidal_tube
 //      Postprocess_load_displacement torus_point_1 (Point<dim>(0.695, 0.0), total_num_loadsteps);
 
@@ -2507,15 +2513,15 @@ void MSP_Toroidal_Membrane<dim>::run ()
                   solution_function(hp_dof_handler, total_solution);
           // Evaluate and fill the load disp data
           // since our FEFieldFunction knows solution at all dofs (global solution)
-//          if (this_mpi_process == 0)
-//          {
+          if (this_mpi_process == 0)
+          {
 //              hooped_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep,
 //                                                               parameters.prescribed_traction_load);
-//              crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep,
-//                                                                  parameters.prescribed_traction_load);
+              crisfield_beam_point.evaluate_data_and_fill_vectors(solution_function, loadstep,
+                                                                  parameters.prescribed_traction_load);
 //              torus_point_1.evaluate_data_and_fill_vectors(solution_function, loadstep,
 //                                                           parameters.prescribed_traction_load);
-//          }
+          }
 
           compute_error ();
           output_results(cycle, loadstep.get_loadstep());
@@ -2523,12 +2529,12 @@ void MSP_Toroidal_Membrane<dim>::run ()
       }
 
       // Write load disp data to an output file for given point
-//      if (this_mpi_process == 0)
-//      {
+      if (this_mpi_process == 0)
+      {
 //          hooped_beam_point.write_load_disp_data(cycle);
-//          crisfield_beam_point.write_load_disp_data(cycle);
+          crisfield_beam_point.write_load_disp_data(cycle);
 //          torus_point_1.write_load_disp_data(cycle);
-//      }
+      }
 
       // clear laodstep internal data for new adaptive refinement cycle
       loadstep.reset();
