@@ -907,7 +907,7 @@ private:
 /*
  * Used strain energy function here:
  * Psi(C) = Psi = mu * [C : I - I : I - 2 * ln(J)] / 2 + lambda * (ln(J))^2 / 2     // Elasticity contribution
- *                - mu_0 * mu_r * [J * C_inv : outer_product(H, H)]                 // Magnetic contribution
+ *                - mu_0 * mu_r * [J * C_inv : outer_product(H, H)] / 2             // Magnetic contribution
  *
  * Parameters: mu: shear modulus,
  *             mu_0: free space permeability
@@ -928,34 +928,24 @@ public:
           mu_(mu),
           nu_(nu),
           kappa((2.0 * mu * (1.0 + nu)) / (3.0 * (1.0 - 2.0 * nu))),
-          c_1(0.5 * mu),
-          lambda(kappa - ((2.0 * mu) / 3.0)),
-          det_F(1.0),
-          phi(0.0)
+          lambda(kappa - ((2.0 * mu) / 3.0))
     {
         Assert(kappa > 0.0, ExcInternalError());
     }
 
     ~Material_Neo_Hookean_Two_Field(){}
 
-    void update_material_data(const Tensor<2, dim_Tensor> &F,
-                              const double phi_in)
+    void update_material_data(const Tensor<2, dim_Tensor> &F)
     {
-        det_F = determinant(F);
+        const double det_F = determinant(F);
 //        std::cout << "det F: " << det_F << std::endl;
-        phi = phi_in;
-
         Assert(det_F > 0.0, ExcInternalError());
-    }
-
-    double get_det_F() const
-    {
-        return det_F;
     }
 
     // Get 2nd Piola-Kirchoff stress tensor
     SymmetricTensor<2, dim_Tensor> get_2nd_Piola_Kirchoff_stress(const Tensor<2, dim_Tensor> &F) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         return ( (mu_ * Physics::Elasticity::StandardTensors<dim_Tensor>::I) -
@@ -965,6 +955,7 @@ public:
     // Get the 4th order material elasticity tensor
     SymmetricTensor<4, dim_Tensor> get_4th_order_material_elasticity(const Tensor<2, dim_Tensor> &F) const
     {
+        const double det_F = determinant(F);
         const SymmetricTensor<2, dim_Tensor> C = Physics::Elasticity::Kinematics::C(F);
         const SymmetricTensor<2, dim_Tensor> C_inv = invert(C);
         const SymmetricTensor<4, dim_Tensor> C_inv_C_inv = outer_product(C_inv, C_inv);
@@ -975,19 +966,11 @@ public:
 
     }
 
-    double get_phi() const
-    {
-        return phi;
-    }
-
 private:
     const double mu_; // shear modulus
     const double nu_; // Poisson ratio
     const double kappa; // bulk modulus
-    const double c_1; // material constant
     const double lambda; // Lame 1st parameter
-    double det_F;
-    double phi; // scalar magnetic potential
 };
 
 // Quadrature point history class
@@ -1009,24 +992,18 @@ class PointHistory
 //        Assert(!material, ExcInternalError());
         material = std::make_shared<Material_Neo_Hookean_Two_Field<dim, dim_Tensor> >(mu,nu);
         Assert(material, ExcInternalError());
-        update_values(Tensor<2, dim_Tensor>(), 0.0);
+        update_values(Tensor<2, dim_Tensor>());
     }
 
-    void update_values(const Tensor<2, dim_Tensor> &Grad_u_n,
-                       const double phi)
+    void update_values(const Tensor<2, dim_Tensor> &Grad_u_n)
     {
         const Tensor<2, dim_Tensor> F = Physics::Elasticity::Kinematics::F(Grad_u_n);
         F_inv = invert(F);
         Assert(material, ExcInternalError());
-        material->update_material_data(F, phi);
+        material->update_material_data(F);
         second_Piola_Kirchoff_stress = material->get_2nd_Piola_Kirchoff_stress(F);
         fourth_order_material_elasticity = material->get_4th_order_material_elasticity(F);
 //        std::cout << "F: " << F << "\n" << "S: " << second_Piola_Kirchoff_stress << std::endl;
-    }
-
-    double get_det_F() const
-    {
-        return material->get_det_F();
     }
 
     const Tensor<2, dim_Tensor> &get_F_inv() const
@@ -1042,11 +1019,6 @@ class PointHistory
     const SymmetricTensor<4, dim_Tensor> &get_4th_order_material_elasticity() const
     {
         return fourth_order_material_elasticity;
-    }
-
-    double get_phi() const
-    {
-        return material->get_phi();
     }
 
 private:
@@ -1094,8 +1066,13 @@ public:
 
     void increment()
     {
-        current_load += delta_load;
+//        current_load += delta_load;
         ++loadstep;
+    }
+
+    void increment_load()
+    {
+        current_load += delta_load;
     }
 
     void reset()
