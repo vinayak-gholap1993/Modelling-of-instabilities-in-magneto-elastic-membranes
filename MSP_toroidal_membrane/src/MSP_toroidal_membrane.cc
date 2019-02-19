@@ -1356,6 +1356,8 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
                                          mpi_communicator);
     TrilinosWrappers::MPI::BlockVector neg_G(locally_owned_partitioning,
                                              mpi_communicator);
+    TrilinosWrappers::MPI::BlockVector delta_solution_update(locally_owned_partitioning,
+                                                             mpi_communicator);
     SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(u_block, u_block).m(),
                                   parameters.lin_slvr_tol);
     /*ReductionControl solver_control (parameters.lin_slvr_max_it * system_matrix.block(u_block, u_block).m(),
@@ -1446,7 +1448,7 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
         // By Defn: P = F_ext_i normalized
         // i.e. lambda = 1 / P.l2_norm()
         const double lambda_k = system_rhs.block(u_block).l2_norm();
-        P.block(u_block) = (1 / lambda_k) * system_rhs.block(u_block);
+        P.block(u_block) = (1.0 / lambda_k) * system_rhs.block(u_block);
         pcout << "P norm: " << P.block(u_block).l2_norm() << std::endl;
 
         // Predictor step for initial displacement increment delta_solution_P_0
@@ -1473,8 +1475,8 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
             // current stiffness parameter
             else
             {
-                k_i = (P.block(u_block) * delta_solution_P_0.block(u_block)) /
-                        (delta_solution_P_0.block(u_block).norm_sqr());
+                k_i = (P.block(u_block) * delta_solution_update.block(u_block)) /
+                        (delta_solution_update.block(u_block).norm_sqr());
                 CS_i = k_i / k_0;
                 pcout << "CS_i: " << CS_i << std::endl;
                 Assert((CS_i >= -1.0) && (CS_i <= 1.0),
@@ -1502,19 +1504,19 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
          pcout << "f_i: " << f_i << std::endl;
 
          // By Defn: D_f_u = \nabla_u f_i = f^T
-         D_f_u.block(u_block) = 2.0 * solution_up.block(u_block);
+//         D_f_u.block(u_block) = 2.0 * solution_up.block(u_block);
 
          const double g = std::sqrt(solution_up.block(u_block).norm_sqr() +
                                     (parameters.psi * parameters.psi * load_parameter_update * load_parameter_update *
                                      (P.block(u_block).norm_sqr())));
- //        D_f_u.block(u_block) = solution_up.block(u_block) / g;
+         D_f_u.block(u_block) = (2.0 / g) * solution_up.block(u_block);
 
          // By Defn: f,lambda_i = (\partial f)/(\partial lambda)
          // => 2 * psi^2 * delta_lambda_i * (P^T * P)
-         D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
-                      (P.block(u_block).norm_sqr());
          /*D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
-                 (P.block(u_block).norm_sqr()) / g;*/
+                      (P.block(u_block).norm_sqr());*/
+         D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
+                 (P.block(u_block).norm_sqr()) / g;
 
          pcout << "D_f_u norm: " << D_f_u.block(u_block).l2_norm() << " \n"
                << "D_f_lambda: " << D_f_lambda << std::endl;
@@ -1530,9 +1532,9 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
         load_parameter_update += delta_load_update;
 
         // Step 2: Compute displacement update
-        TrilinosWrappers::MPI::Vector delta_solution_update = (delta_load_update * delta_solution_P.block(u_block) +
-                                                               delta_solution_G.block(u_block));
-        solution_up.block(u_block) += delta_solution_update;
+        delta_solution_update.block(u_block) = (delta_load_update * delta_solution_P.block(u_block) +
+                                                delta_solution_G.block(u_block));
+        solution_up.block(u_block) += delta_solution_update.block(u_block);
     }
     solution_update.block(u_block) = solution_up.block(u_block);
 }
@@ -1580,7 +1582,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 
         assemble_system(); // update to assemble additional blocks
-        pcout << "Rhs norm: " << system_rhs.l2_norm() << std::endl;
+        pcout << "\nRhs norm: " << system_rhs.l2_norm() << std::endl;
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
