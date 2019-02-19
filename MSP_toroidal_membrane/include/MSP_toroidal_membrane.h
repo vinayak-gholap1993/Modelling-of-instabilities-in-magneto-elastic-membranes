@@ -221,6 +221,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
   {
     unsigned int poly_degree_min;
     unsigned int poly_degree_max;
+    unsigned int poly_degree_chosen;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -241,6 +242,10 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       prm.declare_entry("Maximum polynomial degree", "2",
                         Patterns::Integer(1),
                         "Displacement system polynomial order");
+
+      prm.declare_entry("Chosen polynomial degree", "1",
+                        Patterns::Integer(1),
+                        "Chosen system polynomial order");
     }
     prm.leave_subsection();
   }
@@ -251,6 +256,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     {
       poly_degree_min = prm.get_integer("Minimum polynomial degree");
       poly_degree_max = prm.get_integer("Maximum polynomial degree");
+      poly_degree_chosen = prm.get_integer("Chosen polynomial degree");
     }
     prm.leave_subsection();
   }

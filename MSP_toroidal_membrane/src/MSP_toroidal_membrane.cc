@@ -85,9 +85,9 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 
     // Setting of higher degree FE to cells in toroid membrane
     if (cell->material_id() == material_id_toroid)
-        cell->set_active_fe_index(0); // 1 for FE_Q(2) or 2 for FE_Q(3)
+        cell->set_active_fe_index(parameters.poly_degree_chosen-1); // 1 for FE_Q(2) or 2 for FE_Q(3)
     else
-        cell->set_active_fe_index(0);
+        cell->set_active_fe_index(parameters.poly_degree_chosen-1);
     }
 }
 
@@ -1676,9 +1676,9 @@ void MSP_Toroidal_Membrane<dim>::average_cauchy_stress_components(Vector<double>
                                     update_quadrature_points |
                                     update_JxW_values);
 
-    typename Triangulation<dim>::active_cell_iterator
-    cell = triangulation.begin_active(),
-    endc = triangulation.end();
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
     for (; cell!=endc; ++cell)
         if(cell->is_locally_owned())
     {
