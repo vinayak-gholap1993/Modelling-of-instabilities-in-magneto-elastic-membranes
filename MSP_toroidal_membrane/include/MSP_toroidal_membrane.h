@@ -1105,7 +1105,8 @@ private:
   void setup_quadrature_point_history();
   void update_qph_incremental(const TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_constraints (ConstraintMatrix &constraints, const int &itr_nr);
-  void assemble_system ();
+  void assemble_system (const double lambda_i);
+  void assemble_P (TrilinosWrappers::MPI::Vector &P);
   void solve (TrilinosWrappers::MPI::BlockVector &newton_update);
   void solve_nonlinear_system(TrilinosWrappers::MPI::BlockVector &solution_delta);
   void make_grid ();
@@ -1121,9 +1122,9 @@ private:
   void print_convergence_footer();
   void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
   void solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
-                                                     double &lambda_delta);
+                                                     double &lambda);
   void solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
-                                            double &load_parameter_update,
+                                            double &lambda,
                                             const unsigned int newton_iteration);
 
   MPI_Comm           mpi_communicator;

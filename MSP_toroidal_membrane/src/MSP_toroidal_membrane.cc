@@ -779,12 +779,19 @@ MSP_Toroidal_Membrane<dim>::get_total_solution(const TrilinosWrappers::MPI::Bloc
 // @sect4{MSP_Toroidal_Membrane::assemble_system}
 
 template <int dim>
-void MSP_Toroidal_Membrane<dim>::assemble_system ()
+void MSP_Toroidal_Membrane<dim>::assemble_system (const double lambda_i)
 {
   TimerOutput::Scope timer_scope (computing_timer, "Assembly");
 
   system_matrix = 0.0;
   system_rhs = 0.0;
+  TrilinosWrappers::MPI::Vector P_local(locally_owned_dofs,
+                                        mpi_communicator);
+  assemble_P(P_local);
+  const double P_local_norm = P_local.l2_norm();
+  P_local /= P_local_norm;
+
+  std::vector<bool> dofs_touched(hp_dof_handler.n_dofs(), false);
 
   hp::FEValues<dim> hp_fe_values (mapping_collection,
                                   fe_collection,
@@ -987,7 +994,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   Assert(i_group <= u_block, ExcInternalError());
           }
       }
-
+/*
       // Assemble Neumann type Traction contribution
       if (parameters.mechanical_boundary_condition_type == "Traction"
               &&
@@ -1108,7 +1115,7 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
               }
           }
       }
-
+*/
       // Finally, we need to copy the lower half of the local matrix into the
       // upper half:
       for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
@@ -1116,6 +1123,23 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
           cell_matrix(i, j) = cell_matrix(j, i);
 
       cell->get_dof_indices (local_dof_indices);
+
+      Vector<double> cell_P (n_dofs_per_cell);
+      P_local.extract_subvector_to(local_dof_indices.begin(),
+              local_dof_indices.end()-1,
+              cell_P.begin());
+
+      for (unsigned int k = 0; k < local_dof_indices.size(); ++k)
+      {
+          if (dofs_touched[local_dof_indices[k]] == true)
+              cell_P[k] = 0.0;
+
+          else if (dofs_touched[local_dof_indices[k]] == false)
+              dofs_touched[local_dof_indices[k]] = true;
+      }
+
+      cell_rhs -= lambda_i * cell_P;
+
       constraints.distribute_local_to_global (cell_matrix,
                                               cell_rhs,
                                               local_dof_indices,
@@ -1126,6 +1150,169 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
 
   system_matrix.compress(VectorOperation::add);
   system_rhs.compress(VectorOperation::add);
+}
+
+// Assembly of the external applied loads. i.e. F_ext = P
+template <int dim>
+void MSP_Toroidal_Membrane<dim>::assemble_P(TrilinosWrappers::MPI::Vector &P_local)
+{
+    TimerOutput::Scope timer_output (computing_timer, "Assemble external load P");
+
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_cell,
+                                    update_values |
+                                    update_gradients |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+    hp::FEFaceValues<dim> hp_fe_face_values (mapping_collection,
+                                             fe_collection,
+                                             qf_collection_face,
+                                             update_values |
+                                             update_normal_vectors |
+                                             update_quadrature_points |
+                                             update_JxW_values);
+
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
+    for (; cell!=endc; ++cell)
+    {
+      if (cell->is_locally_owned() == false) continue;
+
+        hp_fe_values.reinit(cell);
+        const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+        const unsigned int  &n_dofs_per_cell = fe_values.dofs_per_cell;
+
+        Vector<double>       cell_P (n_dofs_per_cell);
+        std::vector<types::global_dof_index> local_dof_indices (n_dofs_per_cell);
+
+        // Assemble Neumann type Traction contribution
+        if (parameters.mechanical_boundary_condition_type == "Traction"
+                &&
+             ( parameters.geometry_shape == "Beam"
+               ||
+               parameters.geometry_shape == "Hooped beam"
+               ||
+               parameters.geometry_shape == "Crisfield beam") ) // currently for beam test model only
+        {
+            for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+                if (cell->face(face)->at_boundary() == true
+                    &&
+                    cell->face(face)->boundary_id() == 6)
+                {
+                    hp_fe_face_values.reinit(cell, face);
+                    const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
+                    const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+                    const std::vector<Point<dim> > &quadrature_points_face = fe_face_values.get_quadrature_points();
+
+                    for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
+                    {
+                        // Traction in reference configuration
+                        const double load_ramp = 1.0; //(loadstep.current() / loadstep.final());
+                        const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
+  //                      Tensor<1, dim> dir; // traction direction is irrespective of body deformation
+  //                      dir[1] = -1.0; // -y; downward force direction
+  //                      const Tensor<1, dim> traction = magnitude * dir;
+
+                        // outward unit normal vector for the face
+                        const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
+                        const Tensor<1, dim> traction = -magnitude * N; // negative for downward force
+
+                        const double radial_distance = quadrature_points_face[f_q_point][0];
+                        // If dim == 2, assembly using axisymmetric formulation
+                        const double coord_transformation_scaling = ( dim == 2
+                                                                      ?
+                                                                        2.0 * dealii::numbers::PI * radial_distance
+                                                                      :
+                                                                        1.0);
+
+                        for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+                        {
+                            const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
+
+                            if (i_group == u_block)
+                            {
+                                const unsigned int component_i =
+                                        fe_face_values.get_fe().system_to_component_index(i).first;
+                                if ((component_i - 1) < dim)
+                                {
+                                    const double Ni = fe_face_values.shape_value(i, f_q_point);
+                                    const double JxW = fe_face_values.JxW(f_q_point);
+
+                                    cell_P(i) += (Ni * traction[component_i-1]) * JxW
+                                                    * coord_transformation_scaling;
+                                }
+                            }
+                        }
+                    }
+                }
+        }
+
+        // Mechanical pressure load on the torus tube
+        if (parameters.mechanical_boundary_condition_type == "Traction" &&
+            parameters.geometry_shape == "Toroidal_tube")
+        {
+            if (cell->material_id() == material_id_toroid)
+            {
+                for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+                {
+                    // Identify the face if it is inner interface
+                    // i.e. if it lies on torus minor radius inner
+                    if (cell->face(face)->manifold_id() == manifold_id_inner_radius &&
+                        cell->neighbor(face)->material_id() == material_id_vacuum_inner_interface_membrane)
+                    {
+                        hp_fe_face_values.reinit(cell, face);
+                        const FEFaceValues<dim> &fe_face_values = hp_fe_face_values.get_present_fe_values();
+                        const unsigned int n_q_points_f = fe_face_values.n_quadrature_points;
+                        const std::vector<Point<dim> > &quadrature_points_face = fe_face_values.get_quadrature_points();
+
+                        for (unsigned int f_q_point = 0; f_q_point < n_q_points_f; ++f_q_point)
+                        {
+                            // Traction in reference configuration
+                            const double load_ramp = 1.0; //(loadstep.current() / loadstep.final());
+                            const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
+
+                            // outward unit normal vector for the face on inner interface
+                            const Tensor<1, dim> &N = fe_face_values.normal_vector(f_q_point);
+                            const Tensor<1, dim> traction = -magnitude * N; // negative to take inward normal to face
+
+                            const double radial_distance = quadrature_points_face[f_q_point][0];
+                            // If dim == 2, assembly using axisymmetric formulation
+                            const double coord_transformation_scaling = ( dim == 2
+                                                                          ?
+                                                                            2.0 * dealii::numbers::PI * radial_distance
+                                                                          :
+                                                                            1.0);
+                            for (unsigned int i = 0; i < n_dofs_per_cell; ++i)
+                            {
+                                const unsigned int i_group = fe_face_values.get_fe().system_to_base_index(i).first.first;
+
+                                if (i_group == u_block)
+                                {
+                                    const unsigned int component_i =
+                                            fe_face_values.get_fe().system_to_component_index(i).first;
+                                    if ((component_i - 1) < dim)
+                                    {
+                                        const double Ni = fe_face_values.shape_value(i, f_q_point);
+                                        const double JxW = fe_face_values.JxW(f_q_point);
+
+                                        cell_P(i) += (Ni * traction[component_i-1]) * JxW
+                                                        * coord_transformation_scaling;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    cell->get_dof_indices (local_dof_indices);
+    constraints.distribute_local_to_global(cell_P,
+                                           local_dof_indices,
+                                           P_local);
+    }
+    P_local.compress(VectorOperation::add);
 }
 
 
@@ -1280,7 +1467,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
         // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 
-        assemble_system();
+        assemble_system(1.0);
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
@@ -1336,7 +1523,7 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 // Using block elimination for solution update and load parameter update
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
-                                                                      double &load_parameter_update,
+                                                                      double &lambda,
                                                                       const unsigned int newton_iteration)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Solve linear system: Block elimination");
@@ -1364,7 +1551,7 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
                                      1.0e-30,
                                      parameters.lin_slvr_tol);*/
 
-    if (parameters.lin_slvr_type == "Iterative")
+//    if (parameters.lin_slvr_type == "Iterative")
     {
         // Solver required to compute inverse of tangent matrix
         // using LinearOperator class function
@@ -1447,9 +1634,11 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
 
         // By Defn: P = F_ext_i normalized
         // i.e. lambda = 1 / P.l2_norm()
-        const double lambda_k = system_rhs.block(u_block).l2_norm();
-        P.block(u_block) = (1.0 / lambda_k) * system_rhs.block(u_block);
-        pcout << "P norm: " << P.block(u_block).l2_norm() << std::endl;
+        assemble_P(P.block(u_block));
+        const double P_norm = P.block(u_block).l2_norm();
+        P.block(u_block) /= P_norm;
+        pcout << "\nP norm: " << P_norm << std::endl;
+        pcout << "G norm: " << system_rhs.block(u_block).l2_norm() << std::endl;
 
         // Predictor step for initial displacement increment delta_solution_P_0
         if (newton_iteration == 0)
@@ -1468,7 +1657,7 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
             {
                 k_0 = ( P.block(u_block) * delta_solution_P_0.block(u_block)) /
                         (delta_solution_P_0.block(u_block).norm_sqr());
-                load_parameter_update += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
+                lambda += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
             }
 
             // for further load iterations: compute the sign using
@@ -1481,16 +1670,14 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
                 pcout << "CS_i: " << CS_i << std::endl;
                 Assert((CS_i >= -1.0) && (CS_i <= 1.0),
                        ExcInternalError());
-                load_parameter_update += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
+                lambda += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
             }
-            pcout << "l.p.u: " << load_parameter_update << std::endl;
-            Assert(load_parameter_update != 0.0, ExcInternalError());
+            Assert(lambda != 0.0, ExcInternalError());
         }
 
+        pcout << "lambda: " << lambda << std::endl;
         // G = F_int_i - lambda_i * F_ext_i => (sys_mat * sol - lambda * sys_rhs) at current iteration i
-        TrilinosWrappers::MPI::Vector G = -load_parameter_update * P.block(u_block); // -lambda_i * P_i
-        system_matrix.block(u_block, u_block).vmult_add(G, solution_up.block(u_block));
-        neg_G.block(u_block) = -1.0 * G;
+        neg_G.block(u_block) = -1.0 * system_rhs.block(u_block);
 
         // Compute delta_solution_P
         K_T_inv.vmult(delta_solution_P.block(u_block),P.block(u_block));
@@ -1498,41 +1685,39 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
          K_T_inv.vmult(delta_solution_G.block(u_block), neg_G.block(u_block));
 
          // Arc-Length constraint value at current iteration
-         const double f_i = std::sqrt(solution_up.block(u_block).norm_sqr() +
-                                      (parameters.psi * parameters.psi * load_parameter_update * load_parameter_update *
-                                       (P.block(u_block).norm_sqr()))) - parameters.delta_s;
+         const double g = std::sqrt(solution_up.block(u_block).norm_sqr() +
+                                    (parameters.psi * parameters.psi * lambda * lambda *
+                                     (P.block(u_block).norm_sqr())));
+
+         const double f_i = g - parameters.delta_s;
          pcout << "f_i: " << f_i << std::endl;
 
          // By Defn: D_f_u = \nabla_u f_i = f^T
 //         D_f_u.block(u_block) = 2.0 * solution_up.block(u_block);
-
-         const double g = std::sqrt(solution_up.block(u_block).norm_sqr() +
-                                    (parameters.psi * parameters.psi * load_parameter_update * load_parameter_update *
-                                     (P.block(u_block).norm_sqr())));
          D_f_u.block(u_block) = (2.0 / g) * solution_up.block(u_block);
 
          // By Defn: f,lambda_i = (\partial f)/(\partial lambda)
          // => 2 * psi^2 * delta_lambda_i * (P^T * P)
-         /*D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
+         /*D_f_lambda = 2.0 * parameters.psi * parameters.psi * lambda *
                       (P.block(u_block).norm_sqr());*/
-         D_f_lambda = 2.0 * parameters.psi * parameters.psi * load_parameter_update *
+         D_f_lambda = 2.0 * parameters.psi * parameters.psi * lambda *
                  (P.block(u_block).norm_sqr()) / g;
 
          pcout << "D_f_u norm: " << D_f_u.block(u_block).l2_norm() << " \n"
                << "D_f_lambda: " << D_f_lambda << std::endl;
 
         // Step 1: Compute load parameter update
-        const double delta_load_update = -1.0 * ( (f_i +
+        const double delta_lambda_update = -1.0 * ( (f_i +
                                                    D_f_u.block(u_block) * delta_solution_G.block(u_block)) /
                                                   (D_f_lambda +
                                                    D_f_u.block(u_block) * delta_solution_P.block(u_block)) );
-        pcout << "delta_l_u: " << delta_load_update << std::endl;
+        pcout << "delta_l_u: " << delta_lambda_update << std::endl;
 
         // Update load parameter
-        load_parameter_update += delta_load_update;
+        lambda += delta_lambda_update;
 
         // Step 2: Compute displacement update
-        delta_solution_update.block(u_block) = (delta_load_update * delta_solution_P.block(u_block) +
+        delta_solution_update.block(u_block) = (delta_lambda_update * delta_solution_P.block(u_block) +
                                                 delta_solution_G.block(u_block));
         solution_up.block(u_block) += delta_solution_update.block(u_block);
     }
@@ -1543,7 +1728,7 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
 // Nonlinear system of equation iterative solver using Arc-Length method
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
-                                                                               double &lambda_delta)
+                                                                               double &lambda)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Solve nonlinear system: Arc-Length");
     pcout << "Load step: " << loadstep.get_loadstep() << " "
@@ -1552,7 +1737,6 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
     TrilinosWrappers::MPI::BlockVector solution_update(locally_owned_partitioning,
                                                        locally_relevant_partitioning,
                                                        mpi_communicator);
-    double load_parameter_update = 0.0;
 
     error_residual.reset();
     error_residual_0.reset();
@@ -1581,8 +1765,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
         // merge both constraints matrices with hanging node constraints dominating when conflict occurs on same dof
         constraints.merge(hanging_node_constraints,  ConstraintMatrix::MergeConflictBehavior::right_object_wins);
 
-        assemble_system(); // update to assemble additional blocks
-        pcout << "\nRhs norm: " << system_rhs.l2_norm() << std::endl;
+        assemble_system(lambda); // update to assemble additional blocks
         get_error_residual(error_residual);
 
         if (newton_iteration == 0)
@@ -1608,7 +1791,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
         // Solve linear system in two steps using block elimination:
         // Step 1: solve for load parameter update delta_lambda
         // Step 2: Back substituion to find displacement update solution_delta
-        solve_linear_system_block_eliminaton(solution_update, load_parameter_update, newton_iteration);
+        solve_linear_system_block_eliminaton(solution_update, lambda, newton_iteration);
 
         get_error_update(solution_update, error_update);
         if (newton_iteration == 0)
@@ -1620,8 +1803,6 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
 
         // update the solution with current solution increment
         solution_delta += solution_update;
-        // update the load parameter with current load increment
-        lambda_delta += load_parameter_update;
         // update qph related to this new displacement and stress state
         update_qph_incremental(solution_delta);
 
@@ -2821,7 +3002,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
       // Declare the incremental load update
-      double lambda_delta = 0.0;
+      double lambda = 0.001;
 
       if (parameters.nonlinear_solver_type == "Newton-Raphson")
       {
@@ -2878,17 +3059,13 @@ void MSP_Toroidal_Membrane<dim>::run ()
       else if (parameters.nonlinear_solver_type == "Arc-Length")
       {
           loadstep.increment();
-          loadstep.increment_load();
-          while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+          while (std::abs(lambda) <= 1.0)
           {
               solution_delta = 0.0;
-              lambda_delta = 0.0;
 
-              solve_nonlinear_system_with_arc_length_method(solution_delta, lambda_delta);
+              solve_nonlinear_system_with_arc_length_method(solution_delta, lambda);
               solution += solution_delta;
 
-              // Check if final load increment is equal to desired step size
-//              Assert(lambda_delta == loadstep.current(), ExcInternalError());
               compute_error ();
               output_results(cycle, loadstep.get_loadstep());
               loadstep.increment();
