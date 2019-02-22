@@ -1,0 +1,88 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw"
+    version="1.1" baseProfile="full">
+    <g>
+        <g latexdraw:type="picture" id="id1275470019">
+            <image
+                xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/Task_2.1_documentation/images/torus_disp_mue_1000_2.png"
+                x="25.294117647058783" y="-72.05882352941177"
+                height="765" width="1109"/>
+        </g>
+        <g latexdraw:type="text" id="id1279534862" fill="#ef1414" latexdraw:position="bl">
+            <text x="159.7058823529412" y="722.9411764705883">Displacements at full load</text>
+        </g>
+        <g latexdraw:type="text" id="id2017554820" fill="#ef1414" latexdraw:position="bl">
+            <text x="747.9411764705883" y="722.0588235294118">Deformed torus membrane</text>
+        </g>
+        <g latexdraw:type="square" id="id1247309851">
+            <rect x="72.1764705882353" y="260.41176470588243"
+                width="107.41176470588226" height="107.41176470588226"
+                latexdraw:borderPos="outer" stroke-width="2.0"
+                stroke="#e60d0d" fill="none" stroke-dasharray="8.819444444444445, 5.291666666666667"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1472641459">
+            <polyline
+                points="182.35294117647058,258.8235294117647 641.1764705882354,-52.94117647058824 "
+                stroke-width="2.0" stroke="#e60d0d"
+                stroke-dasharray="8.819444444444445, 5.291666666666667" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id383204875">
+            <polyline
+                points="182.35294117647058,364.70588235294116 641.1764705882354,317.6470588235294 "
+                stroke-width="2.0" stroke="#e60d0d"
+                stroke-dasharray="8.819444444444445, 5.291666666666667" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1330246860">
+            <polyline
+                points="23.529411764705884,711.7647058823529 82.3529411764706,711.7647058823529 "
+                stroke-width="3.0" stroke="#241313"
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1330246860)"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1050843776">
+            <polyline
+                points="23.529411764705884,711.7647058823529 23.529411764705884,652.9411764705883 "
+                stroke-width="3.0" stroke="#241313"
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1050843776)"/>
+        </g>
+        <g latexdraw:type="text" id="id1655516247" fill="#241313" latexdraw:position="bl">
+            <text x="65.58823529411765" y="729.4117647058823">R</text>
+        </g>
+        <g latexdraw:type="text" id="id110790158" fill="#241313" latexdraw:position="bl">
+            <text x="5.882352941176471" y="668.8235294117648">Z</text>
+        </g>
+    </g>
+    <defs>
+        <marker overflow="visible" orient="auto" id="arrow1-1330246860">
+            <path
+                d="M 0.0 0.0 L -4.034722222222222 1.4409722222222223 L -4.034722222222222 0.0 L -4.034722222222222 -1.4409722222222223 z "
+                latexdraw:arrSizeNum="2.0" fill="#241313"/>
+        </marker>
+        <marker overflow="visible" orient="auto" id="arrow1-1050843776">
+            <path
+                d="M 0.0 0.0 L -4.034722222222222 1.4409722222222223 L -4.034722222222222 0.0 L -4.034722222222222 -1.4409722222222223 z "
+                latexdraw:arrSizeNum="2.0" fill="#241313"/>
+        </marker>
+    </defs>
+    <metadata>
+        <latexdraw:metadata>
+            <latexdraw:latexIncludes/>
+            <latexdraw:displayXScale>true</latexdraw:displayXScale>
+            <latexdraw:displayYScale>true</latexdraw:displayYScale>
+            <latexdraw:unit>CM</latexdraw:unit>
+            <latexdraw:zoom>0.85</latexdraw:zoom>
+            <latexdraw:magneticGridStyle>CUSTOMISED</latexdraw:magneticGridStyle>
+            <latexdraw:gridGap>5</latexdraw:gridGap>
+            <latexdraw:magneticGrid>true</latexdraw:magneticGrid>
+            <latexdraw:version>3.3.8</latexdraw:version>
+            <latexdraw:size>
+                <latexdraw:width>1855</latexdraw:width>
+                <latexdraw:height>1056</latexdraw:height>
+            </latexdraw:size>
+            <latexdraw:position>
+                <latexdraw:x>65.0</latexdraw:x>
+                <latexdraw:y>33.0</latexdraw:y>
+            </latexdraw:position>
+        </latexdraw:metadata>
+    </metadata>
+</svg>

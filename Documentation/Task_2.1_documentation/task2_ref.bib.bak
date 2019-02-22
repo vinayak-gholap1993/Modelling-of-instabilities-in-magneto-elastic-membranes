@@ -129,7 +129,6 @@
 @InProceedings{Hrinda2010,
   author    = {Hrinda, Glenn},
   title     = {Snap-through instability patterns in truss structures},
-  booktitle = {51st AIAA/ASME/ASCE/AHS/ASC Structures, Structural Dynamics, and Materials Conference 18th AIAA/ASME/AHS Adaptive Structures Conference 12th},
   year      = {2010},
   pages     = {2611},
 }
@@ -154,6 +153,45 @@
   pages         = {248--263},
   __markedentry = {[vinayak:6]},
   publisher     = {Elsevier},
+}
+
+@Article{Kelly1983,
+  author    = {D. W. Kelly and J. P. De S. R. Gago and O. C. Zienkiewicz and I. Babuska},
+  title     = {A posteriori error analysis and adaptive processes in the finite element method: Part I{\textemdash}error analysis},
+  journal   = {International Journal for Numerical Methods in Engineering},
+  year      = {1983},
+  volume    = {19},
+  number    = {11},
+  pages     = {1593--1619},
+  month     = {nov},
+  doi       = {10.1002/nme.1620191103},
+  publisher = {Wiley},
+}
+
+@TechReport{Gholap_project,
+  author      = {Gholap, Vinayak},
+  title       = {Computationally scalable and efficient Multigrid implementation for long-range Coulomb interaction in atomistic simulations using h-adaptive Finite Element Method},
+  institution = {Friedrich-Alexander University Erlangen–Nuremberg},
+  year        = {2018},
+}
+
+@TechReport{Vasios,
+  author      = {Vasios, Nikolaos},
+  title       = {Nonlinear Analysis of Structures The Arc Length Method: Formulation, Implementation and Applications},
+  institution = {Harvard University},
+  year        = {2015},
+}
+
+@Article{Riks1979,
+  author    = {E. Riks},
+  title     = {An incremental approach to the solution of snapping and buckling problems},
+  journal   = {International Journal of Solids and Structures},
+  year      = {1979},
+  volume    = {15},
+  number    = {7},
+  pages     = {529--551},
+  doi       = {10.1016/0020-7683(79)90081-7},
+  publisher = {Elsevier {BV}},
 }
 
 @Comment{jabref-meta: databaseType:bibtex;}

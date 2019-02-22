@@ -18,6 +18,7 @@
 \newcommand{\seminorm}[1]{\left\lvert #1 \right\rvert}
 
 \usepackage{tikz,pgfplots}
+\usetikzlibrary{spy}
 \pgfplotsset{table/search path={./data}} %checks in data folder
 \pgfplotsset{compat=newest}	%mention version to avoid warnings
 \pgfplotsset{every axis/.append style={
@@ -32,6 +33,8 @@
 \usepackage{multirow}                         % spanning rows
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{stmaryrd} % for jump in gradient symbol
+\usepackage{siunitx}
+\usepackage[capitalise, noabbrev]{cleveref}
 \usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
 \addbibresource{task2_ref.bib}
 
@@ -403,7 +406,7 @@ The rate of convergence of the Newton-Raphson method is given by the inequality 
 	\If{$i \geq i_{max}$}
 	{No convergence! Break and throw error message;}
 }
-\caption{Newton-Raphson method}
+\caption{\textbf{NEWTON-RAPHSON METHOD}}
 \label{alg:1}
 \end{algorithm} \par
 
@@ -453,7 +456,7 @@ This results in a $2^{nd}$ order $[(dim + 1) \times (dim + 1)]$ tensor $\mathbf{
 
 \subsection{Data structures employed}
 \subsubsection{Constitutive material model (CMM)}
-As described in depth in Section \eqref{sec:const_law}, we consider the entire continuum body to be composed of a compressible hyperelastic material. The corresponding Neo-Hookean strain energy density function were stated in Equation \eqref{eq:1.2} for a purely non-linear compressible hyperelastic material. We implement this material model using a data structure which is stored at each local quadrature point of the cell/element. Within each object of this data structure we store the current state characterized by the values of solution fields and use these current state values to compute the kinematic, kinetic quantities and the resulting stresses at the given load/ time step.\par 
+As described in depth in Section \eqref{sec:const_law}, we consider the entire continuum body to be composed of a compressible hyperelastic material. The corresponding Neo-Hookean strain energy density function were stated in Equation \eqref{eq:1.2} for a purely non-linear compressible hyperelastic material. We implement this material model using a data structure which is stored at each local quadrature point of the cell/element. Within each object of this data structure we store the current state characterized by the values of solution fields and use these current state values to compute the kinematic, kinetic quantities and the resulting stresses at the given load/time step.\par 
 The quantities stored within an object of this material model data structure are as given in Table \eqref{tab:1}. This data structure is provided with two functionalities: to update the material quantities such as the Jacobian $J$ using the deformation dependent data such as deformation gradient $\mathbf{F}$, and to compute the values of the different quantities such as the second Piola-Kirchhoff stress $\mathbf{S}$ and the fourth order material elasticity tensor $\mathfrak{C}$ at the current load/time step. This data structure also has a consistency check for a positive value of the bulk modulus $\kappa$ and positive Jacobian (to avoid material self-penetration) for each deformation state of the body. \par 
 
 \begin{table}[ht]
@@ -505,43 +508,43 @@ Tests with different geometries and loading and boundary conditions were set up 
 \end{subfigure}
 \begin{subfigure}{0.4\textwidth}
 \centering
-\includegraphics[width=0.7\textwidth]{patch_distort_grid.png}
-\caption{Distort grid}
+\includegraphics[width=0.8\textwidth]{patch_distort_grid.pdf}
+\caption{Distorted grid}
 \label{fig:1.1.2}
 \end{subfigure}
 \caption{Patch test unit cube geometry}
 \label{fig:1.1}
 \end{figure}
 
-We consider an axisymmetric geometry with unit cube cross section which is discretized into nine elements, cf. Figure \eqref{fig:1.1.1}. To check for the discretization error in the numerical solution using a selected finite element, we also have a distorted grid with the grid points in the interior of mesh distorted in a random way, cf. Figure \eqref{fig:1.1.2}. The hyperelastic Neo-Hookean material model as given in Equation \eqref{eq:1.2} was considered for the patch material. The considered boundary conditions are: homogeneous Dirichlet boundary condition on the boundary consisting the axis of symmetry (boundary id = 0) and inhomogeneous Dirichlet boundary condition (tensile load) on boundary id = 1. The tensile load of $0.1 \ \text{N}$ was applied in a uniformly increasing step of $0.025 \ \text{N}$. Lagrange finite elements with linear and quadratic shape functions were employed for this patch test. One h-adaptive mesh refinement cycle was performed to compare the quality of solution between the coarse mesh and once h-adaptively refined mesh for the distort grid geometry. \par 
+We consider an axisymmetric geometry with unit cube cross section which is discretized into nine elements, cf. Figure \eqref{fig:1.1.1}. To check for the discretization error in the numerical solution using a selected finite element, we also have a distorted grid with the grid points in the interior of mesh distorted in a random way, cf. Figure \eqref{fig:1.1.2}. The hyperelastic Neo-Hookean material model as given in Equation \eqref{eq:1.2} was considered for the patch material. The material parameters chosen for this test were $\mu = 3e^{-2}$ Pa and $\nu = 0.4$. The considered boundary conditions are: homogeneous Dirichlet boundary condition on the boundary along the axis of symmetry (boundary id = 0) and inhomogeneous Dirichlet boundary condition (tensile load) on boundary id = 1. The prescribed displacement of $0.1 $m was applied in a uniformly increasing step of $0.025 $m. Lagrange finite elements with bi-linear and bi-quadratic shape functions were employed for this patch test. One h-adaptive mesh refinement cycle was performed to compare the quality of solution between the coarse mesh and once h-adaptively refined mesh for the distorted grid geometry. \par 
 
 \begin{figure}[h]
 \centering
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_0.png}
+\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_0.pdf}
 \caption{Linear element: Ref. cycle 0}
 \label{fig:1.2.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_1.png}
+\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_1.pdf}
 \caption{Linear element: Ref. cycle 1}
 \label{fig:1.2.2}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_0_quad.png}
+\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_0_quad.pdf}
 \caption{Quadratic element: Ref. cycle 0}
 \label{fig:1.2.3}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_1_quad.png}
+\includegraphics[width=0.9\textwidth]{patch_distort_grid_ref_1_quad.pdf}
 \caption{Quadratic element: Ref. cycle 1}
 \label{fig:1.2.4}
 \end{subfigure}
-\caption{Distort grid displacement at total load}
+\caption{Distorted grid displacement at total load}
 \label{fig:1.2}
 \end{figure}
 
@@ -549,25 +552,25 @@ We consider an axisymmetric geometry with unit cube cross section which is discr
 \centering
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_0.png}
+\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_0.pdf}
 \caption{Linear element: Ref. cycle 0}
 \label{fig:1.3.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_1.png}
+\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_1.pdf}
 \caption{Linear element: Ref. cycle 1}
 \label{fig:1.3.2}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_0_quad.png}
+\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_0_quad.pdf}
 \caption{Quadratic element: Ref. cycle 0}
 \label{fig:1.3.3}
 \end{subfigure}
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_1_quad.png}
+\includegraphics[width=0.9\textwidth]{patch_uniform_grid_ref_1_quad.pdf}
 \caption{Quadratic element: Ref. cycle 1}
 \label{fig:1.3.4}
 \end{subfigure}
@@ -575,14 +578,14 @@ We consider an axisymmetric geometry with unit cube cross section which is discr
 \label{fig:1.3}
 \end{figure}
 
-Comparing the results for the final deformed states for the distort mesh Figures \eqref{fig:1.2} and the uniform grid patch Figures \eqref{fig:1.3}, we can confirm that the employed linear (vector-valued) shape functions $(\mathbf{Q}_1 \times \mathbf{Q}_1)$ for the displacement field lead to same results (under given tolerance) as the ones for the quadratic shape functions $(\mathbf{Q}_2 \times \mathbf{Q}_2)$. The deformed states after one refinement cycle for the distort grid are different compared to the uniform grid results, this is due to the different mesh with refined cells which is by the virtue of the adaptive mesh refinement. But the nature of the displacement field is same irrespective of the employed linear or quadratic shape functions. \par 
+Comparing the results for the final deformed states for the distorted mesh in Figures \eqref{fig:1.2} and the uniform grid patch in Figures \eqref{fig:1.3}, we can confirm that the employed bi-linear (vector-valued) shape functions $(Q_1 \times Q_1)$ for the displacement field lead to qualitatively similar results (under given tolerance) as the ones for the bi-quadratic shape functions $(Q_2 \times Q_2)$. In the regions with high solution gradient (here the cells near the boundary with boundary id $= 0$), an increase in the number of degrees of freedom due to h-adaptive mesh refinement would lead to a higher accuracy solution. Thus, the deformed states after one refinement cycle for the distorted grid are different compared to the uniform grid results. But the nature of the displacement field is similar irrespective of the employed bi-linear or bi-quadratic shape functions. \par 
 
 \subsubsection{Traction boundary condition test}
-A unit test to check the traction boundary condition implementation was set up with an axisymmetric beam geometry problem. The considered beam is of length $2 \ \text{m}$ and height $1 \ \text{m}$. The beam is discretized into 8 elements along the length and 4 elements along the height thus giving a total of 32 elements in the coarse mesh. The hyperelastic Neo-Hookean material model as given in Equation \eqref{eq:1.2} was considered for the beam material. The considered boundary conditions are: homogeneous Dirichlet boundary condition on the boundary consisting the axis of symmetry with boundary id = 0 and a uniformly distributed traction load (downward) on the right half of the top boundary of the beam with boundary id = 6, cf. Figure \eqref{fig:1.4}. The considered traction load has a magnitude of $1e^{-3} \frac{\text{N}}{\text{m}}$ distributed uniformly over a length of $1 \ \text{m}$. Employing uniformly increasing load stepping, this traction load was applied in 4 load steps.  The final deformed state for individual refinement cycles are as observed in Figure \eqref{fig:1.5.2} and \eqref{fig:1.5.4}.
+A unit test to check the traction boundary condition implementation was set up with an axisymmetric beam geometry problem. The considered beam is of length $2$ m and height $1$ m. The beam is discretized into 8 elements along the length and 4 elements along the height, thus giving a total of 32 elements in the coarse mesh. The hyperelastic Neo-Hookean material model as given in Equation \eqref{eq:1.2} was considered for the beam material. The chosen material parameters for this test were $\mu = 3e^{-2}$ Pa and $\nu = 0.4$. The considered boundary conditions are: homogeneous Dirichlet boundary condition on the boundary along the axis of symmetry with boundary id = 0 and a uniformly distributed traction load (-Z) on the right half of the top boundary of the beam with boundary id = 6, cf. Figure \eqref{fig:1.4}. The considered traction load has a magnitude of $1e^{-3} \frac{\text{N}}{\text{m}}$ distributed uniformly over a length of $1 \ \text{m}$. Employing uniformly increasing load stepping, this traction load was applied in four load steps. \par    
 
 \begin{figure}[h]
 \centering 
-\includegraphics[width=0.4\textwidth]{beam_grid.pdf}
+\includegraphics[width=0.5\textwidth]{beam_grid.pdf}
 \caption{Beam problem with traction load}
 \label{fig:1.4}
 \end{figure} 
@@ -597,7 +600,7 @@ A unit test to check the traction boundary condition implementation was set up w
 %\end{subfigure}
 \begin{subfigure}[b]{0.45\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{beam_ref_0_load_full.png}
+\includegraphics[width=0.9\textwidth]{beam_ref_0_full_load.pdf}
 \caption{Ref. cycle 0}
 \label{fig:1.5.2}
 \end{subfigure}
@@ -609,7 +612,7 @@ A unit test to check the traction boundary condition implementation was set up w
 %\end{subfigure}
 \begin{subfigure}[b]{0.45\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{beam_ref_1_load_full.png}
+\includegraphics[width=0.9\textwidth]{beam_ref_1_full_load.pdf}
 \caption{Ref. cycle 1}
 \label{fig:1.5.4}
 \end{subfigure}
@@ -617,9 +620,33 @@ A unit test to check the traction boundary condition implementation was set up w
 \label{fig:1.5}
 \end{figure}
 
+In the following, the algorithmic scheme for h-adaptive mesh refinement is highlighted. Due to a high solution gradient in the elements near the axis of symmetry (b.id = 0) in the coarse grid, cf Figure \eqref{fig:1.5.2}, the resulting error in solution is high in these elements. To reduce the error in the solution we need to make the mesh fine where the local ($H^2$) norm of the solution is large. We compute a local indicator of error $\eta_K$ for every cell K employing a standard error estimator such as the ``\textbf{Kelly error estimator}'' from the literature \cite{Kelly1983} which constitutes to an ``\textbf{a-posteriori}'' error estimate. The local Kelly error indicator $\eta_K$ for each cell is given as 
+\begin{equation}
+\eta_K \coloneqq h_K^{\frac{1}{2}} \left( \ \int\limits_{\partial K} \seminorm{{\llbracket\nabla \mathbf{u_h} \rrbracket}}^2 \ \right)^\frac{1}{2},
+\label{eq:1.27}
+\end{equation}
+where $h_k$ is taken to be the greatest length of the diagonals of the cell K, $\nabla \mathbf{u_h}$ is the gradient of the computed FE solution and $\llbracket\nabla \mathbf{u_h} \rrbracket$ denotes the jump in the gradient which is an indicator of the second derivative of the solution field. \par 
+
+Algorithm \eqref{alg:2} highlights the procedure one carries out to perform adaptive h-refinement of the mesh. We employ the \textbf{SOLVE-ESTIMATE-MARK-REFINE} cycle for adaptive refinement. In the solve phase we assemble the linear system of equations and solve it on the coarse/current mesh. By use of heuristically derived error estimator such as the Kelly error estimator, we estimate the error on each cell of the mesh. In the mark phase, following some chosen strategy we mark the cells with largest error for refinement and coarsening. In the last phase, we refine and coarsen the marked cells and continue this iterative procedure for a user selected number of refinement cycles. More details of the refinement procedure with the mathematical foundations for the error estimator and the different marking strategies one can employ can be found in \cite[Chapter 4]{Gholap_project}. \par 
+
+\begin{algorithm}[h]
+\begin{enumerate}
+\item Start with the coarse mesh
+\item Solve on this mesh
+\item Compute the error indicator $\eta_K$ for every cell based on the numerical solution
+\item Mark a fraction of the cells with largest error
+\item Refine the marked cells to get the new mesh
+\item Start over at 2
+\end{enumerate}
+\caption{\textbf{H-ADAPTIVE MESH REFINEMENT CYCLE}}
+\label{alg:2} 
+\end{algorithm}
+
+The final deformed state for individual refinement cycles are as observed in Figure \eqref{fig:1.5.2} and \eqref{fig:1.5.4}. As expected, upon mesh refinement we observe the solution field is more accurate and has reduced jump in the gradient of the solution field in the (refined) cells near the axis of symmetry. This test proves the effectiveness of an adaptively refined mesh in computing the solution more accurately and motivates the need of such adaptivity in the region of interest for a complex geometry and multi-physics problem discussed in the further section.\par  
+
 \subsubsection{Test for instability behaviour}
 
-Mechanical instability is an important phenomenon in determining the limit loads a structure can handle before becoming unstable. A stable design of the structure exists when the deformations increase as the applied load increases; an unstable design occurs when the deformations increase as the load decreases due to loss of stiffness. Study of such finite elastic deformations of structures helps in understanding the limit loads and prevent sudden buckling / snap-through failures of the structure for applied loads. Referring to Figure \eqref{fig:1.8} commonly known as the load-deflection plot of the equilibrium path, elastic limit point is the critical point after which the structure / material begins to deform largely even for slightly increasing loads. For a load past the critical limit point load $(1)$, the structure undergoes a non-linear buckling which includes a post-buckling instability region. The ``snap-through" occurs in the non-linear instability region and the equilibrium path goes from one stable point $(1)$ to another stable point $(2)$. The non-linear behaviour places the next stable point $(2)$ at the same critical limit load as point $(1)$, but this new load limit at point $(2)$ now corresponds to a new structural shape \cite{Hrinda2010}. The slope of the equilibrium path during the snap-through eventually becomes zero. The slope of this curve is also known as ``tangent stiffness". From a mathematical point of view the determination of instability points is related to the investigation of tangent stiffness with respect to singularities. At the bifurcation point a secondary equilibrium path branches off the primary equilibrium path. Bifurcation point is the limit point at which the structure immediately becomes unstable and buckles. The structure is unable to support any further loads. \par 
+Mechanical instability is an important phenomenon in determining the limit loads a structure can handle before becoming unstable. A stable design of the structure exists when the deformations increase as the applied load increases; an unstable design occurs when the deformations increase as the load decreases due to loss of stiffness. The study of such finite elastic deformations of structures helps in understanding the limit loads and prevent sudden buckling/snap-through failures of the structure for applied loads. Referring to Figure \eqref{fig:1.8} commonly known as the load-deflection plot of the equilibrium path, elastic limit point is the critical point after which the structure/material begins to deform largely even for slightly increasing loads. For a load past the critical limit point $(1)$, the structure undergoes a non-linear buckling which includes a post-buckling instability region. The ``snap-through'' occurs in the non-linear instability region and the equilibrium path goes from one stable point $(1)$ to another stable point $(2)$. The non-linear behaviour places the next stable point $(2)$ at the same critical limit load as point $(1)$, but this new load limit at point $(2)$ now corresponds to a new structural shape \cite{Hrinda2010}. The slope of the equilibrium path during the snap-through eventually becomes zero. The slope of this curve is also known as ``tangent stiffness''. From a mathematical point of view the determination of instability points is related to the investigation of tangent stiffness with respect to singularities. At the bifurcation point a secondary equilibrium path branches off the primary equilibrium path. Bifurcation point is the limit point at which the structure immediately becomes unstable and buckles. The structure is unable to support any further loads. \par 
 
 \begin{figure}[h]
 \centering 
@@ -630,79 +657,173 @@ Mechanical instability is an important phenomenon in determining the limit loads
 
 \begin{figure}[ht!]
 \centering
-\begin{subfigure}[b]{0.6\textwidth}
+\begin{subfigure}[b]{0.7\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{hooped_beam_grid.png}
+\includegraphics[width=0.95\textwidth]{hooped_beam_grid.pdf}
 \caption{Hooped beam test model}
 \label{fig:1.6.1}
 \end{subfigure}
-\begin{subfigure}[b]{0.39\textwidth}
+\begin{subfigure}[b]{0.29\textwidth}
 \centering
-\includegraphics[width=0.6\textwidth]{snap_top_mint_box.jpg}
-\caption{Mint box illustrating snap through behaviour}
+\includegraphics[width=0.8\textwidth]{snap_top_mint_box.jpg}
+\caption{Mint box that exhibits snap through behaviour}
 \label{fig:1.6.2}
 \end{subfigure}
 \caption{Mechanical instability test model 1}
 \label{fig:1.6}
 \end{figure}
 
-For the stability analysis two test models were implemented as seen in Figure \eqref{fig:1.6.1} and Figure \eqref{fig:1.14}. The first mechanical test model was inspired by a commonly occurring tin mint box with round top, Figure \eqref{fig:1.6.2}, that snaps through to open the box. The cap of this box undergoes a sudden large deformation for an applied point load at the middle point of the round cap. This instability mode is a desired deformation to open the box. On application of equal loads on the opposite ends of the cap, the cap snaps back to the original shape/ form to close the box. To simulate such a sudden snap through behaviour using robust non-linear solvers we developed the axisymmetric hooped beam test model as observed in Figure \eqref{fig:1.6.1}. The out-of-plane displacement of the beam end is fixed by considering pin support (homogeneous D.B.C.) and the edge lying on the axis of symmetry has a sliding contact constraint ($u_x = 0, u_y \neq 0$). A uniformly distributed traction load acts on the top surface of beam as shown in the model. \par 
+For the stability analysis two test models were implemented as seen in Figure \eqref{fig:1.6.1} and Figure \eqref{fig:1.14}. The first mechanical test model was inspired by a commonly occurring tin mint box with round top, Figure \eqref{fig:1.6.2}, that snaps through to open the box. The cap of this box undergoes a sudden large deformation for an applied point load at the middle point of the round cap. This instability mode is a desired deformation to open the box. On application of equal loads on the opposite ends of the cap, the cap snaps back to the original shape/form to close the box. To simulate such a sudden snap through behaviour using robust non-linear solvers we developed the axisymmetric hooped beam test model as illustrated in Figure \eqref{fig:1.6.1}. The out-of-plane displacement of the beam end is fixed by considering pin support (homogeneous Dirichlet boundary condition) and the edge lying on the axis of symmetry has a ``sliding'' constraint ($u_x = 0, u_y \neq 0$) that preserves the symmetry about the axis of the problem. A uniformly distributed traction load $\mathbf{t}^p = 1.5e^{-4} \ \frac{\text{N}}{\text{m}}$ acts on the top surface of beam as shown in the model. The hyperelastic Neo-Hookean material model as stated in Equation \eqref{eq:1.2} was considered for the hooped beam with material parameters $\mu = 3e^{-2}$ Pa and $\nu = 0.4$.\par 
 
 \begin{figure}[ht!]
 \centering
-\includegraphics[width=0.7\textwidth]{crisfield_beam.pdf}
+\includegraphics[width=0.8\textwidth]{crisfield_beam.pdf}
 \caption{Crisfield beam test model}
 \label{fig:1.14}
 \end{figure}
 
-The second test model to perform stability analysis of structures is the Crisfield beam, cf. Figure \eqref{fig:1.14}, which is used as a standard benchmark test model to study instability modes \cite[see][page 170]{Wriggers2008} and \cite{Hrinda2010}. \par 
+The second test model to perform stability analysis of structures is the Crisfield beam, cf. \Cref{fig:1.14}, which is used as a standard benchmark test model to study instability modes \cite[see][page 170]{Wriggers2008} and \cite{Hrinda2010}. The considered beam has an inner radius of 100 m and outer radius of 101 m and the included angle of $\ang{30}$. For this test model, same boundary conditions were considered as used for the hooped beam test model. A uniformly distributed traction load $\mathbf{t}^p = 2e^{-4} \ \frac{\text{N}}{\text{m}}$ was applied as illustrated in the representative figure. Same material parameter values were considered as employed in the hooped beam model. \par 
 
-Below results using the Newton-Raphson solution method for the solution of these non-linear test models are presented in Figure \eqref{fig:1.15}. It should be dully noted that the Newton-Raphson solver was not able to capture the instablility modes of deformation even for relatively small load step values ($\approx 1000$ load steps). As pointed out in the literature for the Newton-Raphson solver, it is suspected that the solver jumps from one stable point on the load-displacement equilibrium path to another stable point avoiding the instable buckling path. Thus, we do not observe any instable modes of deformation and for the given loads the structure deforms giving incorrect results as depicted in Figure \eqref{fig:1.15}.\par
+\begin{figure}[ht!]
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[spy using outlines={rectangle, magnification=2.5,connect spies}]
+\begin{axis}[
+xlabel = $\text{Displacement (L2 norm)}$,
+ylabel = $\text{Load}$,
+%grid =both,
+%grid style=dashed,
+%minor grid style ={gray!30},
+%major grid style ={gray!30},
+%width=0.8\linewidth,
+legend pos=north west,
+]
+\addplot[
+color=red,
+mark=x,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{hooped_beam_eq_path.dat};
+\addlegendentry{Eq. path}
+% for spy
+\coordinate (spypoint) at (axis cs:0.44,1.0e-4);
+\coordinate (spyviewer) at (axis cs:0.4,0.2e-4);
+\spy[width=3cm, height=1cm] on (spypoint) in node [fill=white] at (spyviewer);
+\end{axis}
+\end{tikzpicture}
+}
+\caption{Hooped beam test}
+\label{fig:1.16.1}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[spy using outlines={rectangle, magnification=2,connect spies}]
+\begin{axis}[
+xlabel = $\text{Displacement (L2 norm)}$,
+ylabel = $\text{Load}$,
+%grid =both,
+%grid style=dashed,
+%minor grid style ={gray!30},
+%major grid style ={gray!30},
+%width=0.8\linewidth,
+legend pos=north west,
+]
+\addplot[
+color=red,
+mark=x,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{crisfield_beam_eq_path.dat};
+\addlegendentry{Eq. path}
+% for spy
+\coordinate (spypoint) at (axis cs:2.75,1.0e-5);
+\coordinate (spyviewer) at (axis cs:4,1.5e-4);
+\spy[width=4.5cm, height=1cm] on (spypoint) in node [fill=white] at (spyviewer);
+\end{axis}
+\end{tikzpicture}
+}
+\caption{Crisfield beam test}
+\label{fig:1.16.2}
+\end{subfigure}
+\caption{Equilibrium paths for test models}
+\label{fig:1.16}
+\end{figure}
+
+The results using the Newton-Raphson solution method for the solution of the non-linear test models are presented in \Cref{fig:1.15}. The resulting load-displacement plots, also known as the equilibrium path, for the point $(0, 0.27)$ in the hooped beam test and the point $(0, 100)$ in the crisfield beam test are depicted in \Cref{fig:1.16} (lower edge points on the boundary along the axis of symmetry). For the hooped beam test, as observed in \Cref{fig:1.16.1}, in the early stages of loading, for each load increment of size $7.5e^{-7}$ N there is a proportional increase in the resulting displacement. We observe a linear relation between the load and displacement in this stage which one can identify as the initial linear response of a hyperelastic material. After a certain load limit is reached, we observe for a small load increment a resulting large displacement identified by the jumps in the cross marked points in the zoomed view in \Cref{fig:1.16.1}. This is also clearly observable in the results of \Cref{fig:1.15.1}. Between the load step number 134 and 135 corresponding to the zoomed region of interest, the structure undergoes a sudden large deformation for a small increment in the applied load. A similar result is also observed for the crisfield beam test in the early stages of loading cycle. The large jump in the displacement from $\approx 1.3$ m to $\approx 4.3$ m for a small increment of load of size $1e^{-6}$ N in \Cref{fig:1.16.2} indicates that the structure has undergone unstable deformation. This significantly large displacement is clearly illustrated in \Cref{fig:1.15.2} between the load step 10 and 11. This work softening of the structure is due to the reduced material stiffness after reaching a certain limit load point that leads to material instability and buckling. \par 
 
 \begin{figure}[ht!]
 \centering
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{hooped_ls_4.png}
-\caption{Load step 4}
+\includegraphics[width=0.95\textwidth]{hooped_beam_ls_50.pdf}
+\caption*{Load step 50}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{hooped_ls_9.png}
-\caption{Load step 9}
+\includegraphics[width=0.95\textwidth]{hooped_beam_ls_100.pdf}
+\caption*{Load step 100}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{hooped_ls_14.png}
-\caption{Load step 14}
+\includegraphics[width=0.95\textwidth]{hooped_beam_ls_134.pdf}
+\caption*{Load step 134}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{hooped_ls_19.png}
-\caption{Load step 19}
+\includegraphics[width=0.95\textwidth]{hooped_beam_ls_135.pdf}
+\caption*{Load step 135}
+\vspace{1cm}
+\centering
+\includegraphics[width=0.95\textwidth]{hooped_beam_ls_199.pdf}
+\caption*{Load step 199}
+\caption{Hooped beam deformations}
 \label{fig:1.15.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{crisfield_ls_4.png}
-\caption{Load step 4}
+\includegraphics[width=0.95\textwidth]{crisfield_beam_ls_0.pdf}
+\caption*{Load step 0}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{crisfield_ls_9.png}
-\caption{Load step 9}
+\includegraphics[width=0.95\textwidth]{crisfield_beam_ls_10.pdf}
+\caption*{Load step 10}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{crisfield_ls_14.png}
-\caption{Load step 14}
+\includegraphics[width=0.95\textwidth]{crisfield_beam_ls_11.pdf}
+\caption*{Load step 11}
+\vspace{1cm}
 \centering
-\includegraphics[width=0.95\textwidth]{crisfield_ls_19.png}
-\caption{Load step 19}
+\includegraphics[width=0.95\textwidth]{crisfield_beam_ls_99.pdf}
+\caption*{Load step 99}
+\vspace{1cm}
+\centering
+\includegraphics[width=0.95\textwidth]{crisfield_beam_ls_199.pdf}
+\caption*{Load step 199}
+\caption{Crisfield beam deformations}
 \label{fig:1.15.2}
 \end{subfigure}
 \caption{Instability test results}
 \label{fig:1.15}
 \end{figure}
 
+As observed in both the \Cref{fig:1.16.1,fig:1.16.2} in the region of interest near the limit point, the tangent to the equilibrium path, also known as the tangent stiffness, approaches to zero. As already pointed out in the literature \cite{Riks1979}, \cite{CRISFIELD1981} and \cite{Vasios}, a major drawback of the employed Newton's method is the failure of the method to accurately follow the equilibrium path once the tangent stiffness reaches zero. This happens due to the formulation of Newton's method, and in particular that it restricts the load parameter to change monotonically in every increment \cite{Vasios}. This problem is better visualized in \Cref{fig:1.17}. The jump from one stable point to another without following the actual unstable buckling path is clearly identified in the result for the crisfield beam equilibrium path in \Cref{fig:1.16.2}. Thus, the failure of the Newton method after the limit point was verified by our tests and it should be noted that the method was not able to capture the material instability resulting in incorrect deformations after the limit point. Employing a robust non-linear path-following solution method from the literature \cite{CRISFIELD1981} (such as the Arc-Length method) can be seen as the logical extension to study the instability behaviour of such structures. \par 
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{newton_method_failure.png}
+\caption{Failure of Newton's method to accurately capture the solution after a limit point is reached \cite{Vasios}}
+\label{fig:1.17}
+\end{figure}
+
 \subsection{Magneto-elastic torus membrane with free space}
-For the geometry of our interest as observed in Figure \eqref{fig:1.7.1}, we now study the elastic finite deformations of the torus magneto-elastic membrane with initial circular cross-section under a quasi-static inflating pressure load. The membrane is modelled as a non-linear elastic material employing the hyperelastic Neo-Hookean material model, cf. Equation \eqref{eq:1.2}. The material parameter values for the magneto-elastic membrane were taken as $\mu = 0.03 \ \text{Pascal}, \ \nu = 0.4$ and the relative magnetic permeability of the membrane as $\mu_r = 6.0$. The surrounding free space (vacuum) through which the magnetic field $\mathbb{H}$ permeates is also modelled as a relatively less stiff elastic material, employing the same Neo-Hookean material model but with different material parameter values of $\mu = 3e^{-5} \ \text{Pascal}$ and $\nu = 0.3$. Employing the total Lagrangian formulation, the inflating pressure load was applied on the undeformed/ reference domain in uniformly increasing load steps as:
+For the geometry of our interest as observed in Figure \eqref{fig:1.7.1}, we now study the elastic finite deformations of the torus magneto-elastic membrane with initial circular cross-section under a quasi-static inflating pressure load. The membrane is modelled as a non-linear elastic material employing the hyperelastic Neo-Hookean material model, cf. Equation \eqref{eq:1.2}. The material parameter values for the magneto-elastic membrane were taken as $\mu = 3e^4$ Pa, $\nu = 0.4$. The surrounding free space (vacuum) through which the magnetic field $\mathbb{H}$ permeates is also modelled as a relatively less stiff elastic material, employing the same Neo-Hookean material model but with different material parameter values of $\mu = 3e^{-2}$ Pa and $\nu = 0.3$. Employing the total Lagrangian formulation, the inflating pressure load was applied on the undeformed/reference domain in uniformly increasing load steps as:
 
 \begin{equation}
 \mathbf{t}^p = \mathbf{P}\mathbf{N} = \left[ p_0 \mathbf{I} \right] \mathbf{N} = p_0 \mathbf{N},
 \end{equation}
 
-\noindent where $\mathbf{P}$ is the $1^{st}$ Piola-Kirchhoff stress, $p_0$ is the inflating pressure load (scalar) and $\mathbf{N}$ is the referential unit inward pointing normal vector for any point on the inner interface of the torus membrane. The inflating pressure load was taken as $p_0 = 1e^{-3} \frac{\text{N}}{\text{m}^2}$. Homogeneous Dirichlet boundary condition was considered for the boundary of the free space domain.\par 
+\noindent where $\mathbf{P}$ is the $1^{st}$ Piola-Kirchhoff stress, $p_0$ is the inflating pressure load (scalar) and $\mathbf{N}$ is the referential unit inward pointing normal vector for any point on the inner interface of the torus membrane. The inflating pressure load was taken as $p_0 = 1e^{3} \frac{\text{N}}{\text{m}^2}$. Homogeneous Dirichlet boundary condition was considered for the boundary of the free space domain.\par 
 
 \begin{figure}[h]
 \centering 
@@ -722,38 +843,34 @@ For the geometry of our interest as observed in Figure \eqref{fig:1.7.1}, we now
 \label{fig:1.7}
 \end{figure} 
 
-The result of the above described uniformly inflating membrane problem is as observed in the Figure \eqref{fig:1.9}. Due to the applied mechanical load, here quasi-static uniform inflating pressure load on inner interface of the membrane, large deformations are observed in the membrane and the surrounding elements of the free space. The deformations in the membrane are relatively large on the right half of the circular cross section when compared to the left half. This is due to the dependence of the deformation gradient $\mathbf{F}$ (component $F_{33}$) on the radial distance of the respective point on the membrane from the axis of symmetry, cf. Equation \eqref{eq:1.26}. Thus for any point on the torus membrane, with increasing radial distance the resulting displacements increase. For the considered free space parameters of $\mu = 3e^{-5} \ \text{Pascal}$ and $\nu = 0.3$, one can observe that the free space material acts relatively less stiff and thus allows for a free inflation of the membrane without any considerable reactive force/ pressure load exerted by the free space material on the inflating membrane. The degree of deformations of the free space elements for increasing pressure load can be observed in Figure \eqref{fig:1.10}. \par 
+The result of the above described uniformly inflating membrane problem is as observed in the Figure \eqref{fig:1.9}. Due to the applied mechanical load, here quasi-static uniform inflating pressure load on inner interface of the membrane, large deformations are observed in the membrane and the surrounding elements of the free space. The deformations in the free space region far away from the torus membrane are small/negligible compared to the deformations in the elements belonging to the torus membrane. As observed in the displacement field of the deformed membrane (lower right image in \Cref{fig:1.9}), the deformations in the membrane are relatively large on the right half of the circular cross section when compared to the left half. This is due to the dependence of the deformation gradient $\mathbf{F}$ (component $F_{33}$) on the radial distance of the respective point on the membrane from the axis of symmetry, cf. Equation \eqref{eq:1.26}. Thus, for any point on the torus membrane, with increasing radial distance the resulting displacements increase. \par  
 
-Element-wise volume averaged Cauchy stress $\bm{\sigma}$ components (radial component $\sigma_{rr}$ and theta component $\sigma_{\theta \theta}$) were also computed to have an understanding of the resulting engineering stress in the torus membrane. The element-wise volume averaged stress was computed as:
-\begin{equation}
-\left\langle \bm{\sigma} \right\rangle_e := \dfrac{\int\limits_{\Omega_{e}} \bm{\sigma} \mathrm{d}V_e}{\int\limits_{\Omega_{e}} \mathrm{d}V_e} = \dfrac{\sum\limits_{q} \bm{\sigma}(q) * J(q) * w(q)}{\sum\limits_{q} J(q) * w(q)}.
-\end{equation}  
-The resulting element averaged Cauchy stress components can be observed in Figure \eqref{fig:1.11}. 
-
-\begin{figure}[h]
+\begin{figure}[h!]
 \centering
-\includegraphics[width=0.7\textwidth]{torus_disp_mue_1000_2.png}
+\includegraphics[width=0.7\textwidth]{torus_disp_mue_1e6.pdf}
 \caption{Deformations at full load}
 \label{fig:1.9}
 \end{figure}
 
-\begin{figure}[h]
+For the considered free space parameters of $\mu = 3e^{-2}$ Pa and $\nu = 0.3$, one can observe that the free space material modelled with relatively less stiffness acts as a very complaint elastic material. This complaint elastic free space material allows for a free inflation of the membrane without any considerable reactive force/pressure load exerted by the free space material on the inflating membrane. The degree of deformations of the free space elements for increasing pressure load can be observed in Figure \eqref{fig:1.10}. The torus membrane elements are ignored from the visualization and thus we observe a white circular section in the presented results.\par 
+
+\begin{figure}[h!]
 \centering 
 \begin{subfigure}[b]{0.32\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{free_space_disp_0.png}
+\includegraphics[width=0.95\textwidth]{vacuum_deformations_ls_0.png}
 \caption{Load step 0 (no load)}
 \label{fig:1.10.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.32\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{free_space_disp_9.png}
+\includegraphics[width=0.92\textwidth]{vacuum_deformations_half_load.png}
 \caption{Load step 9 (Half load)}
 \label{fig:1.10.2}
 \end{subfigure}
 \begin{subfigure}[b]{0.32\textwidth}
 \centering
-\includegraphics[width=0.95\textwidth]{free_space_disp_19.png}
+\includegraphics[width=0.93\textwidth]{vacuum_deformations_full_load.png}
 \caption{Load step 19 (Full load)}
 \label{fig:1.10.3}
 \end{subfigure}
@@ -761,17 +878,23 @@ The resulting element averaged Cauchy stress components can be observed in Figur
 \label{fig:1.10}
 \end{figure}
 
+Element-wise volume averaged Cauchy stress $\bm{\sigma}$ components (radial component $\sigma_{rr}$ and theta component $\sigma_{\theta \theta}$) were also computed to have an understanding of the resulting engineering stress in the torus membrane. The element-wise volume averaged stress was computed as:
+\begin{equation}
+\left\langle \bm{\sigma} \right\rangle_e := \dfrac{\int\limits_{\Omega_{e}} \bm{\sigma} \mathrm{d}V_e}{\int\limits_{\Omega_{e}} \mathrm{d}V_e} = \dfrac{\sum\limits_{q} \bm{\sigma}(q) * J(q) * w(q)}{\sum\limits_{q} J(q) * w(q)}.
+\end{equation}  
+The resulting element averaged Cauchy stress components can be observed in Figure \eqref{fig:1.11}. The dependence of the stress component $\sigma_{\theta \theta}$ on the radial distance of the point on the membrane from the axis of symmetry is clearly observed in \Cref{fig:1.11.2}. Thus, we observe a symmetry in the stress component field $\sigma_{\theta \theta}$ about the centre line cutting the membrane horizontally. Whereas a symmetry in the stress component field $\sigma_{rr}$ about the centre line cutting the membrane vertically can be observed in \Cref{fig:1.11.1}. \par 
+ 
 \begin{figure}[ht!]
 \centering 
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{torus_avg_sigma_rr_mue_1000.png}
+\includegraphics[width=0.9\textwidth]{membrane_avg_sigma_rr_mue_1e6.pdf}
 \caption{$\sigma_{rr}$}
 \label{fig:1.11.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{torus_avg_sigma_theta_mue_1000.png}
+\includegraphics[width=0.9\textwidth]{membrane_avg_sigma_tt_mue_1e6.pdf}
 \caption{$\sigma_{\theta \theta}$}
 \label{fig:1.11.2}
 \end{subfigure}
@@ -780,21 +903,21 @@ The resulting element averaged Cauchy stress components can be observed in Figur
 \end{figure} 
 
 \subsection{Parametric study of free space parameter $\mu$}
-A parametric study of the free space shear modulus $\mu$ was carried out for the finite strain axisymmetric torus elasticity problem. For the given inflating pressure load of $p_0 = 1e^{-3} \frac{\text{N}}{\text{m}^2}$, torus membrane parameters $\mu = 0.03 \ \text{Pascal}, \ \nu = 0.4$ and the relative permeability as $\mu_r = 6.0$, along with fixed value for the Poisson's ratio of the free space material as $\nu = 0.3$, the free space shear modulus $\mu$ was varied between $\mu_1 = 3e^{-5} \ \text{Pascal}$ and $\mu_2 = 3e^{-4} \ \text{Pascal}$. As expected, with higher value of the free space shear modulus $\mu = 3e^{-4} \ \text{Pascal}$ the free space material acts more stiff and we observe the effect of this increased stiffness on the deformation of the torus membrane for the same applied pressure load. As observed in Figure \eqref{fig:1.12.2}, the resultant deformed state of the torus membrane for the value of $\mu_2$, the stiffer free space material obstructs the free inflation of the membrane. Thus, we have relatively less deformed membrane when compared to the deformed state for $\mu_1$. The resulting element averaged Cauchy stress components can be observed in Figure \eqref{fig:1.13}. The developed stress due to larger deformations of the membrane for less stiffer free space material is higher than the resulting stress for the more stiffer free space material. \par 
+To model the free space material surrounding the torus membrane as a very compliant elastic we needed to select the elastic stiffness of the free space material such that there would be no reactive force by the free space material on the inflating torus membrane. For a selected less stiffer free space material one could then assume the torus membrane to inflate freely, adhering to the reality of the physics. Thus, a parametric study of the free space shear modulus $\mu$ was carried out for the finite strain axisymmetric torus elasticity problem. For the given inflating pressure load of $p_0 = 1e^{3} \frac{\text{N}}{\text{m}^2}$, torus membrane parameters $\mu = 3e^4$ Pa and $\nu = 0.4$, along with fixed value for the Poisson's ratio of the free space material as $\nu = 0.3$, the free space shear modulus $\mu$ was varied between $\mu_1 = 3e1$ Pa and $\mu_2 = 3e^{-2}$ Pa. \par 
 
-For appropriate modelling of the membrane and free space with considered assumptions, it is necessary that we choose the parameter values for the free space such that we can closely approximate our free space material (which is modelled as a non-linear elastic material) as being a fluid region with negligible stiffness and thus exerting negligible loads on the inflating elastic torus membrane geometry of our interest. For values of $\mu < 3e^{-5} \ \text{Pascal}$, we observed negligible differences in the resulting deformed states and stress, when compared to the results for the value of $\mu = 3e^{-5} \ \text{Pascal}$. Thus, a chosen value of $\mu \approx 3e^{-5} \ \text{Pascal}$ can be considered as appropriate to model the free space. \par 
+As expected and observed in \Cref{fig:1.12}, with higher value of the free space shear modulus $\mu = 3e^{1}$ Pa the free space material acts more stiff and we observe the effect of this increased stiffness on the deformation of the torus membrane for the same applied pressure load. The resultant deformed state of the torus membrane in Figure \eqref{fig:1.12.2} for the value of $\mu_1$, the stiffer free space material obstructs the free inflation of the membrane. Thus, we have relatively less deformed membrane when compared to the deformed state for $\mu_2$. \par 
 
-\begin{figure}[ht!]
+\begin{figure}[h!]
 \centering 
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{mue_study_half_load.png}
+\includegraphics[width=0.9\textwidth]{mue_study_1e3_vs_1e6_half_load.pdf}
 \caption{Load step 9 (Half load)}
 \label{fig:1.12.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{mue_study_full_load.png}
+\includegraphics[width=0.9\textwidth]{mue_study_1e3_vs_1e6_full_load.pdf}
 \caption{Load step 19 (Full load)}
 \label{fig:1.12.2}
 \end{subfigure}
@@ -802,17 +925,19 @@ For appropriate modelling of the membrane and free space with considered assumpt
 \label{fig:1.12}
 \end{figure}
 
-\begin{figure}[ht!]
+The resulting element averaged Cauchy stress components can be observed in Figure \eqref{fig:1.13}. The developed stress due to larger deformations of the membrane for less stiffer ($\mu_2$) free space material is higher than the resulting stress for the more stiffer ($\mu_1$) free space material. \par 
+
+\begin{figure}[h!]
 \centering 
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{torus_avg_sigma_rr.png}
+\includegraphics[width=0.9\textwidth]{sigma_rr_1e3_vs_1e6_full_load.pdf}
 \caption{$\sigma_{rr}$}
 \label{fig:1.13.1}
 \end{subfigure}
 \begin{subfigure}[b]{0.49\textwidth}
 \centering
-\includegraphics[width=0.9\textwidth]{torus_avg_sigma_theta.png}
+\includegraphics[width=0.9\textwidth]{sigma_tt_1e3_vs_1e6_full_load.pdf}
 \caption{$\sigma_{\theta \theta}$}
 \label{fig:1.13.2}
 \end{subfigure}
@@ -820,13 +945,22 @@ For appropriate modelling of the membrane and free space with considered assumpt
 \label{fig:1.13}
 \end{figure}
 
-\newpage
-\subsection{\textbf{Vector-valued problem}} The solution in the elasticity problem discussed here is not just a single scalar function but has displacements $\mathbf{u} := \left\lbrace u_x, u_y, u_z \right\rbrace^T$ in each euclidean direction, thus we have a vector system which is a set of scalar functions and thus is also addressed as \textit{vector-valued solution}. When considering the coupled magneto-elastic problem (to be solved in next task), the resulting vector-valued solution we will solve for has elements $\left\lbrace \phi, u_x, u_y, u_z \right\rbrace^T$. These elements of the vector-valued solution can be grouped into \textit{blocks}, where for the coupled magneto-elastic problem we have two blocks at each global degree of freedom in the finite element mesh, one block for the magnetic scalar potential function $\phi$ and the second block for the vector displacement function $\mathbf{u}$ with three individual components $u_x, u_y, u_z$ in 3D. This way one is able to access all the components/elements of the vector field such as displacement together without splitting them into their individual components. 
+For appropriate modelling of the membrane and free space with considered assumptions, it is necessary that we choose the material values for the free space such that we can closely approximate our free space material as being a compliant solid with negligible stiffness and thus exerting negligible loads on the inflating elastic torus membrane geometry of our interest. For values of $\mu < 3e^{-2}$ Pa, we observed negligible differences in the resulting deformed states and stress when compared to the results for the value of $\mu = 3e^{-2}$ Pa. Thus, a chosen value of $\mu \approx 3e^{-2}$ Pa can be considered as appropriate to model the free space. \par 
+
+\section{Extensions planned for task 2.2}
+The planned extensions for the next task are introducing the coupled problem and multi-physics employing a material model for the magneto-elastic material of our interest. The to be considered Neo-Hookean material model for the magneto-elastic material is given as
+\begin{equation}
+\Psi \equiv \dfrac{\mu}{2} [\mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} - 2 \ln J] + \dfrac{\lambda}{2} (\ln J)^2 \textcolor{red}{- \dfrac{\mu_0 \mu_r}{2} \left[ J \ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right]}.
+\end{equation}
+The additional highlighted term takes into account the energy stored in the body due to applied external magnetic load $\mathbb{H}$ and the response of the coupled interaction between the displacement field and the magnetic field. The loads to be applied would be the uniformly distributed inflating pressure load on the inner interface of the torus membrane and the static magnetic field as mentioned in the results of previous Task 1. Furthermore, we would then consider the solution field to be comprised of two blocks, the scalar magnetic potential $\phi$ and the vector-valued displacement field $\mathbf{u}$. The corresponding linear algebra concepts for such a multi-physics problem are mentioned in further sections.
+
+\subsection{\textbf{Vector-valued problem}} The solution in the elasticity problem discussed here is not just a single scalar function but has displacements $\mathbf{u} := \left\lbrace u_x, u_y, u_z \right\rbrace^T$ in each euclidean direction, thus we have a vector system which is a set of scalar functions and thus is also addressed as \textit{vector-valued solution}. When considering the coupled magneto-elastic problem, the resulting vector-valued solution has elements $\left\lbrace \phi, u_x, u_y, u_z \right\rbrace^T$. These elements of the vector-valued solution can be grouped into \textit{blocks}, where for the coupled magneto-elastic problem we have two blocks at each global degree of freedom in the finite element mesh, one block for the magnetic scalar potential function $\phi$ and the second block for the vector displacement function $\mathbf{u}$ with three individual components $u_x, u_y, u_z$ in 3D. This way one is able to access all the components/elements of the vector field such as displacement together without splitting them into their individual components. 
+
 \subsection{\textbf{Block linear algebra}} Use of the block structure also proves advantageous in terms of linear algebra and solution methods. One can think of the global linear system of equation $\mathbf{A}\mathbf{x} = \mathbf{b}$ as
 \begin{equation*}
 \begin{bmatrix}
-\mathbf{A}_{\phi\phi} & \mathbf{0} \\
-\mathbf{0} & \mathbf{A}_{\mathbf{u}\mathbf{u}} 
+\mathbf{A}_{\phi\phi} & \mathbf{A}_{\phi \mathbf{u}} \\
+\mathbf{A}_{\mathbf{u} \phi} & \mathbf{A}_{\mathbf{u}\mathbf{u}} 
 \end{bmatrix}
 \begin{bmatrix}
 \phi \\
@@ -838,7 +972,7 @@ For appropriate modelling of the membrane and free space with considered assumpt
 \mathbf{F_{\mathbf{u}}}
 \end{bmatrix},
 \end{equation*}
-where $\phi$ and $\mathbf{u}$ are the values of the scalar magnetic potential field and the displacement field. $\mathbf{A}_{\phi\phi}$ denotes the matrix contributions arising from the linearization of the magnetic problem and $\mathbf{A}_{\mathbf{u}\mathbf{u}}$ describes the tangent matrix contribution from the elasticity problem. One can solve the complete system considering as a single unit which can be convenient for the assembly of the matrix and right-hand-side vector for some class of problems. When employing the Gauss elimination rather than solving the problem monolithically, depending upon the properties of the (block) matrices for individual problem one can then define individual preconditioners that best suite the operators present in the system of equations, rather than defining a single preconditioner for the global matrix $\mathbf{A}$.
+where $\phi$ and $\mathbf{u}$ are the values of the scalar magnetic potential field and the displacement field. $\mathbf{A}_{\phi\phi}$ denotes the matrix contributions arising from the linearization of the magnetic problem and $\mathbf{A}_{\mathbf{u}\mathbf{u}}$ describes the tangent matrix contribution from the elasticity problem. $\mathbf{A}_{\phi \mathbf{u}}$ and $\mathbf{A}_{\mathbf{u} \phi}$ are the coupled interaction contributions. One can solve the complete system considering as a single unit which can be convenient for the assembly of the matrix and right-hand-side vector for some class of problems. When employing the Gauss elimination rather than solving the problem monolithically, depending upon the properties of the (block) matrices for individual problem, one can then define individual preconditioners that best suite the operators present in the system of equations rather than defining a single preconditioner for the global matrix $\mathbf{A}$.
 \subsection{\textbf{Vector-valued Finite Elements}} We shall consider here in all the discussions only \textit{primitive finite elements}. A finite element is said to be primitive if there is a unique relation from the shape function number to the vector component of the vector-valued element. This means for a primitive element we have exactly one non-zero component for each shape function of the vector-valued element. The Lagrangian elements that we shall employ are primitive elements. For the considered vector-valued coupled magneto-elastic problem we build the vector-valued finite element from simpler base elements using tensor product of the base elements. We take multiple simple elements (eg. scalar linear Lagrange elements $Q_1$) and connect them to have an element with more than one block. For the vector-valued displacement field in 2D, we can construct a vector-valued finite element using two $Q_1$ elements (each constituting to a single component $u_x$ and $u_y$) to form using a tensor product $Q_1 \times Q_1$ element with two components. This will form a single block in our coupled problem where the second block for the scalar magnetic potential will have only a single component such as a quadratic element $Q_2$. Thus, the vector-valued element we shall employ, for e.g., can be represented in block form as ($Q_1 \times Q_1, Q_2$) which will have in total $\text{dim}+1$ individual components in 2D as [$u_x, u_y, \phi$]. \newline 
 
 \newpage
