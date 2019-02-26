@@ -176,8 +176,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
               }
               */
 
-            // Apply magnetic potential load in second half of total load cycle
-            if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+            // Apply magnetic potential load in first half of total load cycle
+            if (loadstep.get_loadstep() <= (0.5 * loadstep.final()/loadstep.get_delta_load()))
             {
                 // Lower bottom boundary
                 {
@@ -211,7 +211,10 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                     const int boundary_id = 2;
                     VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                              boundary_id,
-                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        0.0),
                                                              constraints,
                                                              fe_collection.component_mask(phi_fe));
                 }
@@ -220,7 +223,10 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                     const int boundary_id = 3;
                     VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                              boundary_id,
-                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        0.0),
                                                              constraints,
                                                              fe_collection.component_mask(phi_fe));
                 }
@@ -1297,12 +1303,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   {
                       // Traction in reference configuration
                       double load_ramp = 0.0;
-                      // Apply mechanical pressure load in first half of total load cycle
-                      if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
-                          load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+                      // Apply mechanical pressure load in second half of total load cycle
+                      if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                          load_ramp = 2.0 * (loadstep.current() - (0.5 * loadstep.final())) / loadstep.final();
 
                       else
-                          load_ramp = 1.0;
+                          load_ramp = 0.0;
 
                       const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
@@ -1362,12 +1368,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       {
                           // Traction in reference configuration
                           double load_ramp = 0.0;
-                          // Apply mechanical pressure load in first half of total load cycle
-                          if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
-                              load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+                          // Apply mechanical pressure load in second half of total load cycle
+                          if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                              load_ramp = 2.0 * (loadstep.current() - (0.5 * loadstep.final())) / loadstep.final();
 
                           else
-                              load_ramp = 1.0;
+                              load_ramp = 0.0;
 
                           const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
@@ -2951,6 +2957,8 @@ void MSP_Toroidal_Membrane<dim>::postprocess_point_displacement(Postprocess_poin
                     p.disp_z[loadstep.get_loadstep()-1] = total_solution(cell->vertex_dof_index(v,
                                                                                                 displacement_z_component,
                                                                                                 cell->active_fe_index()));
+                    p.disp_norm[loadstep.get_loadstep()-1] =
+                            std::hypot(p.disp_r[loadstep.get_loadstep()-1], p.disp_z[loadstep.get_loadstep()-1]);
                     p.load_values[loadstep.get_loadstep()-1] = loadstep.current();
                 }
         }
@@ -2973,13 +2981,15 @@ void MSP_Toroidal_Membrane<dim>::write_point_displacement(const Postprocess_poin
         f << "# Point: " << p.point_of_interest << std::endl;
         f << "# phi_prescribed: " << parameters.potential_difference_per_unit_length <<
              "\t" << "p0: " << parameters.prescribed_traction_load << std::endl;
-        f << "Disp_r \t Disp_z \t Load_value" << std::endl;
+        f << "Disp_r \t Disp_z \t Disp_norm \t Load_value" << std::endl;
 
         AssertDimension (p.disp_r.size(), p.disp_z.size());
         AssertDimension (p.load_values.size(), p.disp_r.size());
+        AssertDimension (p.disp_norm.size(), p.disp_r.size());
         for (unsigned int i = 0; i < p.load_values.size(); ++i)
             f << std::fixed << std::setprecision(3) << std::scientific <<
                  p.disp_r[i] << "\t" << p.disp_z[i] << "\t" <<
+                 p.disp_norm[i] << "\t" <<
                  p.load_values[i] << std::endl;
 
         f << std::flush;

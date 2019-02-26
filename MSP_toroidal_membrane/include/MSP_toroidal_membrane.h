@@ -1258,6 +1258,7 @@ struct Postprocess_point_displacement
     {
         disp_r.resize(this->total_load_steps);
         disp_z.resize(this->total_load_steps);
+        disp_norm.resize(this->total_load_steps);
         load_values.resize(this->total_load_steps);
     }
 
@@ -1265,6 +1266,7 @@ struct Postprocess_point_displacement
     const unsigned int total_load_steps;
     std::vector<double> disp_r;
     std::vector<double> disp_z;
+    std::vector<double> disp_norm;
     std::vector<double> load_values;
 };
 
