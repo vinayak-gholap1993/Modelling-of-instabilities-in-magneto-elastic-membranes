@@ -176,8 +176,8 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
               }
               */
 
-            // Apply magnetic potential load in second half of total load cycle
-            if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+            // Apply magnetic potential load in first half of total load cycle
+            if (loadstep.get_loadstep() <= (0.5 * loadstep.final()/loadstep.get_delta_load()))
             {
                 // Lower bottom boundary
                 {
@@ -211,7 +211,10 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                     const int boundary_id = 2;
                     VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                              boundary_id,
-                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        0.0),
                                                              constraints,
                                                              fe_collection.component_mask(phi_fe));
                 }
@@ -220,7 +223,10 @@ void MSP_Toroidal_Membrane<dim>::make_constraints (ConstraintMatrix &constraints
                     const int boundary_id = 3;
                     VectorTools::interpolate_boundary_values(hp_dof_handler,
                                                              boundary_id,
-                                                             Functions::ZeroFunction<dim>(n_components),
+                                                             LinearScalarPotential<dim>(parameters.potential_difference_per_unit_length,
+                                                                                        n_components,
+                                                                                        phi_component,
+                                                                                        0.0),
                                                              constraints,
                                                              fe_collection.component_mask(phi_fe));
                 }
@@ -1297,12 +1303,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                   {
                       // Traction in reference configuration
                       double load_ramp = 0.0;
-                      // Apply mechanical pressure load in first half of total load cycle
-                      if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
-                          load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+                      // Apply mechanical pressure load in second half of total load cycle
+                      if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                          load_ramp = 2.0 * (loadstep.current() - (0.5 * loadstep.final())) / loadstep.final();
 
                       else
-                          load_ramp = 1.0;
+                          load_ramp = 0.0;
 
                       const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
@@ -1362,12 +1368,12 @@ void MSP_Toroidal_Membrane<dim>::assemble_system ()
                       {
                           // Traction in reference configuration
                           double load_ramp = 0.0;
-                          // Apply mechanical pressure load in first half of total load cycle
-                          if (loadstep.get_loadstep() < (0.5 * loadstep.final()/loadstep.get_delta_load()))
-                              load_ramp = 2.0 * (loadstep.current() / loadstep.final());
+                          // Apply mechanical pressure load in second half of total load cycle
+                          if (loadstep.get_loadstep() > (0.5 * loadstep.final()/loadstep.get_delta_load()))
+                              load_ramp = 2.0 * (loadstep.current() - (0.5 * loadstep.final())) / loadstep.final();
 
                           else
-                              load_ramp = 1.0;
+                              load_ramp = 0.0;
 
                           const double magnitude = (parameters.prescribed_traction_load) * load_ramp;
 
