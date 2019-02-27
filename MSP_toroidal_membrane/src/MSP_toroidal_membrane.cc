@@ -2951,6 +2951,8 @@ void MSP_Toroidal_Membrane<dim>::postprocess_point_displacement(Postprocess_poin
                     p.disp_z[loadstep.get_loadstep()-1] = total_solution(cell->vertex_dof_index(v,
                                                                                                 displacement_z_component,
                                                                                                 cell->active_fe_index()));
+                    p.disp_norm[loadstep.get_loadstep()-1] =
+                            std::hypot(p.disp_r[loadstep.get_loadstep()-1], p.disp_z[loadstep.get_loadstep()-1]);
                     p.load_values[loadstep.get_loadstep()-1] = loadstep.current();
                 }
         }
@@ -2973,13 +2975,15 @@ void MSP_Toroidal_Membrane<dim>::write_point_displacement(const Postprocess_poin
         f << "# Point: " << p.point_of_interest << std::endl;
         f << "# phi_prescribed: " << parameters.potential_difference_per_unit_length <<
              "\t" << "p0: " << parameters.prescribed_traction_load << std::endl;
-        f << "Disp_r \t Disp_z \t Load_value" << std::endl;
+        f << "Disp_r \t Disp_z \t Disp_norm \t Load_value" << std::endl;
 
         AssertDimension (p.disp_r.size(), p.disp_z.size());
         AssertDimension (p.load_values.size(), p.disp_r.size());
+        AssertDimension (p.disp_norm.size(), p.disp_r.size());
         for (unsigned int i = 0; i < p.load_values.size(); ++i)
             f << std::fixed << std::setprecision(3) << std::scientific <<
                  p.disp_r[i] << "\t" << p.disp_z[i] << "\t" <<
+                 p.disp_norm[i] << "\t" <<
                  p.load_values[i] << std::endl;
 
         f << std::flush;
