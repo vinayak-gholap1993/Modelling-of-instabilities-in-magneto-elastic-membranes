@@ -55,6 +55,7 @@ MSP_Toroidal_Membrane<dim>::MSP_Toroidal_Membrane (const std::string &input_file
       mapping_collection.push_back(MappingQGeneric<dim>(degree));
       qf_collection_cell.push_back(QGauss<dim>  (degree + 1));
       qf_collection_face.push_back(QGauss<dim-1> (degree + 1));
+      qf_collection_trapez.push_back(QTrapez<dim>());
     }
 }
 
@@ -2942,11 +2943,22 @@ template<int dim>
 void MSP_Toroidal_Membrane<dim>::postprocess_point_displacement(Postprocess_point_displacement<dim> &p,
                                                                 const BlockVector<double> &total_solution)
 {
+    hp::FEValues<dim> hp_fe_values (mapping_collection,
+                                    fe_collection,
+                                    qf_collection_trapez,
+                                    update_values |
+                                    update_gradients |
+                                    update_quadrature_points |
+                                    update_JxW_values);
+    std::vector<Tensor<1, dim> > solution_values_u_total;
+    std::vector<Tensor<2, dim> > solution_grads_u_total;
+    std::vector<Tensor<2, dim_Tensor> > solution_grads_u_total_transformed;
+
     typename hp::DoFHandler<dim>::active_cell_iterator
             cell = hp_dof_handler.begin_active(),
             endc = hp_dof_handler.end();
     for (; cell != endc; ++cell)
-        if (cell->material_id() == material_id_toroid)
+        if (cell->is_locally_owned() && (cell->material_id() == material_id_toroid))
         {
             for (unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; ++v)
                 if (cell->vertex(v).distance(p.point_of_interest) < 1e-6)
@@ -2960,6 +2972,76 @@ void MSP_Toroidal_Membrane<dim>::postprocess_point_displacement(Postprocess_poin
                     p.disp_norm[loadstep.get_loadstep()-1] =
                             std::hypot(p.disp_r[loadstep.get_loadstep()-1], p.disp_z[loadstep.get_loadstep()-1]);
                     p.load_values[loadstep.get_loadstep()-1] = loadstep.current();
+
+                    hp_fe_values.reinit(cell);
+                    const FEValues<dim> &fe_values = hp_fe_values.get_present_fe_values();
+                    const unsigned int  &n_q_points = fe_values.n_quadrature_points;
+                    const std::vector<Point<dim> > &quadrature_points = fe_values.get_quadrature_points();
+
+                    solution_values_u_total.clear();
+                    solution_grads_u_total.clear();
+                    solution_grads_u_total_transformed.clear();
+                    solution_values_u_total.resize(n_q_points, Tensor<1, dim>());
+                    solution_grads_u_total.resize(n_q_points, Tensor<2, dim>());
+                    solution_grads_u_total_transformed.resize(n_q_points, Tensor<2, dim_Tensor>());
+
+                    fe_values[u_fe].get_function_values(total_solution,
+                                                        solution_values_u_total);
+                    fe_values[u_fe].get_function_gradients(total_solution,
+                                                           solution_grads_u_total);
+
+                    // if axisymmetric simulation, need this transformation of
+                    // gradient of 2D shape functions to get dim 3 gradient of shape functions Tensor
+                    // accounting for the circumferential strain i.e. hoop stress
+                    if(dim == 2)
+                    {
+                        unsigned int q_point = 0;
+                        for(; q_point < n_q_points; ++q_point)
+                            if (quadrature_points[q_point].distance(p.point_of_interest) < 1e-6)
+                                // Found the matching quadrature point
+                                break;
+
+                        // Due to use of QTrapez
+                        Assert(quadrature_points[q_point] == cell->vertex(v),
+                               ExcInternalError());
+                        Assert(q_point < n_q_points, ExcInternalError());
+
+                        // Get the x co-ord to the quadrature point
+                        const double radial_distance = quadrature_points[q_point][0];
+
+                        // copy dim 2 tensor components into corresponding dim 3 tensor
+                        // leaving dim 3 Tensor components 0,2 = 1,2 = 2,0 = 2,1 = 0
+                        /*      dim 2 mapped to   dim 3 Tensor
+                         * | u_r,r  u_r,z | ->  | u_r,r  u_r,z   0    |
+                         * | u_z,r  u_z,z | ->  | u_z,r  u_z,z   0    |
+                         *                      | 0      0      u_r/R |
+                         * */
+
+                        for(unsigned int i = 0; i < dim; ++i)
+                            for(unsigned int j = 0; j < dim; ++j)
+                                solution_grads_u_total_transformed[q_point][i][j] =
+                                        solution_grads_u_total[q_point][i][j];
+
+                        // u_theta,theta = u_r / R
+                        solution_grads_u_total_transformed[q_point][dim][dim] =
+                                solution_values_u_total[q_point][0] / radial_distance;
+
+                        const Tensor<2, dim_Tensor> F =
+                                Physics::Elasticity::Kinematics::F(solution_grads_u_total_transformed[q_point]);
+                        const SymmetricTensor<2, dim_Tensor> C =
+                                Physics::Elasticity::Kinematics::C(F);
+
+                        // Get eigen values of C, i.e. the principal stretches
+                        const auto eigen_values_sqaure = eigenvalues(C);
+                        AssertDimension(eigen_values_sqaure.size(), dim_Tensor);
+
+                        for (unsigned int i = 0; i < eigen_values_sqaure.size(); ++i)
+                            p.principal_stretches[loadstep.get_loadstep()-1][i] =
+                                    std::sqrt(eigen_values_sqaure[i]);
+                    }
+
+                    // Work done for the given point of interest
+                    return;
                 }
         }
 }
@@ -2981,15 +3063,20 @@ void MSP_Toroidal_Membrane<dim>::write_point_displacement(const Postprocess_poin
         f << "# Point: " << p.point_of_interest << std::endl;
         f << "# phi_prescribed: " << parameters.potential_difference_per_unit_length <<
              "\t" << "p0: " << parameters.prescribed_traction_load << std::endl;
-        f << "Disp_r \t Disp_z \t Disp_norm \t Load_value" << std::endl;
+        f << "Disp_r \t Disp_z \t Disp_norm \t p_stretch_1 \t p_stretch_2 \t p_stretch_3 \t Load_value" << std::endl;
 
         AssertDimension (p.disp_r.size(), p.disp_z.size());
         AssertDimension (p.load_values.size(), p.disp_r.size());
         AssertDimension (p.disp_norm.size(), p.disp_r.size());
+        AssertDimension (p.principal_stretches.size(), p.disp_r.size());
+        AssertDimension (p.principal_stretches[0].size(), dim_Tensor);
         for (unsigned int i = 0; i < p.load_values.size(); ++i)
             f << std::fixed << std::setprecision(3) << std::scientific <<
                  p.disp_r[i] << "\t" << p.disp_z[i] << "\t" <<
                  p.disp_norm[i] << "\t" <<
+                 p.principal_stretches[i][0] << "\t" <<
+                 p.principal_stretches[i][1] << "\t" <<
+                 p.principal_stretches[i][2] << "\t" <<
                  p.load_values[i] << std::endl;
 
         f << std::flush;
@@ -3145,9 +3232,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
       Postprocess_point_displacement<dim> torus_p2 (Point<dim>(0.9, 0.195), total_num_loadsteps);
       Postprocess_point_displacement<dim> torus_p3 (Point<dim>(0.705, 0.0), total_num_loadsteps);
 
-      // Can add a loop over load domain here later
-      // currently single load step taken
-      while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+      while (std::abs(loadstep.current()) < std::abs(loadstep.final() + (0.01 * loadstep.get_delta_load())))
       {
           solution_delta = 0.0;
           solve_nonlinear_system(solution_delta);

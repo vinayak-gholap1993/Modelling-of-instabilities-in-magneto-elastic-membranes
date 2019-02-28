@@ -1259,6 +1259,8 @@ struct Postprocess_point_displacement
         disp_r.resize(this->total_load_steps);
         disp_z.resize(this->total_load_steps);
         disp_norm.resize(this->total_load_steps);
+        principal_stretches.resize(this->total_load_steps,
+                                std::vector<double>(dim+1, 0.0));
         load_values.resize(this->total_load_steps);
     }
 
@@ -1267,6 +1269,7 @@ struct Postprocess_point_displacement
     std::vector<double> disp_r;
     std::vector<double> disp_z;
     std::vector<double> disp_norm;
+    std::vector<std::vector<double> > principal_stretches;
     std::vector<double> load_values;
 };
 
@@ -1343,6 +1346,7 @@ private:
   hp::DoFHandler<dim>        hp_dof_handler;
   hp::QCollection<dim>       qf_collection_cell;
   hp::QCollection<dim-1>     qf_collection_face;
+  hp::QCollection<dim>       qf_collection_trapez;
 
   std::vector<IndexSet> all_locally_owned_dofs;
   IndexSet              locally_owned_dofs;
