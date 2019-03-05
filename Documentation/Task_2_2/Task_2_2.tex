@@ -258,8 +258,8 @@ The internal energy contribution \Cref{eq:3.24.1} is a sum of total potential en
 
 The stationary (saddle-)point $\min_{\mathbf{u}} \max_{\phi} \Pi \implies \delta \Pi$ describes the equilibrium solution to the coupled boundary value problem. The stationary point $\min_{\mathbf{u}} \max_{\phi} \Pi$ is that point at which all the directional derivatives of the total potential energy vanish. Using the G\^ateaux derivative we have
 \begin{align}
-\delta \Pi = D_{\delta \mathbf{u}} \Pi_{int} + D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{ext} + D_{\delta \phi} \Pi_{ext} = 0.
-\label{eq:3.25}
+\delta \Pi &= D_{\delta \mathbf{u}} \Pi_{int} + D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{ext} + D_{\delta \phi} \Pi_{ext} = 0, \label{eq:3.25} \\
+&= \delta \Pi_{int} + \delta \Pi_{ext}. \nonumber
 \end{align}
 The components of the variation of the internal potential energy are given as \cite{Saxena2015}
 \begin{align}
@@ -302,7 +302,99 @@ with the constraints
 \begin{equation}
 \delta \mathbf{u} = \mathbf{0} \ \text{on} \ \partial \mathcal{B}_{0,\mathbf{u}} \cup \left[ \overline{\mathcal{S}_0} \setminus \Gamma_{0, \mathcal{BS}} \right] \ \delta \phi = 0 \ \text{on} \ \partial \mathcal{B}_{0,\phi} \ \text{and} \ \partial \mathcal{S}_{0,\phi},
 \end{equation}
-where $\Gamma_{0, \mathcal{BS}} = \overline{\mathcal{S}_0} \cap \overline{\mathcal{B}_0}$ indicates the boundary of the magneto-elastic solid body exposed to the free space material. 
+where $\Gamma_{0, \mathcal{BS}} = \overline{\mathcal{S}_0} \cap \overline{\mathcal{B}_0}$ indicates the boundary of the magneto-elastic solid body exposed to the free space material. As the employed material law for the magneto-elastic material is non-linear Neo-Hookean, the linearisation of \Cref{eq:3.26.1,eq:3.26.2} ($\delta \Pi_{int}$) is required within an iterative solution scheme such as the Newton-Raphson method to find the stationary point of the saddle-point system. 
+
+\section{Linearisation of coupled problem}
+Assuming the state of the system is known at some load or time step $t_{n-1}$, the linearisation by employing the first-order Taylor expansion of the variation of total potential energy is given as: Find $\Delta \mathbf{u}$ and $\Delta \phi$ such that
+\begin{equation}
+\mathbf{L} \left[ \delta \Pi \right]_{\phi_{i+1}, \mathbf{u}_{i+1}} = \delta \Pi \Big{|}_{\phi_i, \mathbf{u}_i} + D_{\Delta \phi} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big] + D_{\Delta \mathbf{u}} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big].
+\label{eq:3.29}
+\end{equation} 
+
+Assuming dead load ($\mathbf{b}^p = \mathbf{0}$), the direct terms of linearisation are given as:
+\begin{align}
+D_{\Delta \phi, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbf{D} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.30.1}\\
+D_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi_{int} &= \int\limits_{\mathcal{D}_0} \Delta \delta \mathbf{E} : \mathbf{S} \ \mathrm{d}V + \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathfrak{C} : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:2.30.2}
+\end{align}
+where $\Delta \delta \mathbf{E} = \left[ \Delta \mathbf{F}^T \cdot \delta \mathbf{F} \right]^{\text{sym}}, \ \mathbf{D} := \dfrac{\partial \mathbb{B}}{\partial \mathbb{H}} = -\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbb{H}}$ is the rank-2 magneto-static tensor and $\mathfrak{C} := 2\dfrac{\partial \mathbf{S}}{\partial \mathbf{C}} = 4\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbf{C}}$ is the referential elastic tangent as derived earlier in \Cref{eq:3.9}. \par 
+
+The coupled terms arising from the linearisation are
+\begin{align}
+D_{\Delta \phi, \delta \mathbf{u}} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathbb{P} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.31.1} \\
+D_{\Delta \mathbf{u}, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbb{P}^T : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:3.31.2}
+\end{align}
+where $\mathbb{P} := -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \mathbb{H}}$ and $\mathbb{P}^T := 2 \dfrac{\partial \mathbb{B}}{\partial \mathbf{C}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbf{C}}$ are the referential magneto-elasticity tensors. \par 
+
+The final linear form of \Cref{eq:3.25} can be written as:
+\begin{align}
+D_{\delta \phi} \Pi + D_{\Delta \phi, \delta \phi} \Pi + D_{\Delta \mathbf{u}, \delta \phi} \Pi = 0, \\
+D_{\delta \mathbf{u}} \Pi + D_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi + D_{\Delta \phi, \delta \mathbf{u}} \Pi = 0.
+\end{align}
+ 
+The derived forms for the terms $\mathbf{D}$ and $\mathbb{P}$ will be presented below. To derive $\mathbf{D}$, we first need to derive the referential magnetic induction vector as follows:
+\begin{align*}
+\mathbb{B} &= - \dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}} = - \dfrac{\partial M_0 (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}}\\
+&= \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbb{H}} \\
+&= \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \ C^{-1}_{IJ} \ H_I \ H_J	]}{\partial H_K} \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{IJ} \dfrac{\partial H_I}{\partial H_K} \ H_J + J \ C^{-1}_{IJ} \ H_I \dfrac{\partial H_J}{\partial H_K} \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} \left[ J \ C^{-1}_{IJ} \ \delta_{IK} \ H_J + J \ C^{-1}_{IJ} \ H_I \ \delta_{JK} \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} J \left[ \ C^{-1}_{JI} \ \delta_{IK} \ H_J + \ C^{-1}_{IJ} \ \delta_{JK} \ H_I \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} J \left[ \ C^{-1}_{JK} \ H_J + \ C^{-1}_{IK} \ H_I \right] \mathbf{E}_K \\
+&= \dfrac{\mu_0 \mu_r}{2} J \left[ \ C^{-1}_{KJ} \ H_J + \ C^{-1}_{KI} \ H_I \right] \mathbf{E}_K
+\end{align*}
+\begin{empheq}[box=\tcbhighmath]{align}
+\mathbb{B} = \mu_0 \mu_r \ J \ [\mathbf{C}^{-1} \cdot \mathbb{H}].
+\label{eq:3.32}
+\end{empheq}
+
+The derivation for the rank-2 magnetic tensor $\mathbf{D}$ is as follows:
+\begin{align*}
+\mathbf{D} &= \dfrac{\partial \mathbb{B}}{\partial \mathbb{H}} \\
+&= \dfrac{\partial [\mu_0 \mu_r \ J \ (\mathbf{C}^{-1} \cdot \mathbb{H})]}{\partial \mathbb{H}} \\
+&= \mu_0 \mu_r \ J \ \dfrac{\partial (C^{-1}_{IJ} \ H_J)}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IJ} \ \dfrac{\partial H_J}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IJ} \ \delta_{JK} \ \mathbf{E}_I \otimes \mathbf{E}_K \\
+&= \mu_0 \mu_r \ J \ C^{-1}_{IK} \ \mathbf{E}_I \otimes \mathbf{E}_K
+\end{align*}
+\begin{empheq}[box=\tcbhighmath]{align}
+\mathbf{D} &= \mu_0 \mu_r \ J \ \mathbf{C}^{-1}.
+\label{eq:3.33}
+\end{empheq}
+
+The magneto-elasticity tensor quantity $\mathbb{P}$ defines the sensitivity of the second Piola-Kirchhoff stress $\mathbf{S}$ w.r.t. the applied referential magnetic field $\mathbb{H}$ and can be derived as follows:
+\begin{align*}
+\mathbb{P} &= -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -\dfrac{\partial}{\partial \mathbb{H}} \left( 2 \dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C}} \right) = -2 \ \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbb{H}}\\
+\intertext{Employing the result of \Cref{eq:3.6} for $\mathbf{S}$, we have}
+&= \dfrac{\mu_0 \mu_r}{2} \ J \ \left[ \mathbf{C}^{-1} \otimes \dfrac{\partial}{\partial \mathbb{H}} \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right) \right] - \mu_0 \mu_r \ J \ \dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}}
+\end{align*}
+Side calculation 1:
+\begin{align*}
+\dfrac{\partial \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right)}{\partial \mathbb{H}} &= \dfrac{\partial \left( C^{-1}_{IJ} \ H_I \ H_J \right)}{\partial H_K} \mathbf{E}_K \\
+&= \left[ C^{-1}_{IJ} \ \delta_{IK} \ H_J + C^{-1}_{IJ} \ H_I \ \delta_{JK} \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{JI} \ \delta_{IK} \ H_J + C^{-1}_{IJ} \ \delta_{JK} \ H_I \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{JK} \ H_J + C^{-1}_{IK} \ H_I \right] \ \mathbf{E}_K \\
+&= \left[ C^{-1}_{KJ} \ H_J + C^{-1}_{KI} \ H_I \right] \ \mathbf{E}_K \\
+&= 2 [\mathbf{C}^{-1} \cdot \mathbb{H}]
+\end{align*}
+Side calculation 2:
+\begin{align*}
+\dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}} &= \dfrac{1}{2} \dfrac{\partial \left[ C^{-1}_{IM} \ H_M \ C^{-1}_{JN} \ H_N + C^{-1}_{JM} \ H_M \ C^{-1}_{IN} \ H_N \right]}{\partial H_K} \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+\begin{split}
+= & \ \dfrac{1}{2} \left[ C^{-1}_{IM} \ \delta_{MK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JN} \ \delta_{NK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K  \\
+&+ \dfrac{1}{2} \left[ C^{-1}_{JM} \ \delta_{MK} \ C^{-1}_{IN} \ H_N + C^{-1}_{JM} \ H_M \ C^{-1}_{IN} \ \delta_{NK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+\end{split}\\
+\begin{split}
+= & \ \dfrac{1}{2} \left[ C^{-1}_{IK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+&+ \dfrac{1}{2} \left[ C^{-1}_{JK} \ C^{-1}_{IN} \ H_N + C^{-1}_{JM} \ H_M \ C^{-1}_{IK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+\end{split}\\
+\intertext{Observing the symmetry over the indices $I$ and $J$, we have}
+&= \left[ C^{-1}_{IK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
+&= \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1}
+\end{align*}
+\begin{empheq}[box=\tcbhighmath]{align}
+\mathbb{P} &= \mu_0 \mu_r \ J \ \left[  \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) \right] -  \mu_0 \mu_r \ J \ \left[ \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1} \right].
+\label{eq:3.34}
+\end{empheq}
 
 
 \section{FEM discretization}
