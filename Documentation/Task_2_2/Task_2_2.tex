@@ -307,28 +307,30 @@ where $\Gamma_{0, \mathcal{BS}} = \overline{\mathcal{S}_0} \cap \overline{\mathc
 \section{Linearisation of coupled problem}
 Assuming the state of the system is known at some load or time step $t_{n-1}$, the linearisation by employing the first-order Taylor expansion of the variation of total potential energy is given as: Find $\Delta \mathbf{u}$ and $\Delta \phi$ such that
 \begin{equation}
-\mathbf{L} \left[ \delta \Pi \right]_{\phi_{i+1}, \mathbf{u}_{i+1}} = \delta \Pi \Big{|}_{\phi_i, \mathbf{u}_i} + D_{\Delta \phi} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big] + D_{\Delta \mathbf{u}} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big].
+\mathbf{L} \left[ \delta \Pi \right]_{\phi_{i+1}, \mathbf{u}_{i+1}} = \delta \Pi \Big{|}_{\phi_i, \mathbf{u}_i} + D_{\Delta \phi} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big] + D_{\Delta \mathbf{u}} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big],
 \label{eq:3.29}
 \end{equation} 
+where $\Delta \left\lbrace \cdot \right\rbrace := \left\lbrace \cdot \right\rbrace_{i+1} - \left\lbrace \cdot \right\rbrace_i$ is the incremental change between the iterative solver iterations $i$ and $i+1$ and the value of a quantity at the current Newton iteration at the currently unknown load/time state $t_n$ is denoted as $\left\lbrace \cdot \right\rbrace_i^n = \left\lbrace \cdot \right\rbrace_i$.
 
 Assuming dead load ($\mathbf{b}^p = \mathbf{0}$), the direct terms of linearisation are given as:
 \begin{align}
-D_{\Delta \phi, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbf{D} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.30.1}\\
-D_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi_{int} &= \int\limits_{\mathcal{D}_0} \Delta \delta \mathbf{E} : \mathbf{S} \ \mathrm{d}V + \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathfrak{C} : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:2.30.2}
+D^2_{\Delta \phi, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbf{D} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.30.1}\\
+D^2_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi_{int} &= \int\limits_{\mathcal{D}_0} \Delta \delta \mathbf{E} : \mathbf{S} \ \mathrm{d}V + \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathfrak{C} : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:3.30.2}
 \end{align}
-where $\Delta \delta \mathbf{E} = \left[ \Delta \mathbf{F}^T \cdot \delta \mathbf{F} \right]^{\text{sym}}, \ \mathbf{D} := \dfrac{\partial \mathbb{B}}{\partial \mathbb{H}} = -\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbb{H}}$ is the rank-2 magneto-static tensor and $\mathfrak{C} := 2\dfrac{\partial \mathbf{S}}{\partial \mathbf{C}} = 4\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbf{C}}$ is the referential elastic tangent as derived earlier in \Cref{eq:3.9}. \par 
+where $\Delta \delta \mathbf{E} = \left[ \Delta \mathbf{F}^T \cdot \delta \mathbf{F} \right]^{\text{sym}}, \ \mathbf{D} := \dfrac{\partial \mathbb{B}}{\partial \mathbb{H}} = -\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbb{H}}$ is the rank-2 magneto-static tensor and $\mathfrak{C} := 2\dfrac{\partial \mathbf{S}}{\partial \mathbf{C}} = 4\dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbf{C}}$ is the referential elastic tangent as derived earlier in \Cref{eq:3.9}. The detailed linearisation of the kinematical quantity $\mathbf{E}$, i.e. the Green-Lagrange strain tensor, and the constitutive equation $\mathbf{S}$, the second Piola-Kirchhoff stress tensor is already discussed in Task 2.1 and the same result applies here. \par 
 
 The coupled terms arising from the linearisation are
 \begin{align}
-D_{\Delta \phi, \delta \mathbf{u}} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathbb{P} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.31.1} \\
-D_{\Delta \mathbf{u}, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbb{P}^T : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:3.31.2}
+D^2_{\Delta \phi, \delta \mathbf{u}} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathbb{P} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.31.1} \\
+D^2_{\Delta \mathbf{u}, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbb{P}^T : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:3.31.2}
 \end{align}
 where $\mathbb{P} := -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \mathbb{H}}$ and $\mathbb{P}^T := 2 \dfrac{\partial \mathbb{B}}{\partial \mathbf{C}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbf{C}}$ are the referential magneto-elasticity tensors. \par 
 
 The final linear form of \Cref{eq:3.25} can be written as:
 \begin{align}
-D_{\delta \phi} \Pi + D_{\Delta \phi, \delta \phi} \Pi + D_{\Delta \mathbf{u}, \delta \phi} \Pi = 0, \\
-D_{\delta \mathbf{u}} \Pi + D_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi + D_{\Delta \phi, \delta \mathbf{u}} \Pi = 0.
+D_{\delta \phi} \Pi + D^2_{\Delta \phi, \delta \phi} \Pi + D^2_{\Delta \phi, \delta \mathbf{u}} \Pi = \mathbf{0}, \nonumber \\
+D_{\delta \mathbf{u}} \Pi + D^2_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi + D^2_{\Delta \mathbf{u}, \delta \phi} \Pi = \mathbf{0}.
+\label{eq:3.35}
 \end{align}
  
 The derived forms for the terms $\mathbf{D}$ and $\mathbb{P}$ will be presented below. To derive $\mathbf{D}$, we first need to derive the referential magnetic induction vector as follows:
@@ -397,15 +399,56 @@ Side calculation 2:
 \end{empheq}
 
 
-\section{FEM discretization}
-Space discretization using finite elements. Final fem form using quadrature rule. 
+\section{Space discretization by finite element method}
+We now discretize the variational form \Cref{eq:3.35} by introducing the standard Lagrangian finite element basis for the scalar-valued magnetic potential $\phi$ and the vector-valued displacement $\mathbf{u}$ as
+\begin{align}
+\phi (\mathbf{X}) &\approx \phi^h (\mathbf{X}) = \sum\limits_{I} \phi_I N_I (\mathbf{X}), \ \ \ \ \mathbf{u} (\mathbf{X}) \approx \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} u_I \mathbf{N}_I (\mathbf{X}), \\
+\nabla_0 \phi (\mathbf{X}) &\approx \nabla_0 \phi^h (\mathbf{X}) = \sum\limits_{I} \phi_I \nabla_0 N_I (\mathbf{X}), \ \ \nabla_0 \mathbf{u} (\mathbf{X}) \approx \nabla_0 \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} u_I \nabla_0 \mathbf{N}_I (\mathbf{X}),
+\end{align}
+with $\phi_I \in \mathbb{R}$ and $u_I \in \mathbb{R}$. $N_I$ and $\mathbf{N}_I$ are, respectively, the scalar-valued and vector-valued shape functions corresponding to the global degree of freedom (support point) $I$. Let the collective solution vector be called as $\mathbf{d} = \left\lbrace \phi; \mathbf{u} \right\rbrace^T$. The shape functions belong to the Sobolev space which is defined as
+\begin{equation}
+H^1 (\mathcal{D}_0; \mathbb{R}^{\text{dim}}) = \left\lbrace \mathbf{d} : \mathcal{D}_0 \mapsto \mathbb{R} \Big{|} \int\limits_{\mathcal{D}_0} \norm{\mathbf{d}}^2 + \norm{\nabla \mathbf{d}}^2 \ \mathrm{d}\mathcal{D}_0 < \infty \right\rbrace.
+\end{equation}
+The discrete function spaces for the solution fields are given as
+\begin{align}
+S^h &= \left\lbrace \phi^h \in H^1, \ \phi^h|_{\partial \mathcal{S}_{0, \phi}} = \overline{\phi^h} \right\rbrace, \\
+\mathbf{W}^h &= \left\lbrace \mathbf{u}^h \in H^1, \ \mathbf{u}^h|_{\partial \mathcal{B}_{0, \mathbf{u}} \cup \partial \mathcal{S}_{0, \mathbf{u}}} = \overline{\mathbf{u}^h} \right\rbrace.
+\end{align}
 
-\section{Implementation details}
+\noindent The variations and linearization of the discretized fields are given as
+\begin{align}
+\delta \phi^h (\mathbf{X}) &= \sum\limits_{I} \delta \phi_I N_I (\mathbf{X}), \ \ \ \ \delta  \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} \delta u_I \mathbf{N}_I (\mathbf{X}), \\
+\Delta \phi^h (\mathbf{X}) &= \sum\limits_{I} \Delta \phi_I N_I (\mathbf{X}), \ \ \Delta \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} \Delta u_I \mathbf{N}_I (\mathbf{X}),
+\end{align}
+with $\delta \phi_I, \Delta \phi_I \in \mathbb{R}$ and $\delta u_I, \Delta u_I \in \mathbb{R}$. \par 
 
-\subsection{Saddle point system}
-Theory on saddle point problems arising in coupled problems, compressible elasticity. Few properties of the block system in saddle point system and requirements to be satisfied to classify the linear system of equations as a saddle point system. \par 
+\noindent The discrete function spaces for the variation of the solution fields are given as
+\begin{align}
+T^h &= \left\lbrace \delta\phi^h \in H^1, \ \delta\phi^h|_{\partial \mathcal{S}_{0, \phi}} = 0 \right\rbrace, \\
+\mathbf{V}^h &= \left\lbrace \delta\mathbf{u}^h \in H^1, \ \delta\mathbf{u}^h|_{\partial \mathcal{B}_{0, \mathbf{u}} \cup \partial \mathcal{S}_{0, \mathbf{u}}} = \mathbf{0} \right\rbrace.
+\end{align}
 
-A discretized system of linear equations valid for all the variations $\delta \mathbf{u}$ and $\delta \phi$ in the linearized variational formulation can be formed. At any Newton iteration $i$ and time step $t_n$ the algebraic equations are
+\noindent The derivatives of the increments of the solution fields are given as
+\begin{align}
+\nabla_0 \Delta \phi^h (\mathbf{X}) &= \sum\limits_{I} \Delta \phi_I \nabla_0 N_I (\mathbf{X}), \ \ \nabla_0 \Delta \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} \Delta u_I \nabla_0 \mathbf{N}_I (\mathbf{X}).
+\end{align} \newline
+
+The resulting discretized system of equations for the final linearised variational form \Cref{eq:3.35} employing the results from \Crefrange{eq:3.26.1}{eq:3.27.2} and \Crefrange{eq:3.30.1}{eq:3.31.2} can be written in the form of the following L.H.S. and R.H.S.:
+\begin{align}
+\text{L.H.S.:} \ = &- \sum\limits_I \sum\limits_J \delta \phi_I \int\limits_{\mathcal{D}_0} \left[ \nabla_0 N_I (\mathbf{X}) \cdot \mathbf{D} \cdot \nabla_0 N_J (\mathbf{X}) \right] \cdot \Delta \phi_J \ \mathrm{d}V \nonumber \\
+&+ \sum\limits_I \sum\limits_J \delta u_I \int\limits_{\mathcal{D}_0} \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (\mathbf{X}) \right] : \mathbb{P} \cdot \nabla_0 N_J (\mathbf{X}) \right] \cdot \Delta \phi_J \ \mathrm{d}V \nonumber \\
+&+ \sum\limits_I \sum\limits_J \delta \phi_I \int\limits_{\mathcal{D}_0} \left[ \nabla_0 N_I (\mathbf{X}) \cdot \mathbb{P}^T : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_J (\mathbf{X}) \right] \right] \cdot \Delta u_J \ \mathrm{d}V \nonumber \\
+&+ \sum\limits_I \sum\limits_J \delta u_I \int\limits_{\mathcal{D}_0} \left[ \left[ \nabla_0 \mathbf{N}_I^T (\mathbf{X}) \cdot \nabla_0 \mathbf{N}_J (\mathbf{X}) \right]^{\text{sym}} : \mathbf{S} \right] \cdot \Delta u_J \ \mathrm{d}V \nonumber \\
+&+ \sum\limits_I \sum\limits_J \delta u_I \int\limits_{\mathcal{D}_0} \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (\mathbf{X}) \right]^{\text{sym}} : \mathfrak{C} : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_J (\mathbf{X}) \right]^{\text{sym}} \right] \cdot \Delta u_J \ \mathrm{d}V.
+\label{eq:3.36}
+\end{align}
+\begin{align}
+\text{R.H.S.:} \ = &- \sum\limits_I \delta u_I \int\limits_{\mathcal{D}_0} \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (\mathbf{X}) \right]^{\text{sym}} : \mathbf{S} \right] \ \mathrm{d}V \nonumber \\
+&- \sum\limits_I \delta \phi_I \int\limits_{\mathcal{D}_0} \left[ \nabla_0 N_I (\mathbf{X}) \cdot \mathbb{B} \right] \ \mathrm{d}V \nonumber \\
+&+ \sum\limits_I \delta u_I \int\limits_{\partial \mathcal{B}_{0,t}} \left[ \mathbf{N}_I (\mathbf{X}) \cdot \mathbf{t}^p \right] \ \mathrm{d}A.
+\label{eq:3.37}
+\end{align}
+The resulting discretized equations \Cref{eq:3.36,eq:3.37} must hold for all arbitrary variations $\delta \phi_I$ and $\delta u_I$. The algebraic system to be solved at time/load step $t_n$ and Newton iterate $i$ is
 \begin{equation}
 \begin{bmatrix}
 \mathbf{K}_{\phi \phi} & \mathbf{K}_{\phi \mathbf{u}} \\
@@ -423,14 +466,37 @@ A discretized system of linear equations valid for all the variations $\delta \m
 \implies \ \mathbf{K} \cdot \Delta \mathbf{d} = -\mathbf{R}.
 \label{eq:3.10}
 \end{equation}
-Consider the scalar-valued magnetic potential solution block vector $\mathbf{d}_{\phi}$ be of size $p$ and the vector-valued displacement solution block vector $\mathbf{d}_{\mathbf{u}}$ for an axisymmetric formulation be of size $q$. Then the total number of unknowns, called as number of DoFs, will be $n_{dofs} = p + q$. For the case where the same order finite elements are employed for both the fields, for e.g., for a total number of support points $n_d$, for linear Lagrange finite element $(Q_1)$ used for the solution field $\phi$ with $p = n_d$ and bi-linear Lagrange finite elements $(Q_1 \times Q_1)$ for the solution field $\mathbf{u}$ with $q = 2 n_d$, then the total number of unknowns would be $n_{dofs} = 3 n_d$. By definition, a support point is a point $p_i$ such that for a shape function $N_j$ (finite element families based on the Lagrange interpolation) it holds $N_j (p_i) = \delta_{ij}$. The corresponding tangent matrix blocks will be of the following dimensions:
+The solution update is then performed as follows
+\begin{equation}
+\mathbf{d}_{i+1}^n = \mathbf{d}_i^n + \Delta \mathbf{d}^n.
+\label{eq:3.38}
+\end{equation}
+Applying the Gauss quadrature rule for the numerical integration and also considering the transformation needed for the axisymmetric formulation (as previously discussed in Task 1 and 2.1), the final cell wise FE assembly is given as follows:
+\begin{align}
+K_{IJ} = &- \sum\limits_q \left[ \nabla_0 N_I (q) \cdot \mathbf{D} \cdot \nabla_0 N_J (q) \right] \ C.S.F. \ J \ w(q) \nonumber \\
+&+ \sum\limits_q \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (q) \right] : \mathbb{P} \cdot \nabla_0 N_J (q) \right] \ C.S.F. \ J \ w(q) \nonumber \\
+&+ \sum\limits_q \left[ \nabla_0 N_I (q) \cdot \mathbb{P}^T : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_J (q) \right] \right] \ C.S.F. \ J \ w(q) \nonumber \\
+&+ \sum\limits_q \left[ \left[ \nabla_0 \mathbf{N}_I^T (q) \cdot \nabla_0 \mathbf{N}_J (q) \right]^{\text{sym}} : \mathbf{S} \right]  \ C.S.F. \ J \ w(q) \nonumber \\
+&+ \sum\limits_q \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (q) \right]^{\text{sym}} : \mathfrak{C} : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_J (q) \right]^{\text{sym}} \right] \ C.S.F. \ J \ w(q),
+\label{eq:3.39}
+\end{align}
+and with $\mathbf{f} := -\mathbf{R}$
+\begin{align}
+f_I = &- \sum\limits_q \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (q) \right]^{\text{sym}} : \mathbf{S} \right] \ C.S.F. \ J \ w(q) \nonumber \\
+&- \sum\limits_q \left[ \nabla_0 N_I (q) \cdot \mathbb{B} \right] \ C.S.F. \ J \ w(q) \nonumber \\
+&+ \sum\limits_q \left[ \mathbf{N}_I (q) \cdot \mathbf{t}^p \right] \ C.S.F. \ J \ w(q),
+\label{eq:3.40}
+\end{align}
+where $q$ are the local quadrature points with corresponding weights $w(q)$ and the scalar $C.S.F. := 2 \pi R$ is the co-ordinate scaling factor arising from the transformation of the 3D integrals to the axisymmetric (2.5D) integrals. $R$ is the axial component of the distance of the local quadrature point $q$ from the axis of symmetry. \Cref{eq:3.39,eq:3.40} represents the final FE assembly we have implemented for the axisymmetric fully-coupled magneto-elastic problem of our interest. \par 
+
+\section{Implementation details}
+
+\subsection{Saddle point system}
+
+At any Newton iteration $i$ and time/load step $t_n$ the algebraic equations to solve are as represented in \Cref{eq:3.10}. Consider the scalar-valued magnetic potential solution block vector $\mathbf{d}_{\phi}$ be of size $p$ and the vector-valued displacement solution block vector $\mathbf{d}_{\mathbf{u}}$ for an axisymmetric formulation be of size $q$. Then the total number of unknowns, called as number of global DoFs, will be $n_{dofs} = p + q$. For the case where the same order finite elements are employed for both the fields, for e.g., for a total number of support points $n_d$, for linear Lagrange finite element $(Q_1)$ used for the solution field $\phi$ with $p = n_d$ and bi-linear Lagrange finite elements $(Q_1 \times Q_1)$ for the solution field $\mathbf{u}$ with $q = 2 n_d$, then the total number of unknowns would be $n_{dofs} = 3 n_d$. By definition, a support point is a point $p_i$ such that for a shape function $N_j$ (finite element families based on the Lagrange interpolation) it holds $N_j (p_i) = \delta_{ij}$. The corresponding tangent matrix blocks will be of the following dimensions:
 \begin{equation}
 \mathbf{K}_{\phi \phi} \in \mathbb{R}^{p \times p}, \ \mathbf{K}_{\phi \mathbf{u}} \in \mathbb{R}^{p \times q}, \ \mathbf{K}_{\mathbf{u} \phi} \in \mathbb{R}^{q \times p}, \ \mathbf{K}_{\mathbf{u} \mathbf{u}} \in \mathbb{R}^{q \times q}.
 \end{equation}
-The increment in the solution $\Delta \mathbf{d} := \{ \Delta \mathbf{d}_{\phi}, \Delta \mathbf{d}_{\mathbf{u}} \}^T$ is then used to get the solution at the current unknown state $\mathbf{d}_{i+1}$ as
-\begin{equation}
-\mathbf{d}_{i+1} = \mathbf{d}_i + \Delta \mathbf{d}.
-\end{equation} 
 The system of equations in \Cref{eq:3.10} represents a saddle point system for the coupled multi-physics problem of our interest. Saddle point systems arise when a certain quantity such as the energy of a continuum body has to be minimized, subject to a set of linear constraints. The constraints typically represent some basic conservation law such as the balance law of linear momentum in our case of non-linear solid mechanics. Because saddle point systems can be derived as equilibrium conditions for a physical system, they are sometimes also referred to a \textit{equilibrium equations} \cite{Benzi2005}. We therefore briefly discuss the saddle point systems and also mention the necessary requirements to be satisfied for a linear system of equations to be classified as a saddle point system. \newline \par 
 For a general linear system 
 \begin{equation}
@@ -501,11 +567,6 @@ A better understanding of \Cref{eq:3.15.1,eq:3.15.2} can be observed in \Cref{fi
 \Cref{eq:3.10} for the coupled multi-physics problem of magneto-elastic membrane in free space is a special case of the (generalized) saddle point system. Here, the conditions C1-C4 are satisfied, but not C5 which arises in the discretization of equations describing slightly compressible solids \cite{Benzi2005}.
 
 \subsection{Numerical solution of saddle point systems}
-Iterative method using preconditioners: Schur complement method. Algorithm. Use of preconditioners (AMG theory?). Use of linear operator data structure from deal.ii. \par 
-
-Explain the LSAE for our coupled problem. The properties of each block of the matrix. Choice of the block to proceed with schur complement of that block of matrix (why phi phi block?). Precomputations performed to transform the corresponding block from neg def to pos def (for solution by use of iterative method such as CG). \par 
-
-Direct solution method: Monolithic approach using UMFPACK. Assembly in serial block solution and rhs vectors. 
 
 To solve the linear system of equations \Cref{eq:3.10}, one of the following approach can be taken:
 \begin{itemize}
@@ -515,7 +576,7 @@ To solve the linear system of equations \Cref{eq:3.10}, one of the following app
 \end{itemize}
 Below we explain the direct solver and the iterative solution method exploiting the block structure that were implemented. Before we discuss the details of the solution methods, it is important to highlight the properties of each block in the tangent matrix $\mathbf{K}$. This will also explain the motive for the choice of block to proceed with iterative solution method detailed in the further section.\par 
 
-As observed in the finite element discretized form for the coupled problem, the block for purely magnetic scalar potential contribution $\mathbf{K}_{\phi \phi} = - \int\limits_{\mathcal{D}_0} \nabla_0 N^I \cdot \mathbf{D} \cdot \nabla_0 N^J$ results in a symmetric negative-definite matrix of size $p \times p$. The block for purely non-linear elastic contribution $\mathbf{K}_{\mathbf{u} \mathbf{u}} = \int\limits_{\mathcal{D}_0} \left[ \left[ \nabla_0^T \mathbf{N}^I \cdot \nabla_0 \mathbf{N}^J \right] : \mathbf{S} + \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}^I \right] : \mathfrak{C} : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}^J \right] \right]$ represents a symmetric positive-definite matrix of size $q \times q$. For the considered axisymmetric problem, we know that for any given total number of support points $n_d$, $p < q$ given that we solve for a single scalar-valued magnetic potential $\phi$ and a vector-valued displacement $(u_r, u_z)^T$. Thus, the size of block $\mathbf{K}_{\phi \phi}$ is always less than the block $\mathbf{K}_{\mathbf{u} \mathbf{u}}$ (unless we solve for a 1D problem). The blocks resulting from the coupling between the two fields, namely $\mathbf{K}_{\phi \mathbf{u}}$ and $\mathbf{K}_{\mathbf{u} \phi}$ are symmetric negative-definite matrices with sizes $p \times q$ and $q \times p$, respectively and are transposes of each other. Thus, one can assemble one block and store the other as the transpose of the assembled block to save computations. Due to the sparsity arising in each individual block, the structure of the tangent matrix $\mathbf{K}$ is an unsymmetric sparse banded block matrix.\par 
+As observed in the finite element discretized form for the coupled problem, the block for purely magnetic scalar potential contribution $\mathbf{K}_{\phi \phi} = - \int\limits_{\mathcal{D}_0} \nabla_0 N_I \cdot \mathbf{D} \cdot \nabla_0 N_J$ results in a symmetric negative-definite matrix of size $p \times p$. The block for purely non-linear elastic contribution $\mathbf{K}_{\mathbf{u} \mathbf{u}} = \int\limits_{\mathcal{D}_0} \left[ \left[ \nabla_0^T \mathbf{N}_I \cdot \nabla_0 \mathbf{N}_J \right] : \mathbf{S} + \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I \right] : \mathfrak{C} : \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_J \right] \right]$ represents a symmetric positive-definite matrix of size $q \times q$. For the considered axisymmetric problem, we know that for any given total number of support points $n_d$, $p < q$ given that we solve for a single scalar-valued magnetic potential $\phi$ and a vector-valued displacement $(u_r, u_z)^T$. Thus, the size of block $\mathbf{K}_{\phi \phi}$ is always less than the block $\mathbf{K}_{\mathbf{u} \mathbf{u}}$ (unless we solve for a 1D problem). The blocks resulting from the coupling between the two fields, namely $\mathbf{K}_{\phi \mathbf{u}}$ and $\mathbf{K}_{\mathbf{u} \phi}$ are symmetric negative-definite matrices with sizes $p \times q$ and $q \times p$, respectively and are transposes of each other. Thus, one can assemble one block and store the other as the transpose of the assembled block to save computations. Due to the sparsity arising in each individual block, the structure of the tangent matrix $\mathbf{K}$ is an unsymmetric sparse banded block matrix.\par 
 
 \subsubsection{Direct solver}
 This category of solvers is also known as `\textit{coupled}' or `all at once' methods. Coupled solvers deal with the system such as \Cref{eq:3.10} as a whole, computing both the fields $\phi$ and $\mathbf{u}$ simultaneously and without making any explicit use of reduced systems. In most cases, due to the ease of implementation, the direct solver is employed. One doesn't have to care about the properties of the tangent matrix $\mathbf{K}$ and also about the properties of individual blocks. \par 
@@ -577,7 +638,7 @@ In terms of the general representation as in \Cref{eq:3.11}, we arrive at
 \mathbf{K}_{\phi \phi} \cdot \Delta \mathbf{d}_{\phi} = -\mathbf{R}_{\phi} - \mathbf{K}_{\phi \mathbf{u}} \cdot \Delta \mathbf{d}_{\mathbf{u}}.
 \label{eq:3.21}
 \end{equation}
-\Cref{eq:3.21} represents the other reduced system of size $p$ that needs to be solved for the magnetic potential solution update. \Cref{alg:3.1} highlights the algorithmic steps needed to solve any saddle point system using the segregated iterative solver. The algorithm is explained for the fully-coupled magneto-elastic problem of our interest, solving for the displacement field first and then for the magnetic potential, but can be applied for any general saddle point system such as \Cref{eq:3.11}.
+\Cref{eq:3.21} represents the other reduced system of size $p$ that needs to be solved for the magnetic potential solution update. \Cref{alg:3.1} highlights the algorithmic steps needed to solve any saddle point system using the segregated iterative solver. The algorithm is explained for the fully-coupled magneto-elastic problem of our interest, solving for the displacement field first and then for the magnetic potential, but can be applied for any general saddle point system such as \Cref{eq:3.11}. \newline \par 
 
 \begin{algorithm}[h]
 \begin{enumerate}
@@ -590,7 +651,7 @@ In terms of the general representation as in \Cref{eq:3.11}, we arrive at
 \end{enumerate}
 \caption{Schur complement reduction}
 \label{alg:3.1}
-\end{algorithm}
+\end{algorithm} 
 
 \begin{large}
 \noindent \textbf{Choice of the block to compute the Schur complement of $\mathbf{K}$:}\\
