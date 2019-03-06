@@ -2228,9 +2228,9 @@ void MSP_Toroidal_Membrane<dim>::average_cauchy_stress_components(Vector<double>
                                     update_quadrature_points |
                                     update_JxW_values);
 
-    typename Triangulation<dim>::active_cell_iterator
-    cell = triangulation.begin_active(),
-    endc = triangulation.end();
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
     for (; cell!=endc; ++cell)
         if(cell->is_locally_owned())
     {
@@ -2744,6 +2744,12 @@ void MSP_Toroidal_Membrane<dim>::make_grid ()
                                                 (dim == 3 ? Point<dim>(1.0, 0.5, 0.25) : Point<dim>(1.0, 0.5)),
                                                 true);
 
+      typename Triangulation<dim>::active_cell_iterator
+              cell = triangulation.begin_active(),
+              endc = triangulation.end();
+      for (; cell!=endc; ++cell)
+          cell->set_material_id(material_id_toroid);
+
       GridTools::scale(parameters.grid_scale, triangulation);
       triangulation.refine_global(parameters.n_global_refinements);
   }
@@ -3231,6 +3237,8 @@ void MSP_Toroidal_Membrane<dim>::run ()
       Postprocess_point_displacement<dim> torus_p1 (Point<dim>(1.095, 0.0), total_num_loadsteps);
       Postprocess_point_displacement<dim> torus_p2 (Point<dim>(0.9, 0.195), total_num_loadsteps);
       Postprocess_point_displacement<dim> torus_p3 (Point<dim>(0.705, 0.0), total_num_loadsteps);
+      /*Postprocess_point_displacement<dim> coupled_problem_test (Point<dim>(1.0, 0.5),
+                                                                total_num_loadsteps);*/
 
       while (std::abs(loadstep.current()) < std::abs(loadstep.final() + (0.01 * loadstep.get_delta_load())))
       {
@@ -3245,6 +3253,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
               postprocess_point_displacement(torus_p1, total_solution);
               postprocess_point_displacement(torus_p2, total_solution);
               postprocess_point_displacement(torus_p3, total_solution);
+//              postprocess_point_displacement(coupled_problem_test, total_solution);
           }
 //          Functions::FEFieldFunction<dim,hp::DoFHandler<dim>,BlockVector<double> >
 //                  solution_function(hp_dof_handler, total_solution);
@@ -3268,6 +3277,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
           write_point_displacement(torus_p1, cycle, 1);
           write_point_displacement(torus_p2, cycle, 2);
           write_point_displacement(torus_p3, cycle, 3);
+//          write_point_displacement(coupled_problem_test, cycle, 1);
       }
       // Write load disp data to an output file for given point
 /*      if (this_mpi_process == 0)
