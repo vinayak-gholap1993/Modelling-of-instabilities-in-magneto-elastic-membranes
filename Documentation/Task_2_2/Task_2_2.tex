@@ -51,11 +51,38 @@
 
 \section{Tasks performed}
 \begin{enumerate}
-\item abc
+\item Implement a material model for the coupled problem
+\item Extend the application code incorporating the conclusions drawn from the previous tasks
+\item Implement a segregated iterative solver from the literature \cite{Benzi2005} to solve the coupled saddle point system
+\item Examine material behaviour at high mechanical loads for material instability
 \end{enumerate}
 
-\section{Introduction}
-Coupled magneto-elasticity problem. Multi-physics theory, arising difficulties, challenges in modelling. Summarising results and conclusions from task 1 and 2.1. 
+\section{Kinematics}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{kinematics_potato_coupled.pdf}
+\caption{Domain definition: Deformable magneto-elastic solid $\mathcal{B}_0$ immersed in an electromagnetically permeable free space ($\mathcal{S}_0$).}
+\label{fig:3.2}
+\end{figure}
+
+We consider a compressible magneto-elastic deformable solid $\mathcal{B}_0$ with a boundary $\partial \mathcal{B}_0$ in a reference state of no stress and no deformations. In this state, the free space surrounding the deformable solid is denoted as $\mathcal{S}_0$ with the topologically constant/fixed boundary $\partial \mathcal{S}_0$. We denote the entire domain containing the magneto-elastic and the surrounding free space domain as $\mathcal{D}_0 := \mathcal{B}_0 \cup \ \mathcal{S}_0$. On application of a combined static mechanical and magnetic load, the body deforms and occupies the current state $\mathcal{B}_t$ with boundary $\partial \mathcal{B}_t$. In the current configuration the free space is denoted as $\mathcal{S}_t$, the free space boundary due to fixed constraints stays constant with $\partial \mathcal{S}_0 = \partial \mathcal{S}_t$ and the entire domain is denoted as $\mathcal{D}_t := \mathcal{B}_t \cup \ \mathcal{S}_t$. Any point in the deformed/current configuration $\mathbf{x} \in \overline{\mathcal{D}_t}$ is identified by a one-to-one non-linear deformation map $\bm{\varphi}$ to $\mathbf{X} \in \overline{\mathcal{D}_0}$ as $\mathbf{x} := \bm{\varphi} (\mathbf{X})$. We define the associated deformation gradient relative to reference configuration $\mathcal{D}_0$ as $\mathbf{F} := \nabla_0 \bm{\varphi}$ and its determinant $J := \text{det} \mathbf{F} > 0$ to ensure that $\bm{\varphi}$ remains invertible and it also avoid the material self-penetration. Here, the gradient w.r.t. $\mathcal{D}_0$ is denoted as $\nabla_0$ and that w.r.t. $\mathcal{D}_t$ is denoted as $\nabla$. $\mathbf{N}$ describes the unit outward normal to $\partial \mathcal{B}_0$ and $\mathbf{N}_{\infty}$ describes the unit outward normal to the boundary $\partial \mathcal{S}_0$. We denote the portion of boundary $\partial \mathcal{B}_{0, \mathbf{u}}$ as the boundary with prescribed deformations and $\partial \mathcal{B}_{0, t}$ as the boundary with prescribed mechanical traction load. The portion $\partial \mathcal{B}_{0, \phi}$ denotes the boundary with prescribed magnetic scalar-valued potential. We assume the boundary $\partial \mathcal{S}_{0,\mathbf{u}} = \partial \mathcal{S}_{0}$ to be prescribed with homogeneous Dirichlet boundary condition for the deformations (fixing the free space boundary topology). We apply a prescribed magnetic scalar-valued potential $\overline{\phi}$ on the portion $\partial \mathcal{S}_{0, \phi}$ to generate a magnetic vector field $\mathbb{H}$ in $\mathcal{D}_0$. Let the associated referential magnetic induction vector be $\mathbb{B}$ and the magnetization vector be $\mathbb{M}$. \par 
+We proceed with the assumption that there exists no free electric currents and thus, no electric fields in the complete computational domain. As already explained in detail in Task 1, due to the magnetic vector fields such as $\mathbb{H}$ which is discontinuous over boundaries and material interfaces, for the purpose of finite element modelling we proceed with a magnetic scalar potential formulation. We assume a fictitious quantity $\phi$ and define the curl-free magnetic field $\mathbb{H}$ as \cite{ogden2011mechanics,Dorfmann2014} 
+\begin{equation}
+\mathbb{H} := -\nabla_0 \phi \ \text{in} \ \mathcal{D}_0.
+\label{eq:3.0}
+\end{equation}
+The continuity condition associated with potential $\phi$ is 
+\begin{equation}
+\llbracket \phi \rrbracket = 0 \ \text{on} \ \partial\mathcal{B}_{0},
+\label{eq:3.0.1}
+\end{equation}
+and the Dirichlet and Neumann boundary conditions are
+\begin{equation}
+\phi = \overline{\phi} \ \text{on} \ \partial \mathcal{S}_{0,\phi}, \ \ \mathbb{B}_{\infty} \cdot \mathbf{N}_{\infty} = 0 \ \text{on} \ \partial\mathcal{S}_{0,\mathbb{B}},
+\label{eq:3.0.2}
+\end{equation}
+where $\mathbb{B}_{\infty}$ is the prescribed magnetic induction on the far-field boundary.
 
 \section{Constitutive material model for coupled problem}
 The material response is characterised by a Helmholtz free energy density function. For the considered magneto-elastic material, in addition to the dependence on the deformation gradient $\mathbf{F}$ and the Jacobian $J$ (as already seen in quasi-static finite strain compressible elasticity, Task 2.1), the free energy density function now also depends on the referential magnetic vector field. The strain energy function (S.E.F.) is given as: 
@@ -198,12 +225,12 @@ Side calculation 2:
 \end{split}\\
 &= -\textcolor{red}{\mathbb{X}} - \textcolor{blue}{\mathbb{Y}}
 \end{align*}
-The tensors with indices $\mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N$ are
+The tensors
 \begin{align*}
 \textcolor{red}{\mathbb{X}} &:= \dfrac{1}{4} \left[ C^{-1}_{KI} H_I C^{-1}_{LM} C^{-1}_{NJ} H_J + C^{-1}_{KI} H_I C^{-1}_{LN} C^{-1}_{MJ} H_J + C^{-1}_{LI} H_I C^{-1}_{KM} C^{-1}_{NJ} H_J + C^{-1}_{LI} H_I C^{-1}_{KN} C^{-1}_{MJ} H_J \right]\\
 \textcolor{blue}{\mathbb{Y}} &:= \dfrac{1}{4} \left[ C^{-1}_{KM} C^{-1}_{NI} H_I C^{-1}_{LJ} H_J + C^{-1}_{KN} C^{-1}_{MI} H_I C^{-1}_{LJ} H_J + C^{-1}_{LM} C^{-1}_{NI} H_I C^{-1}_{KJ} H_J + C^{-1}_{LN} C^{-1}_{MI} H_I C^{-1}_{KJ} H_J \right]
 \end{align*}
-\noindent are both symmetric rank-4 tensors such that for given symmetric rank-2 tensors $\mathbf{M}, \mathbf{N}, \mathbf{P}, \mathbf{Q}$, we have:
+\noindent with indices $\mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N$ are both symmetric rank-4 tensors such that for given symmetric rank-2 tensors $\mathbf{M}, \mathbf{N}, \mathbf{P}, \mathbf{Q}$, we have:
 \begin{align*}
 \mathbf{N} &= \textcolor{red}{\mathbb{X}} : \mathbf{M}, \\
 \mathbf{Q} &= \textcolor{blue}{\mathbb{Y}} : \mathbf{P}.
@@ -223,8 +250,116 @@ For given symmetric rank 2 tensors $\mathbf{A}$ and $\mathbf{B}$, we know: $\mat
 \end{empheq}
 The fourth-order referential material elasticity tensor possess both major and minor symmetries, i.e. $\mathfrak{C} = C_{KLMN} = C_{MNKL} = C_{KLNM} = C_{LKMN}$.
 
-\section{Problem setup}
-Geometry description. BC's and externally applied loads. Magnetic load and mechanical load. Load application setup. 
+\section{Problem set up}
+
+\subsection{Set up for the magnetic field $\mathbb{H}$}
+Following the results obtained in Task 1 and Task 2.1, the problem set up for the coupled magneto-elasticity problem is updated in view of modelling the instabilities arising in the torus membrane. Same geometry of the axisymmetric torus membrane immersed in free space is used as in the Task 1 and Task 2.1.  \par 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.59\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{magnetic_field_saxena.png}
+\caption{Desired distribution \cite{Reddy2017}}
+\label{fig:3.3.1}
+\end{subfigure}
+\begin{subfigure}{0.39\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{2d_toroid_field_2.png}
+\caption{Modelled distribution}
+\label{fig:3.3.2}
+\end{subfigure}
+\caption{Resulting magnetic field in torus membrane}
+\label{fig:3.3}
+\end{figure}
+
+In Task 1 of the thesis (a purely magneto-static problem), we considered a rectangular permanent magnet placed at the center and along the axis of symmetry to generate a circulating magnetic field $\mathbb{H}$ in $\mathcal{D}_0$. A linearly varying potential function was applied to this permanent magnet region, c.f. \Cref{fig:3.4.1}. The dimension of this rectangular permanent magnet region and the potential difference per unit length to be applied were taken as user input parameters. It was observed in the results for Task 1 that the size of the magnet and the potential applied influenced the resulting magnetic field generated in the domain. A small study for this was also carried out and presented in Task 1. The important finding of this study was that the direction of the resulting magnetic field in the tours membrane did not change irrespective of increasing the magnet size and the applied potential value. The resulting magnetic field, c.f. \Cref{fig:3.3.2}, in the torus membrane on the left section (in close proximity to the permanent magnet and axis of symmetry) was comparatively high in magnitude than on the other sections of the membrane. The orientation of this large magnetic field on the left section was the same as that observed on the right section. The orientation of the magnetic field did not meet the desired result as observed in \Cref{fig:3.3.1} from \cite{Reddy2017}. The main reason for this discrepancy was the different modelling approach taken by us to generate the magnetic field compared to the approach taken in \cite{Reddy2017}. In \cite{Reddy2017}, a thin current carrying wire placed along the centre line of the torus membrane was considered to generate the field $\mathbb{H}$. This approach is not possible from the perspective of finite element modelling and thus we had employed a permanent magnet region to generate a similar effect. \par 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.35\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{applied_mag_pot_magnet.pdf}
+\caption{Permanent magnet used in Task 1 (purely magneto-static problem)}
+\label{fig:3.4.1}
+\end{subfigure}
+\begin{subfigure}{0.5\textwidth}
+\centering
+\includegraphics[width=0.7\textwidth]{magnetic_potential_coupled_problem.pdf}
+\caption{For the coupled problem}
+\label{fig:3.4.2}
+\end{subfigure}
+\caption{Applied potential difference per unit length}
+\label{fig:3.4}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\begin{subfigure}{0.59\textwidth}
+\centering
+\includegraphics[width=0.8\textwidth]{magnetic_field_toroid_coupled.png}
+\caption{Modelled distribution of $\mathbb{H}$ in torus membrane}
+\label{fig:3.5.1}
+\end{subfigure}
+\begin{subfigure}{0.39\textwidth}
+\centering
+\includegraphics[width=0.85\textwidth]{magnetic_field_50.png}
+\caption{Uniformly distributed magnetic field in $\mathcal{D}_0$}
+\label{fig:3.5.2}
+\end{subfigure}
+\caption{Resulting magnetic field $\mathbb{H}$ for the coupled problem (Vectors are coloured and scaled to the magnitude of the magnetic field $\mathbb{H}$)}
+\label{fig:3.5}
+\end{figure}
+
+Due to such a concentrated magnetic field on one section of the membrane, modelling of instabilities arising from the coupled  mechanical and magnetic static loading would not be possible. The instability behaviour of our interest is witnessed at large mechanical loads and under an uniformly distributed magnetic field of large magnitude \cite{Reddy2017,Reddy2018}. Thus, to generate a uniformly distributed magnetic field in the coupled problem and to study the instabilities, a different approach was undertaken. In the new approach, we considered the top and bottom boundary of the free space $\partial \mathcal{S}_0$ as the south and the north pole of a permanent magnet, respectively. A constant potential $\overline{\phi}$ of same magnitude but opposite polarities was prescribed at the top and the bottom boundary as observed in \Cref{fig:3.4.2}. The resulting magnetic field in \Cref{fig:3.5.2} is uniformly distributed and vertically aligned. The important outcome of this approach, comparing \Cref{fig:3.5.1} to \Cref{fig:3.3.2}, is the absence of a concentrated magnetic field of high magnitude on any section of the tours membrane. Using the new approach we were able to generate a uniform magnetic field in the torus membrane. This will prove ideal to study the instability behaviour under a quasi-static mechanical load. \par 
+
+\subsection{Problem geometry and load application set up}
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.55\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{coupled_prob_description.pdf}
+\caption{Representative description}
+\label{fig:3.6.1}
+\end{subfigure}
+\begin{subfigure}{0.44\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{load_cycle.pdf}
+\caption{Load application cycle}
+\label{fig:3.6.2}
+\end{subfigure}
+\caption{Coupled problem geometry and applied load set up}
+\label{fig:3.6}
+\end{figure}
+
+The problem geometry shown in \Cref{fig:3.6.1} is same as used in Task 1 and Task 2.1. However, now along with the finite elastic deformations of the circular cross-section torus membrane, we also model the magnetic scalar potential problem and study the coupled finite strain magneto-elastic deformations of this membrane immersed in the surrounding free space. The interactions between the displacement and magnetic fields and the response of the material for the coupled loads will be examined. We consider the external load application in uniformly increasing load steps as shown in \Cref{fig:3.6.2}. For the study of instabilities arising due to coupled loads, following \cite{Reddy2017}, we first apply the scalar magnetic potential load $\phi = \overline{\phi}$ on the far-field free space boundary $\partial \mathcal{S}_0$ in the first half of the total number of load steps. The magnetic potential is increased linearly until the total desired magnetic potential is reached. In the next half of the total load cycle, the externally applied magnetic potential is kept constant. Thus, the established magnetic field $\mathbb{H}$ from the first half load cycle remains constant in the second half cycle. A uniformly distributed inflating pressure load is applied on the inner interface of the torus magneto-elastic membrane as observed in \Cref{fig:3.6.1}. No mechanical load is applied in the first half of the total load application cycle. The  mechanical inflating load is linearly increased with each load step in the second half of the remaining load steps until the total desired mechanical load value is reached. To model the instability behaviour with a simple set up and obtain initial understanding of the physics, we avoid the complex combined increasing load application here. Once the desired unstable deformations for a simple set up is achieved, one can then increase the complexities considered in the modelling and examine the behaviour. 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{magnetic_field_25.png}
+\caption{Load step 25}
+\label{fig:3.7.1}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{magnetic_field_35.png}
+\caption{Load step 35}
+\label{fig:3.7.2}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{magnetic_field_50.png}
+\caption{Load step 50 (Half load)}
+\label{fig:3.7.3}
+\end{subfigure}
+\caption{Increasing magnetic field $\mathbb{H}$ with each load step in first half of the total load application cycle}
+\label{fig:3.7}
+\end{figure}
+
+The resulting magnetic field is observed in \Crefrange{fig:3.7.1}{fig:3.7.3}. As already stated, we observe the quadratic convergence of Newton solver only in close vicinity to the solution. The main advantage of the approach of linearly increasing the applied magnetic potential in small increments is that for each small increment the non-linear Newton solver would converge to a solution. Whereas if one were to apply such a large magnetic load in a single load step, we would observe no convergence and no solution corresponding to this large load value. \par 
 
 \section{Variational formulation}
 
@@ -277,7 +412,7 @@ The variations of the kinematic quantities are defined as
 \begin{align}
 \delta \mathbf{F} &= \nabla_0 \delta \mathbf{u}, \\
 \delta \mathbf{E} &= \left[ \mathbf{F}^T \cdot \delta \mathbf{F} \right]^{\text{sym}}, \\ 
-\delta \mathbb{H} &= -\nabla_0 \delta \phi.
+\delta \mathbb{H} &= -\nabla_0 \delta \phi \ \ \text{ from \Cref{eq:3.0}}.
 \label{eq:3.28}
 \end{align}
 The second Piola-Kirchhoff stress $\mathbf{S}$ in \Cref{eq:3.26.1} can further be split into two components, the total stress within the elastic body (membrane) and the Maxwell stress contribution from the free space (non-magnetisable) material respectively, as follows:
@@ -296,11 +431,11 @@ Similarly, the referential magnetic induction vector $\mathbb{B}$ in \Cref{eq:3.
 
 \noindent The variations in \Cref{eq:3.26.2,eq:3.27.1} belong to the following space
 \begin{equation}
-\delta \mathbf{u} \in H^1 (\overline{\mathcal{B}_0}), \ \ \delta \phi \in H^1 (\overline{\mathcal{B}_0}, \cup \mathcal{S}_0),
+\delta \mathbf{u} \in H^1 (\overline{\mathcal{B}_0}), \ \ \delta \phi \in H^1 (\overline{\mathcal{B}_0}, \cup \ \mathcal{S}_0),
 \end{equation}
 with the constraints 
 \begin{equation}
-\delta \mathbf{u} = \mathbf{0} \ \text{on} \ \partial \mathcal{B}_{0,\mathbf{u}} \cup \left[ \overline{\mathcal{S}_0} \setminus \Gamma_{0, \mathcal{BS}} \right] \ \delta \phi = 0 \ \text{on} \ \partial \mathcal{B}_{0,\phi} \ \text{and} \ \partial \mathcal{S}_{0,\phi},
+\delta \mathbf{u} = \mathbf{0} \ \text{on} \ \partial \mathcal{B}_{0,\mathbf{u}} \cup \left[ \overline{\mathcal{S}_0} \setminus \Gamma_{0, \mathcal{BS}} \right], \ \ \delta \phi = 0 \ \text{on} \ \partial \mathcal{B}_{0,\phi} \ \text{and} \ \partial \mathcal{S}_{0,\phi},
 \end{equation}
 where $\Gamma_{0, \mathcal{BS}} = \overline{\mathcal{S}_0} \cap \overline{\mathcal{B}_0}$ indicates the boundary of the magneto-elastic solid body exposed to the free space material. As the employed material law for the magneto-elastic material is non-linear Neo-Hookean, the linearisation of \Cref{eq:3.26.1,eq:3.26.2} ($\delta \Pi_{int}$) is required within an iterative solution scheme such as the Newton-Raphson method to find the stationary point of the saddle-point system. 
 
@@ -433,7 +568,7 @@ T^h &= \left\lbrace \delta\phi^h \in H^1, \ \delta\phi^h|_{\partial \mathcal{S}_
 \nabla_0 \Delta \phi^h (\mathbf{X}) &= \sum\limits_{I} \Delta \phi_I \nabla_0 N_I (\mathbf{X}), \ \ \nabla_0 \Delta \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} \Delta u_I \nabla_0 \mathbf{N}_I (\mathbf{X}).
 \end{align} \newline
 
-The resulting discretized system of equations for the final linearised variational form \Cref{eq:3.35} employing the results from \Crefrange{eq:3.26.1}{eq:3.27.2} and \Crefrange{eq:3.30.1}{eq:3.31.2} can be written in the form of the following L.H.S. and R.H.S.:
+The resulting discretized system of equations for the final linearised variational form \Cref{eq:3.35} employing the results from \Crefrange{eq:3.26.1}{eq:3.27.2}, \Crefrange{eq:3.30.1}{eq:3.31.2} and the definitions for the variations \Cref{eq:3.28} can be written in the form of the following L.H.S. and R.H.S.:
 \begin{align}
 \text{L.H.S.:} \ = &- \sum\limits_I \sum\limits_J \delta \phi_I \int\limits_{\mathcal{D}_0} \left[ \nabla_0 N_I (\mathbf{X}) \cdot \mathbf{D} \cdot \nabla_0 N_J (\mathbf{X}) \right] \cdot \Delta \phi_J \ \mathrm{d}V \nonumber \\
 &+ \sum\limits_I \sum\limits_J \delta u_I \int\limits_{\mathcal{D}_0} \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (\mathbf{X}) \right] : \mathbb{P} \cdot \nabla_0 N_J (\mathbf{X}) \right] \cdot \Delta \phi_J \ \mathrm{d}V \nonumber \\

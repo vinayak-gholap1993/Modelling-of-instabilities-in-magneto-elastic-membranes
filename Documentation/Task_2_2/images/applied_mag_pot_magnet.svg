@@ -1,0 +1,64 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw"
+    version="1.1" baseProfile="full">
+    <g>
+        <g latexdraw:type="picture" id="id1881593821">
+            <image
+                xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/Task_2_2/images/applied_mag_pot_magnet.png"
+                x="335.7692307692307" y="31.538461538461547"
+                height="782" width="907"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id1642151394">
+            <polyline
+                points="343.46153846153845,394.6153846153846 458.8461538461538,448.46153846153845 "
+                stroke-width="5.0" stroke="#f51212"
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1642151394)"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id287836115">
+            <polyline
+                points="353.46153846153845,605.0 461.15384615384613,551.1538461538462 "
+                stroke-width="5.0" stroke="#f51212"
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-287836115)"/>
+        </g>
+        <g latexdraw:type="text" id="id1102238318" fill="#f51212" latexdraw:position="bl">
+            <text x="297.3076923076923" y="385.38461538461536">$\phi = - \overline{\phi}$</text>
+        </g>
+        <g latexdraw:type="text" id="id690698608" fill="#f51212" latexdraw:position="bl">
+            <text x="297.3076923076923" y="635.3846153846154">$\phi = + \overline{\phi}$</text>
+        </g>
+    </g>
+    <defs>
+        <marker overflow="visible" orient="auto" id="arrow1-1642151394">
+            <path
+                d="M 0.0 0.0 L -3.540833333333333 1.2645833333333334 L -3.540833333333333 0.0 L -3.540833333333333 -1.2645833333333334 z "
+                latexdraw:arrSizeNum="2.0" fill="#f51212"/>
+        </marker>
+        <marker overflow="visible" orient="auto" id="arrow1-287836115">
+            <path
+                d="M 0.0 0.0 L -3.540833333333333 1.2645833333333334 L -3.540833333333333 0.0 L -3.540833333333333 -1.2645833333333334 z "
+                latexdraw:arrSizeNum="2.0" fill="#f51212"/>
+        </marker>
+    </defs>
+    <metadata>
+        <latexdraw:metadata>
+            <latexdraw:latexIncludes/>
+            <latexdraw:displayXScale>true</latexdraw:displayXScale>
+            <latexdraw:displayYScale>true</latexdraw:displayYScale>
+            <latexdraw:unit>CM</latexdraw:unit>
+            <latexdraw:zoom>0.65</latexdraw:zoom>
+            <latexdraw:magneticGridStyle>CUSTOMISED</latexdraw:magneticGridStyle>
+            <latexdraw:gridGap>5</latexdraw:gridGap>
+            <latexdraw:magneticGrid>true</latexdraw:magneticGrid>
+            <latexdraw:version>3.3.8</latexdraw:version>
+            <latexdraw:size>
+                <latexdraw:width>1301</latexdraw:width>
+                <latexdraw:height>744</latexdraw:height>
+            </latexdraw:size>
+            <latexdraw:position>
+                <latexdraw:x>65.0</latexdraw:x>
+                <latexdraw:y>24.0</latexdraw:y>
+            </latexdraw:position>
+        </latexdraw:metadata>
+    </metadata>
+</svg>
