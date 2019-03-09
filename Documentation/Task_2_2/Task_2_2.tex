@@ -39,6 +39,7 @@
 \usepackage{stmaryrd} % for jump in gradient symbol
 \usepackage{siunitx}
 \usepackage{textcomp} % for trademark and registered symbols
+\usepackage{multicol} % for multiple columns in article
 \usepackage[capitalise, noabbrev]{cleveref}
 \usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
 \addbibresource{task2_ref.bib}
@@ -54,7 +55,7 @@
 \item Implement a material model for the coupled problem
 \item Extend the application code incorporating the conclusions drawn from the previous tasks
 \item Implement a segregated iterative solver from the literature \cite{Benzi2005} to solve the coupled saddle point system
-\item Examine material behaviour at high mechanical loads for material instability
+\item Examine material behaviour at high mechanical and magnetic loads for material instability
 \end{enumerate}
 
 \section{Kinematics}
@@ -314,13 +315,14 @@ In Task 1 of the thesis (a purely magneto-static problem), we considered a recta
 Due to such a concentrated magnetic field on one section of the membrane, modelling of instabilities arising from the coupled  mechanical and magnetic static loading would not be possible. The instability behaviour of our interest is witnessed at large mechanical loads and under an uniformly distributed magnetic field of large magnitude \cite{Reddy2017,Reddy2018}. Thus, to generate a uniformly distributed magnetic field in the coupled problem and to study the instabilities, a different approach was undertaken. In the new approach, we considered the top and bottom boundary of the free space $\partial \mathcal{S}_0$ as the south and the north pole of a permanent magnet, respectively. A constant potential $\overline{\phi}$ of same magnitude but opposite polarities was prescribed at the top and the bottom boundary as observed in \Cref{fig:3.4.2}. The resulting magnetic field in \Cref{fig:3.5.2} is uniformly distributed and vertically aligned. The important outcome of this approach, comparing \Cref{fig:3.5.1} to \Cref{fig:3.3.2}, is the absence of a concentrated magnetic field of high magnitude on any section of the tours membrane. Using the new approach we were able to generate a uniform magnetic field in the torus membrane. This will prove ideal to study the instability behaviour under a quasi-static mechanical load. \par 
 
 \subsection{Problem geometry and load application set up}
+\label{sec:load_setup}
 
 \begin{figure}[h]
 \centering
 \begin{subfigure}{0.55\textwidth}
 \centering
 \includegraphics[width=0.95\textwidth]{coupled_prob_description.pdf}
-\caption{Representative description}
+\caption{Representative geometry description}
 \label{fig:3.6.1}
 \end{subfigure}
 \begin{subfigure}{0.44\textwidth}
@@ -355,7 +357,7 @@ The problem geometry shown in \Cref{fig:3.6.1} is same as used in Task 1 and Tas
 \caption{Load step 50 (Half load)}
 \label{fig:3.7.3}
 \end{subfigure}
-\caption{Increasing magnetic field $\mathbb{H}$ with each load step in first half of the total load application cycle}
+\caption{Magnetic field $\mathbb{H}$ increasing with each load step in first half of the total load application cycle}
 \label{fig:3.7}
 \end{figure}
 
@@ -439,7 +441,7 @@ with the constraints
 \end{equation}
 where $\Gamma_{0, \mathcal{BS}} = \overline{\mathcal{S}_0} \cap \overline{\mathcal{B}_0}$ indicates the boundary of the magneto-elastic solid body exposed to the free space material. As the employed material law for the magneto-elastic material is non-linear Neo-Hookean, the linearisation of \Cref{eq:3.26.1,eq:3.26.2} ($\delta \Pi_{int}$) is required within an iterative solution scheme such as the Newton-Raphson method to find the stationary point of the saddle-point system. 
 
-\section{Linearisation of coupled problem}
+\section{Linearisation of the coupled problem}
 Assuming the state of the system is known at some load or time step $t_{n-1}$, the linearisation by employing the first-order Taylor expansion of the variation of total potential energy is given as: Find $\Delta \mathbf{u}$ and $\Delta \phi$ such that
 \begin{equation}
 \mathbf{L} \left[ \delta \Pi \right]_{\phi_{i+1}, \mathbf{u}_{i+1}} = \delta \Pi \Big{|}_{\phi_i, \mathbf{u}_i} + D_{\Delta \phi} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big] + D_{\Delta \mathbf{u}} \Big[ D_{\delta \phi} \Pi_{int} + D_{\delta \mathbf{u}} \Pi_{int} \Big],
@@ -534,7 +536,7 @@ Side calculation 2:
 \end{empheq}
 
 
-\section{Space discretization by finite element method}
+\section{Discretization by the finite element method}
 We now discretize the variational form \Cref{eq:3.35} by introducing the standard Lagrangian finite element basis for the scalar-valued magnetic potential $\phi$ and the vector-valued displacement $\mathbf{u}$ as
 \begin{align}
 \phi (\mathbf{X}) &\approx \phi^h (\mathbf{X}) = \sum\limits_{I} \phi_I N_I (\mathbf{X}), \ \ \ \ \mathbf{u} (\mathbf{X}) \approx \mathbf{u}^h (\mathbf{X}) = \sum\limits_{I} u_I \mathbf{N}_I (\mathbf{X}), \\
@@ -802,9 +804,106 @@ with symmetric positive-definite matrix blocks. The matrix block $\mathbf{K}_{\p
 Another reduced-iteration CG solver was used with one of the three precondtioner to define the inverse operator for the Schur complement $\mathbf{S}^{-1}$. To pre-process the condensed right-hand side vector as mentioned in \Cref{alg:3.1}, the member function \textbf{condense\_schur_rhs()} of the class \textbf{LinearOperator} was employed. To post-process the solution update for the second field the member function \textbf{postprocess\_schur_solution()} was employed. Thus, in total two different iterative solvers with respective preconditioners were implemented within the Schur complement reduction method. An inner solver to compute $\mathbf{K}_{\phi \phi}^{-1}$ and an outer solver to compute $\mathbf{S}^{-1}$.
 
 \section{Test case and Results}
-\subsection{Unit test problem}
+A unit test was set up for the coupled problem with load application cycle mentioned in \Cref{sec:load_setup}. Referring to \Cref{fig:3.8.1}, the boundary along the axis of symmetry and the bottom horizontal boundary has a sliding constraint for the displacement field. We prescribe the top boundary with a negative magnetic potential and the bottom boundary with an equal magnitude positive magnetic potential, c.f. \Cref{fig:3.8.2}. A uniformly distributed mechanical traction load was applied on the top boundary of the unit cube. \par 
 
-\subsection{Torus problem}
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.4\textwidth}
+\centering
+\includegraphics[width=0.78\textwidth]{coupled_unit_test_geom.pdf}
+\caption{Representative geometry}
+\label{fig:3.8.1}
+\end{subfigure}
+\begin{subfigure}{0.28\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{coup_unit_test_mag_pot.png}
+\caption{Prescribed potential $\phi$}
+\label{fig:3.8.2}
+\end{subfigure}
+\begin{subfigure}{0.28\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_unit_test_mag_field.png}
+\caption{Resulting $\mathbb{H}$ orientation}
+\label{fig:3.8.3}
+\end{subfigure}
+\caption{Unit test for coupled problem}
+\label{eq:3.8}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}[c]{|C{2cm}|C{5cm}|C{5cm}|}
+\hline
+\textbf{{Load step}} & \textbf{{Applied magnetic potential difference}} & \textbf{{Applied mechanical traction $\mathbf{t}^p$}} \\
+\hline
+25\% & 500 & 0 \\
+\hline
+50\% & 1000 & 0 \\
+\hline
+75\% & 1000 & 5e-3 \\
+\hline
+100\% & 1000 & 1e-2 \\
+\hline 
+\end{tabular} 
+\caption{Load values at different load steps}
+\label{tab:3.1}
+\end{table}
+
+The constitutive law stated in \Cref{eq:3.5} was employed to describe the material response for the coupled unit test problem and the chosen values for the material parameters are $\mu = 3e^{-2}$ Pa, $\nu = 0.4$ and relative permeability $\mu_r = 6.0$. A magnetic potential difference of 1000 per unit length was applied in first half of total load cycle and a prescribed traction load $\mathbf{t}^p = 1e^{-2} \frac{\text{N}}{\text{m}}$ was applied in the second half of total load application cycle. The corresponding loads at different load steps is mentioned in \Cref{tab:3.1}. \par 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.23\textwidth}
+\centering
+\includegraphics[width=0.85\textwidth]{unit_test_half_mag_load_disp.png}
+\caption{25\% of total load}
+\label{fig:3.9.1}
+\end{subfigure}
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.8\textwidth]{unit_test_full_mag_load_disp.png}
+\caption{50\% of total load}
+\label{fig:3.9.2}
+\end{subfigure}
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.8\textwidth]{unit_test_ls_15_disp.png}
+\caption{75\% of total load}
+\label{fig:3.9.3}
+\end{subfigure}
+\begin{subfigure}{0.23\textwidth}
+\centering
+\includegraphics[width=0.85\textwidth]{unit_test_full_total_load_disp.png}
+\caption{Total load}
+\label{fig:3.9.4}
+\end{subfigure}
+\caption{Deformations of the unit cube under coupled magnetic and mechanical load (Scale of each result is to be noted)}
+\label{fig:3.9}
+\end{figure}
+
+In reference to the resulting deformations at different load steps in \Cref{fig:3.9.1,fig:3.9.2}, in the first half cycle with the magnetic load application we observe the geometry undergoes compression. Due to the prescribed magnetic potentials at the top and bottom boundaries a vertically aligned magnetic field is generated as observed in \Cref{fig:3.8.3}. With no deformations in the initial reference configuration ($\mathbf{F} = \mathbf{C} = \mathbf{I}$ and $J = 1 \implies \Psi_0^{\text{elas}} = 0$) following \Cref{eq:3.5}, the S.E.F. ($M_0$) for high magnetic field $\mathbb{H}$ leads to a high negative S.E.F. Due to this effect the material softens and becomes less stiff at high magnetic loads. The material experiences a compressive load on the boundaries prescribed with the magnetic potential and this leads to a compression of the material. After the full magnetic load is applied, the material then experiences a tensile load due to the mechanical traction load applied on the top surface in the second half load cycle. For the considered material stiffness parameters, a small traction load is required to overcome the compression developed by the high magnetic load. Thus, the material extends back to its original form as observed in \Cref{fig:3.9.4}. \par 
+
+To test the dependence of the field $\mathbb{H}$ direction on the material response, the prescribed magnetic potential was reversed, i.e. a positive potential $\phi = +\overline{\phi}$ on the top boundary and a negative potential $\phi = -\overline{\phi}$ on the bottom boundary was prescribed as seen in \Cref{fig:3.10.1}. The resulting magnetic field direction in \Cref{fig:3.10.2} is opposite when compared to \Cref{fig:3.8.3}. It was observed that irrespective of the magnetic field direction the resulting material response remained unchanged. For the reversed field direction the material experienced same compression and resulted in same deformed states as observed in \Cref{fig:3.9}. This helps understand that the alignment of the resulting magnetic field w.r.t. the axisymmetric geometry is of importance rather than the direction in which it points. It also points out that the magnetic field leads to a compressive response of the magneto-elastic material for high magnetic loads. \par 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.48\textwidth}
+\centering
+\includegraphics[width=0.6\textwidth]{coup_unit_test_mag_pot_rev.png}
+\caption{Reversed potential $\phi$ prescribed}
+\label{fig:3.10.1}
+\end{subfigure}
+\begin{subfigure}{0.48\textwidth}
+\centering
+\includegraphics[width=0.6\textwidth]{coup_unit_test_mag_field_rev.png}
+\caption{Resulting field $\mathbb{H}$ direction}
+\label{fig:3.10.2}
+\end{subfigure}
+\caption{Test for reversed magnetic field direction}
+\label{fig:3.10}
+\end{figure}
+
+\section{Torus membrane problem}
 With mechanical load applied first, followed by magnetic load. Results. Conclusion. \par 
 
 With magnetic load applied first, followed by mechanical load (to observe mechanically induced instabilities in the membrane). Results and conclusions.

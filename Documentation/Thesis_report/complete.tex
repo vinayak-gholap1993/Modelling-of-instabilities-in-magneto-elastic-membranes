@@ -1,0 +1,240 @@
+\documentclass[a4paper,12pt,BCOR0mm,headsepline,draft,twoside]{scrbook}
+%\documentclass[a4paper,12pt,BCOR0mm,headsepline,final,twoside]{scrbook}
+
+\usepackage{ifpdf}
+\usepackage{ifdraft}
+
+% define the type of the thesis: Studienarbeit/Diplomarbeit
+% (uncomment the appropriate type)
+\newcommand{\thethesis}[0]{%
+  Studienarbeit/Diplomarbeit
+}
+
+% find all usages of \field and replace the whole expression
+\newcommand{\field}[1]{%
+  {\itshape \{#1\}}
+}
+
+\ifoptiondraft{%
+  \usepackage[firsttwo,bottomafter]{draftcopy}
+}
+
+% include some useful packages
+\usepackage{scrtime}                          % gain access to time stamps
+\usepackage{scrpage2}                         % headers and footers
+\usepackage{makeidx}                          % support for makeidx
+\usepackage{array}                            % better table support
+\usepackage{multicol}                         % spanning columns
+\usepackage{multirow}                         % spanning rows
+
+% include right printer driver for graphicx
+\ifpdf
+  \usepackage[pdftex]{graphicx}
+  \pdfcompresslevel=9
+\else
+  \usepackage[dvips]{graphicx}
+\fi
+
+\usepackage{subfigure}
+\usepackage[ngerman,english]{babel}           % switch language
+\usepackage{float}                           
+\usepackage{nomencl}                          % list of abbreviations
+\usepackage{algorithmic}                      % typesetting of algorithms
+\usepackage[plain,chapter]{algorithm}         % typesetting of algorithms
+\usepackage{stfloats}                         % used to have footnotes at bottom of the page
+\usepackage[final]{listings}                  % typesetting of code listings 
+
+% define command \missing
+\newcommand{\missing}[1]{\,\,(\marginpar[\hfill!$\longrightarrow$]{$\longleftarrow$!}{\bfseries 
+    Missing:}\,\emph{#1})\,\,}
+\newcommand{\note}[1]{\marginpar[#1]{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% environment to typeset sub-figures
+\newbox\subfigbox
+\makeatletter
+        \newenvironment{subfloat}
+                {\def\caption##1{\gdef\subcapsave{\relax##1}}%
+                 \let\subcapsave\@empty
+                 \setbox\subfigbox\hbox
+                         \bgroup}
+                  {\egroup
+                 \subfigure[\subcapsave]{\box\subfigbox}}
+\makeatother
+
+% list of abbreviations
+\let\abbrev\nomenclature
+\renewcommand{\nomname}{List of Acronyms}
+\setlength{\nomlabelwidth}{.25\hsize}
+\renewcommand{\nomlabel}[1]{#1 \dotfill}
+\setlength{\nomitemsep}{-\parsep}
+\makeglossary
+\newcommand{\markup}[1]{\textbf{#1}}
+
+% define new style for TOC
+\makeatletter
+\renewcommand{\numberline}[1]{%
+        \makebox[0.9cm][l]{#1}\hspace{1mm}}
+\renewcommand{\l@chapter}[2]{%
+        \addvspace{2ex}%
+        \pagebreak[3]%
+        \noindent%
+        \makebox[0pt][l]{%
+        \rule[-3pt]{\textwidth}{0pt}}%
+        {\large\textsf{\textbf{#1}}}\hfill#2%
+        \par%
+        \nopagebreak%
+        \addvspace{1ex}%
+}
+\renewcommand{\l@section}[2]{%
+        \addvspace{0.5ex}%
+        \noindent\hspace{1cm}%
+        #1\dotfill#2%
+        \par%
+        \nopagebreak[2]%
+}
+\renewcommand{\l@subsection}[2]{%
+        \addvspace{0.2ex}%
+        \noindent\hspace{2cm}%
+        #1\dotfill#2%
+        \par%
+}       
+\makeatother
+
+% define new style for index 
+\makeatletter
+\newcommand*{\heading}[1]{%
+        \makebox[0pt][l]{%
+                \rule[-3pt]{\linewidth}{0pt}}%
+        \textsf{\textbf{\Large #1}}\hfill\nopagebreak\vspace{4pt}}
+\renewenvironment{theindex}{%
+        \setlength{\columnseprule}{0.4pt}
+        \setlength{\columnsep}{2em}
+        \begin{multicols}{2}[\chapter*{\indexname}]
+                \parindent\z@
+                \parskip\z@ \@plus .3\p@\relax
+                \let\item\@idxitem}%
+        {\end{multicols}\clearpage}
+\makeatother
+
+% page break
+\clubpenalty = 10000
+\widowpenalty = 10000
+
+% prepare generation of index
+\makeindex
+
+% put footnotes below floats at the bottom
+\fnbelowfloat
+
+\begin{document}
+
+\frontmatter
+\begin{titlepage}
+  
+  \begin{center}
+    
+    {\Huge \bf
+      \field{Title}\\
+    } 
+    
+    \vspace*{1cm}
+    \thethesis im Fach Informatik
+    \vspace{3cm}
+    
+    {\large vorgelegt von} \\
+    \vspace*{0.7cm}
+    {\Large \bf \field{Your name}} \\
+    \vspace*{0.7cm}
+    {\large geb. \field{Date of birth} in \field{Birthplace}} 
+    
+    \vspace{3cm}
+    
+    angefertigt am 
+
+    \vspace{1cm}
+    
+    {\bf 
+      Department Informatik \\
+      Lehrstuhl f\"ur Informatik 2\\
+      Programmiersysteme \\
+      Friedrich-Alexander-Universit\"at Erlangen--N\"urnberg \\
+      (Prof. Dr. M. Philippsen)
+      }
+    
+    \vspace{2cm}
+
+    Betreuer: \field{Tutor} 
+    
+    \vspace{1cm}
+    
+    Beginn der Arbeit: \field{Date} \\
+    Abgabe der Arbeit: \field{Date}
+    
+  \end{center}
+\end{titlepage}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+
+\thispagestyle{empty}
+\selectlanguage{ngerman}
+Ich versichere, dass ich die Arbeit ohne fremde Hilfe und ohne Benutzung
+anderer als der angegebenen Quellen angefertigt habe und dass die Arbeit in
+gleicher oder \"ahnlicher Form noch keiner anderen Pr\"ufungsbeh\"orde
+vorgelegen hat und von dieser als Teil einer Pr\"ufungsleistung angenommen
+wurde. Alle Ausf\"uhrungen, die w\"ortlich oder sinngem\"a\ss{} \"ubernommen
+wurden, sind als solche gekennzeichnet.
+
+\vspace{2cm}
+
+Der Universit\"at Erlangen-N\"urnberg, vertreten durch die Informatik 2
+(Programmiersysteme), wird f\"ur Zwecke der Forschung und Lehre ein einfaches,
+kostenloses, zeitlich und \"ortlich unbeschr\"anktes Nutzungsrecht an den
+Arbeitsergebnissen der \thethesis einschlie\ss{}lich etwaiger Schutzrechte und
+Urheberrechte einger\"aumt.
+
+\vspace{2cm}
+Erlangen, den \field{Date}
+
+\vspace{2cm}
+\field{Your name} \hfill \ 
+
+\vspace{0,5cm}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\pagenumbering{roman}
+
+\selectlanguage{english}
+\pagestyle{empty}
+\include{task}
+\pagestyle{headings}
+
+\pagenumbering{roman}
+\include{abstract}
+\clearpage{\pagestyle{plain}\cleardoublepage}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\listofalgorithms
+
+\mainmatter
+\include{chapter1}
+\include{chapter2}
+\include{chapter3}
+
+\manualmark
+\markleft{List of Acronyms}
+\markright{List of Acronyms}
+%\printglossary
+\cleardoublepage
+
+\markleft{Index}
+\markright{Index}
+\printindex
+
+\automark[chapter]{section}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

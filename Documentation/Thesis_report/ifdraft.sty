@@ -1,0 +1,119 @@
+% File:      ifdraft.sty
+% Version:   2005/10/05 v1.1
+% Author:    Heiko Oberdiek
+% Email:     <oberdiek@uni-freiburg.de>
+%
+% Function:  Switch for option draft.
+%
+% Copyright: Copyright (C) 1999, 2005 Heiko Oberdiek.
+%
+%            This work may be distributed and/or modified under
+%            the conditions of the LaTeX Project Public License,
+%            either version 1.3 of this license or (at your option)
+%            any later version. The latest version of this license
+%            is in
+%              http://www.latex-project.org/lppl.txt
+%            and version 1.3 or later is part of all distributions
+%            of LaTeX version 2003/12/01 or later.
+%
+%            This work has the LPPL maintenance status "maintained".
+%
+%            This Current Maintainer of this work is Heiko Oberdiek.
+%
+% Use:       \usepackage{ifdraft}
+%            \ifdraft{<draft case>}{<final case>}
+%            \ifoptiondraft{<option draft is given}%
+%                          {<option draft is not given}
+%            \ifoptionfinal{<option final is given}%
+%                          {<option final is not given}
+%
+%            If none of the options "draft" or "final" is used,
+%            then this package assumes "final" as default setting
+%            for \ifdraft. All classes that I know have this
+%            behaviour. (Otherwise you can find out with
+%            \ifoptiondraft and \ifoptionfinal, whether none of
+%            the options is set.)
+%
+%            If either "draft" or "final" is used, \ifdraft is
+%            enough to distinguish between these cases.
+%
+%            Both options "draft" and "final" should not be used
+%            at the same time. This is contradictionary input.
+%            Which option is more important? The result is
+%            unpredictable in general.
+%            * article, report, book, scrartcl, scrreprt, scrbook:
+%              draft, final -> "final" is effective.
+%              final, draft -> "final" is effective.
+%              "final wins, if given"
+%            * memoir:
+%              draft, final -> "draft" is effective.
+%              final, draft -> "draft" is effective.
+%              "you can forget final, draft wins if given anywhere"
+%            These classes evaluates the options in declaration order.
+%            Because the declaration order of these options in this
+%            package is not really interesting, this packages evaluates
+%            the options in the order specified in the calling commands:
+%            * ifdraft:
+%              draft, final -> \ifdraft selects final clause.
+%              final, draft -> \ifdraft selects draft clause.
+%              "latest option wins"
+%            Thus you know with \ifdraft the latest given option
+%            and you can emulate the behaviour of the different
+%            classes with the help of \ifoptiondraft and \ifoptionfinal.
+%
+%            Summary: \ifdraft is sufficient to deal with the
+%            normal use cases "one or none out of draft and final".
+%
+% Installation:
+%            CTAN location: CTAN:macros/latex/contrib/oberdiek/ifdraft.sty
+%            TDS location: TDS:tex/latex/oberdiek/ifdraft.sty
+%
+% History:   1999/12/28 v1.0:
+%              * first public release
+%              * LPPL 1.1
+%            2005/10/05 v1.1:
+%              * \ifoptiondraft and \ifoptionfinal added.
+%              * \ProcessOptions changed to \ProcessOptions*.
+%                (Order of given class options matters instead
+%                of the order of option declaration in this
+%                package.)
+%              * LPPL 1.3
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ifdraft}[2005/10/05 v1.1 Switch for option draft (HO)]
+
+\newif\if@draft
+\newif\if@option@draft
+\newif\if@option@final
+\DeclareOption{draft}{%
+  \@drafttrue
+  \@option@drafttrue
+}
+\DeclareOption{final}{%
+  \@draftfalse
+  \@option@finaltrue
+}
+\ProcessOptions*\relax
+
+\newcommand*{\ifdraft}{%
+  \if@draft
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+}
+\newcommand*{\ifoptiondraft}{%
+  \if@option@draft
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+}
+\newcommand*{\ifoptionfinal}{%
+  \if@option@final
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+}
+\endinput

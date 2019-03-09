@@ -1,0 +1,306 @@
+%\documentclass[a4paper,12pt,BCOR0mm,headsepline,draft,twoside]{scrbook}
+\documentclass[a4paper,12pt,BCOR0mm,headsepline,final,twoside]{scrbook}
+
+\usepackage{ifpdf}
+\usepackage{ifdraft}
+
+% define the type of the thesis: Studienarbeit/Diplomarbeit
+% (uncomment the appropriate type)
+\newcommand{\thethesis}[0]{%
+  Master Thesis
+}
+
+% find all usages of \field and replace the whole expression
+\newcommand{\field}[1]{%
+  {\itshape \{#1\}}
+}
+
+\ifoptiondraft{%
+  \usepackage[firsttwo,bottomafter]{draftcopy}
+}
+
+% include some useful packages
+\usepackage{scrtime}                          % gain access to time stamps
+\usepackage{scrpage2}                         % headers and footers
+\usepackage{makeidx}                          % support for makeidx
+\usepackage{array}                            % better table support
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{multicol}                         % spanning columns
+\usepackage{multirow}                         % spanning rows
+\usepackage{amsfonts}
+\usepackage{stmaryrd} % for jump in gradient symbol
+\usepackage{siunitx}
+\usepackage{amsmath, bm, bbm}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{relsize}
+\usepackage{enumitem}
+\usepackage[usenames, dvipsnames]{color}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[backend=biber,style=numeric,sorting=ynt]{biblatex}
+\addbibresource{task_1_ref.bib}
+\addbibresource{task_2_2_ref.bib}
+
+\renewcommand*{\bibfont}{\small}
+
+\usepackage[nottoc]{tocbibind}
+\usepackage[final]{graphicx}
+\graphicspath{{./images/}}
+
+\usepackage{tikz,pgfplots}
+\usetikzlibrary{spy}
+\pgfplotsset{table/search path={./data}} %checks in data folder
+\pgfplotsset{compat=newest}	%mention version to avoid warnings
+\pgfplotsset{every axis/.append style={
+                    label style={font=\small},
+                    legend style={font=\small, draw=none, fill=none},
+                    tick label style={font=\small}
+                    }}
+                    
+\usepackage{pgfplotstable}
+
+\DeclareMathOperator{\erf}{erf}
+\DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
+\newcommand{\seminorm}[1]{\left\lvert #1 \right\rvert}
+
+% include right printer driver for graphicx
+%\ifpdf
+%  \usepackage[pdftex]{graphicx}
+%  \pdfcompresslevel=9
+%\else
+%  \usepackage[dvips]{graphicx}
+%\fi
+
+\usepackage{caption}
+\usepackage{subcaption}
+%\usepackage[export]{adjustbox}
+
+\usepackage[ngerman,english]{babel}           % switch language
+\usepackage{float}                           
+\usepackage{nomencl}                          % list of abbreviations
+\usepackage[ruled,vlined,algochapter]{algorithm2e}
+%\usepackage{algorithmic}                      % typesetting of algorithms
+%\usepackage[ruled,chapter]{algorithm}         % typesetting of algorithms
+\usepackage{stfloats}                         % used to have footnotes at bottom of the page
+\usepackage[final]{listings}                  % typesetting of code listings 
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage[capitalise, noabbrev]{cleveref}
+\usepackage{xcolor}
+\hypersetup{
+  colorlinks   = true, %Colours links instead of ugly boxes
+  urlcolor     = red, %Colour for external hyperlinks
+  linkcolor    = blue, %Colour of internal links
+  citecolor    = red,  %Colour of citations
+  menucolor    = red
+}
+
+
+
+% define command \missing
+\newcommand{\missing}[1]{\,\,(\marginpar[\hfill!$\longrightarrow$]{$\longleftarrow$!}{\bfseries 
+    Missing:}\,\emph{#1})\,\,}
+\newcommand{\note}[1]{\marginpar[#1]{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% environment to typeset sub-figures
+\newbox\subfigbox
+\makeatletter
+        \newenvironment{subfloat}
+                {\def\caption##1{\gdef\subcapsave{\relax##1}}%
+                 \let\subcapsave\@empty
+                 \setbox\subfigbox\hbox
+                         \bgroup}
+                  {\egroup
+                 \subfigure[\subcapsave]{\box\subfigbox}}
+\makeatother
+
+% list of abbreviations
+\let\abbrev\nomenclature
+\renewcommand{\nomname}{List of Acronyms}
+\setlength{\nomlabelwidth}{.25\hsize}
+\renewcommand{\nomlabel}[1]{#1 \dotfill}
+\setlength{\nomitemsep}{-\parsep}
+\makeglossary
+\newcommand{\markup}[1]{\textbf{#1}}
+
+% define new style for TOC
+\makeatletter
+\renewcommand{\numberline}[1]{%
+        \makebox[0.9cm][l]{#1}\hspace{1mm}}
+\renewcommand{\l@chapter}[2]{%
+        \addvspace{2ex}%
+        \pagebreak[3]%
+        \noindent%
+        \makebox[0pt][l]{%
+        \rule[-3pt]{\textwidth}{0pt}}%
+        {\large\textsf{\textbf{#1}}}\hfill#2%
+        \par%
+        \nopagebreak%
+        \addvspace{1ex}%
+}
+\renewcommand{\l@section}[2]{%
+        \addvspace{0.5ex}%
+        \noindent\hspace{1cm}%
+        #1\dotfill#2%
+        \par%
+        \nopagebreak[2]%
+}
+\renewcommand{\l@subsection}[2]{%
+        \addvspace{0.2ex}%
+        \noindent\hspace{2cm}%
+        #1\dotfill#2%
+        \par%
+}       
+\makeatother
+
+% define new style for index 
+\makeatletter
+\newcommand*{\heading}[1]{%
+        \makebox[0pt][l]{%
+                \rule[-3pt]{\linewidth}{0pt}}%
+        \textsf{\textbf{\Large #1}}\hfill\nopagebreak\vspace{4pt}}
+\renewenvironment{theindex}{%
+        \setlength{\columnseprule}{0.4pt}
+        \setlength{\columnsep}{2em}
+        \begin{multicols}{2}[\chapter*{\indexname}]
+                \parindent\z@
+                \parskip\z@ \@plus .3\p@\relax
+                \let\item\@idxitem}%
+        {\end{multicols}\clearpage}
+\makeatother
+
+% page break
+\clubpenalty = 10000
+\widowpenalty = 10000
+
+% prepare generation of index
+\makeindex
+
+% put footnotes below floats at the bottom
+\fnbelowfloat
+
+\begin{document}
+
+\frontmatter
+\begin{titlepage}
+
+  \begin{center}
+    
+    {\Large \bf
+      \textbf{Modelling Instabilities in Magneto-elastic Membranes}\\
+    } 
+    
+    \vspace*{1cm}
+    \large{\thethesis} % \\ \textbf{Computational Engineering}}
+    \vspace{1cm}
+    
+    {\large vorgelegt von} \\
+    \vspace*{0.7cm}
+    {\Large \bf \text{Vinayak Balasaheb Gholap}} \\
+    \vspace*{0.7cm}
+    {\large \bf \text{Matrikelnummer: 22065422}} \\
+    \vspace*{0.7cm}
+    {\large geb. \text{01.11.1993} in \text{Pune, Indien}} 
+    
+    \vspace{1.5cm}
+    
+    angefertigt am 
+
+    \vspace{0.5cm}
+    
+    {\bf 
+      %Department  \\
+      Lehrstuhl f\"ur Technische Mechanik\\
+      Friedrich-Alexander-Universit\"at Erlangen--N\"urnberg \\
+      (Prof. Dr.-Ing. habil. Paul Steinmann)
+      }
+    
+    \vspace{1cm}
+    \begin{tabular}{rl}
+    Pr\"ufer:& Prof. Dr.-Ing. habil. Paul Steinmann \vspace{1cm} \\
+    
+    
+    Betreuer:& Dr. Jean-Paul Pelteret (FAU Erlangen, Germany)\\
+    		 & Asst. Prof. Prashant Saxena (University of Glasgow, UK) \vspace{1cm} \\    
+    
+   % Beginn der Arbeit: \field{Date} \\
+    Abgabe der Arbeit:& \today
+    \end{tabular}
+    
+  \end{center}
+  \includegraphics[width=2.5cm]{ltm.png}\hspace*{9cm}~\includegraphics[width=6cm]{logo_fau.jpg}
+\end{titlepage}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+
+\thispagestyle{empty}
+\selectlanguage{ngerman}
+Ich versichere, dass ich die Arbeit ohne fremde Hilfe und ohne Benutzung
+anderer als der angegebenen Quellen angefertigt habe und dass die Arbeit in
+gleicher oder \"ahnlicher Form noch keiner anderen Pr\"ufungsbeh\"orde
+vorgelegen hat und von dieser als Teil einer Pr\"ufungsleistung angenommen
+wurde. Alle Ausf\"uhrungen, die w\"ortlich oder sinngem\"a\ss{} \"ubernommen
+wurden, sind als solche gekennzeichnet.
+
+\vspace{2cm}
+
+Der Universit\"at Erlangen-N\"urnberg, vertreten durch die Lehrstuhl f\"ur Technische Mechanik, wird f\"ur Zwecke der Forschung und Lehre ein einfaches,
+kostenloses, zeitlich und \"ortlich unbeschr\"anktes Nutzungsrecht an den
+Arbeitsergebnissen der \thethesis einschlie\ss{}lich etwaiger Schutzrechte und
+Urheberrechte einger\"aumt.
+
+\vspace{2cm}
+Erlangen, den \today
+
+\vspace{2cm}
+\text{Vinayak Gholap} \hfill \ 
+
+\vspace{0,5cm}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\pagenumbering{roman}
+
+\selectlanguage{english}
+%\pagestyle{empty}
+%\include{task}
+%\pagestyle{headings}
+
+\pagestyle{empty}
+\include{Acknowledgments}
+\clearpage{\pagestyle{plain}\cleardoublepage}
+
+\pagenumbering{roman}
+\include{abstract}
+\clearpage{\pagestyle{plain}\cleardoublepage}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\listofalgorithms
+
+\mainmatter
+\pagestyle{scrheadings}
+\include{chapter1}
+\include{Task_1}
+\include{Task_2_1}
+\include{appendix1}
+
+\manualmark
+\markleft{List of Acronyms}
+\markright{List of Acronyms}
+%\printglossary
+\cleardoublepage
+
+\markleft{Index}
+\markright{Index}
+\printindex
+
+\automark[chapter]{section}
+%\bibliographystyle{plain}
+\printbibliography[heading=bibintoc]
+
+
+\end{document}
