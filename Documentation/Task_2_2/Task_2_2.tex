@@ -252,6 +252,7 @@ For given symmetric rank 2 tensors $\mathbf{A}$ and $\mathbf{B}$, we know: $\mat
 The fourth-order referential material elasticity tensor possess both major and minor symmetries, i.e. $\mathfrak{C} = C_{KLMN} = C_{MNKL} = C_{KLNM} = C_{LKMN}$.
 
 \section{Problem set up}
+\label{sec:problem_setup}
 
 \subsection{Set up for the magnetic field $\mathbb{H}$}
 Following the results obtained in Task 1 and Task 2.1, the problem set up for the coupled magneto-elasticity problem is updated in view of modelling the instabilities arising in the torus membrane. Same geometry of the axisymmetric torus membrane immersed in free space is used as in the Task 1 and Task 2.1.  \par 
@@ -804,6 +805,7 @@ with symmetric positive-definite matrix blocks. The matrix block $\mathbf{K}_{\p
 Another reduced-iteration CG solver was used with one of the three precondtioner to define the inverse operator for the Schur complement $\mathbf{S}^{-1}$. To pre-process the condensed right-hand side vector as mentioned in \Cref{alg:3.1}, the member function \textbf{condense\_schur_rhs()} of the class \textbf{LinearOperator} was employed. To post-process the solution update for the second field the member function \textbf{postprocess\_schur_solution()} was employed. Thus, in total two different iterative solvers with respective preconditioners were implemented within the Schur complement reduction method. An inner solver to compute $\mathbf{K}_{\phi \phi}^{-1}$ and an outer solver to compute $\mathbf{S}^{-1}$.
 
 \section{Test case and Results}
+\label{sec:unit_test_coup}
 A unit test was set up for the coupled problem with load application cycle mentioned in \Cref{sec:load_setup}. Referring to \Cref{fig:3.8.1}, the boundary along the axis of symmetry and the bottom horizontal boundary has a sliding constraint for the displacement field. We prescribe the top boundary with a negative magnetic potential and the bottom boundary with an equal magnitude positive magnetic potential, c.f. \Cref{fig:3.8.2}. A uniformly distributed mechanical traction load was applied on the top boundary of the unit cube. \par 
 
 \begin{figure}[h]
@@ -834,7 +836,7 @@ A unit test was set up for the coupled problem with load application cycle menti
 \centering
 \begin{tabular}[c]{|C{2cm}|C{5cm}|C{5cm}|}
 \hline
-\textbf{{Load step}} & \textbf{{Applied magnetic potential difference}} & \textbf{{Applied mechanical traction $\mathbf{t}^p$}} \\
+\textbf{{Load step}} & \textbf{{Applied magnetic potential difference}} & \textbf{{Applied mechanical traction $p_0$}} \\
 \hline
 25\% & 500 & 0 \\
 \hline
@@ -845,7 +847,7 @@ A unit test was set up for the coupled problem with load application cycle menti
 100\% & 1000 & 1e-2 \\
 \hline 
 \end{tabular} 
-\caption{Load values at different load steps}
+\caption{Load values at different load steps for coupled unit test problem}
 \label{tab:3.1}
 \end{table}
 
@@ -883,6 +885,7 @@ The constitutive law stated in \Cref{eq:3.5} was employed to describe the materi
 
 In reference to the resulting deformations at different load steps in \Cref{fig:3.9.1,fig:3.9.2}, in the first half cycle with the magnetic load application we observe the geometry undergoes compression. Due to the prescribed magnetic potentials at the top and bottom boundaries a vertically aligned magnetic field is generated as observed in \Cref{fig:3.8.3}. With no deformations in the initial reference configuration ($\mathbf{F} = \mathbf{C} = \mathbf{I}$ and $J = 1 \implies \Psi_0^{\text{elas}} = 0$) following \Cref{eq:3.5}, the S.E.F. ($M_0$) for high magnetic field $\mathbb{H}$ leads to a high negative S.E.F. Due to this effect the material softens and becomes less stiff at high magnetic loads. The material experiences a compressive load on the boundaries prescribed with the magnetic potential and this leads to a compression of the material. After the full magnetic load is applied, the material then experiences a tensile load due to the mechanical traction load applied on the top surface in the second half load cycle. For the considered material stiffness parameters, a small traction load is required to overcome the compression developed by the high magnetic load. Thus, the material extends back to its original form as observed in \Cref{fig:3.9.4}. \par 
 
+\subsection{Dependence of the material response on the direction of magnetic field}
 To test the dependence of the field $\mathbb{H}$ direction on the material response, the prescribed magnetic potential was reversed, i.e. a positive potential $\phi = +\overline{\phi}$ on the top boundary and a negative potential $\phi = -\overline{\phi}$ on the bottom boundary was prescribed as seen in \Cref{fig:3.10.1}. The resulting magnetic field direction in \Cref{fig:3.10.2} is opposite when compared to \Cref{fig:3.8.3}. It was observed that irrespective of the magnetic field direction the resulting material response remained unchanged. For the reversed field direction the material experienced same compression and resulted in same deformed states as observed in \Cref{fig:3.9}. This helps understand that the alignment of the resulting magnetic field w.r.t. the axisymmetric geometry is of importance rather than the direction in which it points. It also points out that the magnetic field leads to a compressive response of the magneto-elastic material for high magnetic loads. \par 
 
 \begin{figure}[h]
@@ -904,9 +907,292 @@ To test the dependence of the field $\mathbb{H}$ direction on the material respo
 \end{figure}
 
 \section{Torus membrane problem}
-With mechanical load applied first, followed by magnetic load. Results. Conclusion. \par 
+\label{sec:torus_problem}
 
-With magnetic load applied first, followed by mechanical load (to observe mechanically induced instabilities in the membrane). Results and conclusions.
+We now examine the coupled problem of the torus magneto-elastic membrane with the surrounding free space as mentioned in \Cref{sec:problem_setup}. The load application explained in \Cref{sec:load_setup} is to be considered unless another load application set up is mentioned. The membrane is modelled as a non-linear hyperelastic material employing the constitutive material model \Cref{eq:3.5} with coupling between the magnetic and the elastic quantities. We consider the neighbouring free space as a complaint elastic modelled with the same material model but with relatively low elastic stiffness. The material parameters considered for the membrane are $\mu = 3e^{4}$ Pa and $\nu = 0.4$, whereas the free space material parameters considered are $\mu = 3e^1$ Pa and $\nu = 0.3$. The quasi-static inflating traction load applied was $p_0 = 1500$ Pa. A high magnetic potential difference of $3.5e^5$ per unit length was prescribed in the first half of total load cycle. The load values at different load steps are mentioned in \Cref{tab:3.2}. \par     
+
+\begin{table}[ht]
+\centering
+\begin{tabular}[c]{|C{2cm}|C{5cm}|C{5cm}|}
+\hline
+\textbf{{Load step}} & \textbf{{Applied magnetic potential difference}} & \textbf{{Applied mechanical traction $p_0$}} \\
+\hline
+25\% & $1.75e^5$ & 0 \\
+\hline
+50\% & $3.5e^5$ & 0 \\
+\hline
+75\% & $3.5e^5$ & 750 \\
+\hline
+100\% & $3.5e^5$ & 1500 \\
+\hline 
+\end{tabular} 
+\caption{Load values at different load steps for torus magneto-elastic membrane with free space problem}
+\label{tab:3.2}
+\end{table} 
+
+\subsection{Deformations of the membrane under combined loads}
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.48\textwidth}
+\centering
+\includegraphics[width=0.85\textwidth]{coup_membrane_ls_50_disp.png}
+\caption{Half load (total magnetic load applied)}
+\label{fig:3.11.1}
+\end{subfigure}
+\begin{subfigure}{0.48\textwidth}
+\centering
+\includegraphics[width=0.8\textwidth]{coup_membrane_ls_100_disp.png}
+\caption{Full load (total magnetic and mechanical load)}
+\label{fig:3.11.2}
+\end{subfigure}
+\caption{Deformations of the membrane and neighbouring free space for coupled problem}
+\label{fig:3.11}
+\end{figure}
+
+We observe the deformed states of the domain at the end of the magnetic load application  in \Cref{fig:3.11.1} and at the end of the total magnetic and mechanical load application in \Cref{fig:3.11.2}, respectively. As found out from the unit test result in \Cref{sec:unit_test_coup}, on the application of high magnetic loads the material undergoes compression for the vertically aligned magnetic field. We observe a similar effect on the magneto-elastic membrane in the first half of total load cycle (linearly increasing magnetic load and zero mechanical load). The membrane undergoes finite deformations in the lateral and longitudinal directions. The centre of the membrane shifts by negligible magnitude along the radial direction. The membrane thickness also has negligible change at this state. The displacements in the membrane sections along the cylindrical co-ordinate axes direction are significantly high compared to the other sections. \par 
+In the second phase of loading, the membrane starts to inflate on the application of high inflating pressure load, c.f. \Cref{fig:3.11.2}. The applied high traction load overcomes the effect of the compressive forces developed by the magnetic load. The membrane expands back to a circular topology within first few traction application load steps. On further load application, the membrane then inflates to a larger radius. The torus minor radius at the end of total load application has increased from 0.195 m to $\approx$ 0.38 m. The centre of the torus has also shifted by a significant distance of 0.1 m to the right. The membrane thickness due to the large stretch has reduced from $5e^{-3}$ m to $\approx 2.8e^{-3}$ m. As was explained in the quasi-static finite strain elasticity results in Task 2.1, the deformations on the right half of the circular cross-section are relatively large compared to the left half. This is due to the dependence of $\mathbf{F}$ (component $F_{33}$) on the radial distance of the respective point from the axis of symmetry. \par 
+
+It is important to note that the current load values were chosen to demonstrate the finite deformations the membrane can undergo before the onset of any mechanical instability in the membrane (or the complaint free space). On further increasing the magnetic and mechanical pressure load, it was observed that either the Newton solver would not converge or we would observe material instability in the free space elements in close vicinity to the deforming membrane. \par 
+
+\subsection{Developed magnetic field inside the membrane}
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_membrane_field_ls_50.png}
+\caption{50\% of total load}
+\label{fig:3.12.1}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_membrane_field_ls_75.png}
+\caption{75\% of total load}
+\label{fig:3.12.2}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_membrane_field_ls_100.png}
+\caption{Total load}
+\label{fig:3.12.3}
+\end{subfigure}
+\caption{Resulting magnetic field $\mathbb{H}$ in \textbf{free space around magneto-elastic membrane} in second half of load cycle (constant (full) magnetic load and linearly increasing mechanical traction load)}
+\label{fig:3.12}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_mag_field_membrane_ls_50.png}
+\caption{50\% of total load}
+\label{fig:3.14.1}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_mag_field_membrane_ls_75.png}
+\caption{75\% of total load}
+\label{fig:3.14.2}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{coup_mag_field_membrane_ls_100.png}
+\caption{Total load}
+\label{fig:3.14.3}
+\end{subfigure}
+\caption{Resulting magnetic field $\mathbb{H}$ in \textbf{magneto-elastic membrane} in second half of load cycle (constant (full) magnetic load and linearly increasing mechanical traction load)}
+\label{fig:3.14}
+\end{figure}
+
+We now examine the developed magnetic field in the region close to the membrane in \Cref{fig:3.12} and within the membrane in \Cref{fig:3.14}. The magnetic field generated in the first half cycle after total magnetic potential is prescribed can be observed in \Cref{fig:3.12.1}. As seen in the representative load application cycle \Cref{tab:3.2}, in the second half cycle we do not further increase the applied magnetic load. Rather, the mechanical load application begins in the second phase of loading. From the results shown in \Cref{fig:3.12.2,fig:3.12.3} it is evident that the magnetic field inside the membrane, region enclosed within the membrane and surrounding the membrane increases. The increase in the magnetic field can be attributed to the self-magnetization of the magneto-elastic membrane as observed in \Cref{fig:3.14.2,fig:3.14.3}. The resulting magnetic field due to the self-magnetization of the membrane is aligned with the field generated by the application of potential $\phi$. This causes the effective field to increase and thus we observe an increased magnitude of the total magnetic field with no increase in external magnetic load. The magnetic field increase in magnitude after total magnetic and mechanical load application (100\% load) is two-folds compared to the field after the application of total magnetic load only (50\% load). \par 
+
+\subsection{Comparative study of deformations under two different load set ups}
+
+To demonstrate the finite deformations of the membrane for the considered loads of chosen values, we now study the deformations under a reversed load application cycle. Until now we have employed the method mentioned in \Cref{sec:load_setup} in \Cref{fig:3.6.2}. We shall refer to this as `Load set up 1'. We now consider another load application cycle with the mechanical load applied in initial phase followed by the magnetic load; here referred to as `Load set up 2'. We examine the deformed states of the magneto-elastic membrane under the two different load set ups. It is important to note that the magnitude of magnetic and the mechanical loads are kept same (as mentioned in \Cref{sec:torus_problem}) but the order of application of the respective loads is changed. The load values for `Load set up 2' are mentioned in \Cref{tab:3.3}. \par 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}[c]{|C{2cm}|C{5cm}|C{5cm}|}
+\hline
+\textbf{{Load step}} & \textbf{{Applied magnetic potential difference}} & \textbf{{Applied mechanical traction $p_0$}} \\
+\hline
+25\% & 0 & 750 \\
+\hline
+50\% & 0 & 1500 \\
+\hline
+75\% & $1.75e^5$ & 1500 \\
+\hline
+100\% & $3.5e^5$ & 1500 \\
+\hline 
+\end{tabular} 
+\caption{Load values for reversed load cycle in the torus magneto-elastic membrane with free space problem}
+\label{tab:3.3}
+\end{table} 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{torus_ls_25_mech_mag.pdf}
+\caption{25\% of total load}
+\label{fig:3.13.1}
+\end{subfigure}
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{torus_ls_50_mech_mag.pdf}
+\caption{50\% of total load}
+\label{fig:3.13.2}
+\end{subfigure}
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{torus_ls_75_mech_mag.pdf}
+\caption{75\% of total load}
+\label{fig:3.13.3}
+\end{subfigure}
+\begin{subfigure}{0.24\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{torus_ls_100_mech_mag.png}
+\caption{Total load}
+\label{fig:3.13.4}
+\end{subfigure}
+\caption{Comparison between deformed states of magneto-elastic membrane for two different (equal in magnitude) load application set ups}
+\label{fig:3.13}
+\end{figure}
+
+We observe the comparative results for the deformed states of the membrane at different load steps in \Cref{fig:3.13}. One can easily identify the differences in the results under different load set up from \Cref{fig:3.13.1,fig:3.13.2,fig:3.13.3}. It is interesting to point out that irrespective of the order in which one applies the loads (before any material instability is observed), the final deformed states for both the load set ups are exactly identical as observed in \Cref{fig:3.13.4}. The resulting stresses developed in the membrane under both the load set ups matched and also verified the correctness of the result observed in \Cref{fig:3.13.4}. For the `Load set up 2', it is evident that the applied magnetic load in second phase is not large enough to observe finite deformations of the new inflated membrane geometry. \par
+
+We compare the load-displacement history for two points on the membrane inner radius in \Cref{fig:3.15}. First point is at the position (1.095, 0) located at $\Theta = \ang{0}$ (on the right section of the membrane) and the second point of interest is at position (0.9, 0.195) located at $\Theta = \ang{90}$, both measured anti-clockwise respectively. Though the equilibrium paths for both the load set ups are different, the final displacements in both the cases are same. It is important to note that the equilibrium path in the second phase of loading in `Load set up 1' is linearly increasing, thus indicating that the observed large deformations are still in stable regime and that the elastic critical limit point at which the tangent stiffness approaches to zero, hasn't arrived yet. Thus, we do not observe any buckling instability for the considered load values. For the further instability modes study, we shall continue with the `Load set up 1' where the magnetic load is applied in first phase. \par  
+
+\begin{figure}[h]
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}
+\begin{axis}[
+xlabel = $\text{Displacement (L2 norm)}$,
+ylabel = $\text{Load step value}$,
+%grid =both,
+%grid style=dashed,
+%minor grid style ={gray!30},
+%major grid style ={gray!30},
+%width=0.8\linewidth,
+legend pos=north west,
+]
+\addplot[
+color=red,
+mark=x,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{mag_first_point_1.dat};
+\addlegendentry{Load set up 1}
+\addplot[
+color=blue,
+mark=+,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{mech_first_point_1.dat};
+\addlegendentry{Load set up 2}
+\end{axis}
+\end{tikzpicture}
+}
+\caption{Point 1 at $\Theta = \ang{0}$}
+\label{fig:3.15.1}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}
+\begin{axis}[
+xlabel = $\text{Displacement (L2 norm)}$,
+ylabel = $\text{Load step value}$,
+%grid =both,
+%grid style=dashed,
+%minor grid style ={gray!30},
+%major grid style ={gray!30},
+%width=0.8\linewidth,
+legend pos=north west,
+]
+\addplot[
+color=red,
+mark=x,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{mag_first_point_2.dat};
+\addlegendentry{Load set up 1}
+\addplot[
+color=blue,
+mark=+,
+mark size=2pt,
+line width=1pt,
+]
+table[x=Disp_norm,y=Load_value]{mech_first_point_2.dat};
+\addlegendentry{Load set up 2}
+\end{axis}
+\end{tikzpicture}
+}
+\caption{Point 2 at $\Theta = \ang{90}$}
+\label{fig:3.15.2}
+\end{subfigure}
+\caption{Equilibrium paths}
+\label{fig:3.15}
+\end{figure}
+
+\subsection{Study of unstable deformations of the membrane}
+
+The thickness of a structure affects the bending stiffness of the structure. Bending stiffness is the resistance offered by the structure against any bending deformation. It is a function of the elastic modulus \textit{E} of the structure and the second moment area (also known as area moment of inertia) \textit{I} of the structure cross-section about the axis of interest. Bending stiffness in beams is also termed as \textbf{Flexural rigidity}. Since the second moment area \textit{I} depends on the cross-section dimensions of the structure, thickness of the structure thus plays a role in observing the buckling unstable deformations of our interest. Thus, to study the membrane unstable deformations leading to the buckling of the membrane we consider a membrane of reduced thickness. The magneto-elastic membrane thickness was reduced by half to 0.0025 m. The corresponding membrane minor inner and outer radii are 0.195 m and 0.1975 m, respectively. The reduced thickness of membrane was spatially discretized into four elements along the thickness to get high accuracy of the results in the membrane when observing the buckling behaviour.  \par 
+
+The material parameters were taken as mentioned earlier in \Cref{sec:torus_problem}. For the results to be observed, an externally applied magnetic potential difference of $3e^5$ per unit length was considered and the traction load was set to $p_0 = 1500$ Pa. As mentioned earlier, the buckling deformations of our interest are observed for an established magnetic field $\mathbb{H}$ and with increasing large mechanical pressure loads \cite{Reddy2017,Reddy2018}. Therefore we consider the load set up with the magnetic potential application in first phase. \par 
+
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.3\textwidth}
+\centering
+\includegraphics[width=0.85\textwidth]{instab_test_1_before_failure.png}
+\caption{Before numerical failure}
+\label{fig:3.16.1}
+\end{subfigure}
+\begin{subfigure}{0.3\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{instab_test_1_membrane_inv_cells.png}
+\caption{After numerical failure}
+\label{fig:3.16.2}
+\end{subfigure}
+\begin{subfigure}{0.38\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{instab_test_1_membrane_disp.png}
+\caption{Zoomed view of inverted elements in membrane (top section at $\Theta = \ang{90}$)}
+\label{fig:3.16.3}
+\end{subfigure}
+\caption{Magneto-elastic membrane during numerical failure}
+\label{fig:3.16}
+\end{figure}
+
+We examine the results for the magneto-elastic membrane in \Cref{fig:3.16}. For the considered load values, material parameters and membrane thickness, we observe a numerical failure of the employed (direct coupled) solution method. The result in \Cref{fig:3.16.1} is at the end of the magnetic loading, i.e. end of the first phase of loading. The numerical failure observed in \Cref{fig:3.16.2} is at the first load step of the second phase of loading, i.e. the mechanical inflating pressure load application. The membrane appears to buckle at the large pressure applied in the first step on the new compressed (oval) geometry structure. The buckling of the membrane occurs at the sections located along the longitudinal axes at $\Theta = \ang{90}$ and $\Theta = \ang{270}$. On close examination of the elements in these sections, we observe inverted elements at the region near the kink in \Cref{fig:3.16.3}. \par 
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.4\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{instab_test_1_inv_cells.png}
+\caption{After numerical failure}
+\label{fig:3.17.1}
+\end{subfigure}
+\begin{subfigure}{0.58\textwidth}
+\centering
+\includegraphics[width=0.9\textwidth]{instab_test_1_free_space_inv_cells.png}
+\caption{Zoomed view of inverted elements in free space (top section at $\Theta = \ang{90}$)}
+\label{fig:3.17.2}
+\end{subfigure}
+\caption{Free space elements surrounding the membrane causing the numerical failure (white section is the cut-out membrane for better visualization purpose)}
+\label{fig:3.17}
+\end{figure}
+
+We now focus on the elements in the free space neighbouring the membrane where we observed numerical failure. It is important to note that the free space material is modelled as a very complaint elastic body with elastic stiffness relatively low compared to the membrane's stiffness. Observing \Cref{fig:3.17.2}, it is suspected that the cause of the numerical failure is the inversion of elements in the complaint free space with non-invertible deformation maps $\bm{\varphi}$. One can clearly observe the outer free space elements have intersected with the inner free space elements, thus crossing the membrane region (white cut-out section). The reason for this numerical failure is due to the direct solution of the coupled problem, solving for both the magneto-elastic membrane as well as the complaint free space together. Use of a segregated solution method can be motivated to overcome this failure in modelling buckling of the membrane. In the segregated approach, one splits the solution to the problem of deformable geometry (in our case the magneto-elastic membrane) from the mesh update of the surrounding free space. In the first stage, one would consider the degrees of freedom in membrane only and solve the coupled problem for finite deformations of the magneto-elastic body without considering the free space degrees of freedom. In the next stage, which is termed as \textbf{moving-mesh update} in literature \cite{bustamante2011numerical} and \cite{Pelteret2016} for the magneto-active polymers, one would then use the solution of the first stage coupled problem as the necessary inhomogeneous Dirichlet boundary conditions and solve another boundary value problem to compute a suitable deformation map $\bm{\varphi}$ in the free space $\mathcal{S}_0$. Such techniques were developed for problems in fluid mechanics and fluid-structure interaction problems where large deformations and moving domains, boundaries and interfaces are to be modelled accurately. Employing this staggered algorithm, one could then truly be able to move past the critical point of buckling as observed in above results for the failing simulations. Due to time restrictions to submit the thesis report, the work in the direction to implement such a mesh update algorithm could not be done and presented in this report. Readers interested to know more about the staggered approach are directed to \cite[see][Sec. 7]{Pelteret2016} and the references mentioned therein. \par 
 
 
 \newpage
