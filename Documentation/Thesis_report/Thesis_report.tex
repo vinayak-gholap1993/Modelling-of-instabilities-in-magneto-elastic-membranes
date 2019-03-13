@@ -1,5 +1,5 @@
 %\documentclass[a4paper,12pt,BCOR0mm,headsepline,draft,twoside]{scrbook}
-\documentclass[a4paper,12pt,BCOR0mm,headsepline,final,twoside]{scrbook}
+\documentclass[a4paper,12pt,BCOR0mm,headsepline,final,oneside]{scrbook}
 
 \usepackage{ifpdf}
 \usepackage{ifdraft}
@@ -65,6 +65,18 @@
 \DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
 \newcommand{\seminorm}[1]{\left\lvert #1 \right\rvert}
 
+\usepackage{breqn}
+\usepackage{empheq}
+\usepackage[most]{tcolorbox}
+
+{
+%\makeatletter
+% \renewcommand*\l@subsubsection{\@dottedtocline{5}{1cm}{1cm}}
+%\makeatother
+% section numbering depth
+%\setcounter{secnumdepth}{5} % seting level of numbering (default for "report" is 3). With ''-1'' you have non number also for chapters
+%\setcounter{tocdepth}{5} % if you want all the levels in your table of contents
+}
 % include right printer driver for graphicx
 %\ifpdf
 %  \usepackage[pdftex]{graphicx}
@@ -84,8 +96,7 @@
 %\usepackage{algorithmic}                      % typesetting of algorithms
 %\usepackage[ruled,chapter]{algorithm}         % typesetting of algorithms
 \usepackage{stfloats}                         % used to have footnotes at bottom of the page
-\usepackage[final]{listings}                  % typesetting of code listings 
-\usepackage{listings}
+%\usepackage[final]{listings}                  % typesetting of code listings 
 \usepackage{hyperref}
 \usepackage[capitalise, noabbrev]{cleveref}
 \usepackage{xcolor}
@@ -189,25 +200,25 @@
 
   \begin{center}
     
-    {\Large \bf
-      \textbf{Modelling Instabilities in Magneto-elastic Membranes}\\
+    {\LARGE \bf
+      \textbf{MODELLING OF INSTABILITIES IN MAGNETO-ELASTIC MEMBRANES}\\
     } 
     
-    \vspace*{1cm}
-    \large{\thethesis} % \\ \textbf{Computational Engineering}}
-    \vspace{1cm}
+    \vspace*{1.5cm}
+    {\Large{\textbf{\thethesis} \\in the study programme Computational Engineering}}
+    \vspace{1.5cm}
     
-    {\large vorgelegt von} \\
-    \vspace*{0.7cm}
+    {\large submitted by} \\
+    \vspace*{0.5cm}
     {\Large \bf \text{Vinayak Balasaheb Gholap}} \\
-    \vspace*{0.7cm}
-    {\large \bf \text{Matrikelnummer: 22065422}} \\
-    \vspace*{0.7cm}
-    {\large geb. \text{01.11.1993} in \text{Pune, Indien}} 
+    \vspace*{0.2cm}
+    {\large \bf \text{Matriculation number: 22065422}} \\
+    \vspace*{0.2cm}
+    {\large born on \text{01.11.1993} in \text{Pune, India}} 
     
     \vspace{1.5cm}
     
-    angefertigt am 
+    {\large performed at}
 
     \vspace{0.5cm}
     
@@ -220,18 +231,15 @@
     
     \vspace{1cm}
     \begin{tabular}{rl}
-    Pr\"ufer:& Prof. Dr.-Ing. habil. Paul Steinmann \vspace{1cm} \\
-    
-    
-    Betreuer:& Dr. Jean-Paul Pelteret (FAU Erlangen, Germany)\\
-    		 & Asst. Prof. Prashant Saxena (University of Glasgow, UK) \vspace{1cm} \\    
-    
+    \textbf{Examiner:}& Prof. Dr.-Ing. habil. Paul Steinmann \vspace{0.5cm} \\    
+    \textbf{Supervisors:}& Dr. Jean-Paul Pelteret (FAU Erlangen, Germany)\\
+    		 & Dr. Prashant Saxena (University of Glasgow, UK) \vspace{0.5cm} \\    
    % Beginn der Arbeit: \field{Date} \\
-    Abgabe der Arbeit:& \today
+    \textbf{Date of submission:}& \today
     \end{tabular}
     
   \end{center}
-  \includegraphics[width=2.5cm]{ltm.png}\hspace*{9cm}~\includegraphics[width=6cm]{logo_fau.jpg}
+  \includegraphics[width=4cm]{ltm.png}\hspace*{4cm}~\includegraphics[width=7.5cm]{logo_fau.jpg}
 \end{titlepage}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
@@ -264,15 +272,17 @@ Erlangen, den \today
 \pagenumbering{roman}
 
 \selectlanguage{english}
-%\pagestyle{empty}
-%\include{task}
-%\pagestyle{headings}
-
+{
+\pagestyle{empty}
+\include{task}
+\pagestyle{scrheadings}
+}
+\pagenumbering{roman}
 \pagestyle{empty}
 \include{Acknowledgments}
 \clearpage{\pagestyle{plain}\cleardoublepage}
 
-\pagenumbering{roman}
+
 \include{abstract}
 \clearpage{\pagestyle{plain}\cleardoublepage}
 
@@ -283,9 +293,10 @@ Erlangen, den \today
 
 \mainmatter
 \pagestyle{scrheadings}
-\include{chapter1}
+\include{Introduction}
 \include{Task_1}
 \include{Task_2_1}
+\include{Task_2_2}
 \include{appendix1}
 
 \manualmark
