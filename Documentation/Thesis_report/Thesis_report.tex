@@ -74,9 +74,10 @@
 % \renewcommand*\l@subsubsection{\@dottedtocline{5}{1cm}{1cm}}
 %\makeatother
 % section numbering depth
-%\setcounter{secnumdepth}{5} % seting level of numbering (default for "report" is 3). With ''-1'' you have non number also for chapters
+\setcounter{secnumdepth}{5} % seting level of numbering (default for "report" is 3). With ''-1'' you have non number also for chapters
 %\setcounter{tocdepth}{5} % if you want all the levels in your table of contents
 }
+
 % include right printer driver for graphicx
 %\ifpdf
 %  \usepackage[pdftex]{graphicx}
@@ -224,7 +225,7 @@
     
     {\bf 
       %Department  \\
-      Lehrstuhl f\"ur Technische Mechanik\\
+      Chair of Applied Mechanics (LTM)\\
       Friedrich-Alexander-Universit\"at Erlangen--N\"urnberg \\
       (Prof. Dr.-Ing. habil. Paul Steinmann)
       }
@@ -246,6 +247,10 @@
 
 \thispagestyle{empty}
 \selectlanguage{ngerman}
+\begin{center}
+\Large \textbf{Ehrenw\"ortliche Erkl\"arung / Declaration} \vspace{1cm}\\
+\end{center}
+
 Ich versichere, dass ich die Arbeit ohne fremde Hilfe und ohne Benutzung
 anderer als der angegebenen Quellen angefertigt habe und dass die Arbeit in
 gleicher oder \"ahnlicher Form noch keiner anderen Pr\"ufungsbeh\"orde
@@ -253,12 +258,16 @@ vorgelegen hat und von dieser als Teil einer Pr\"ufungsleistung angenommen
 wurde. Alle Ausf\"uhrungen, die w\"ortlich oder sinngem\"a\ss{} \"ubernommen
 wurden, sind als solche gekennzeichnet.
 
-\vspace{2cm}
+\vspace{1cm}
 
 Der Universit\"at Erlangen-N\"urnberg, vertreten durch die Lehrstuhl f\"ur Technische Mechanik, wird f\"ur Zwecke der Forschung und Lehre ein einfaches,
 kostenloses, zeitlich und \"ortlich unbeschr\"anktes Nutzungsrecht an den
 Arbeitsergebnissen der \thethesis einschlie\ss{}lich etwaiger Schutzrechte und
 Urheberrechte einger\"aumt.
+
+\vspace{1cm}
+
+I hereby declare formally that I have developed and written the enclosed thesis entirely by myself and have not used sources or means without declaration in the text. Any thoughts or quotations which were inferred from the sources are marked as such. This thesis was not submitted in the same or a substantially similar version to any other authority to achieve an academic grading.
 
 \vspace{2cm}
 Erlangen, den \today
@@ -272,19 +281,19 @@ Erlangen, den \today
 \pagenumbering{roman}
 
 \selectlanguage{english}
-{
-\pagestyle{empty}
-\include{task}
-\pagestyle{scrheadings}
-}
+%{
+%\pagestyle{empty}
+%\include{task}
+%\pagestyle{scrheadings}
+%}
 \pagenumbering{roman}
 \pagestyle{empty}
 \include{Acknowledgments}
 \clearpage{\pagestyle{plain}\cleardoublepage}
 
 
-\include{abstract}
-\clearpage{\pagestyle{plain}\cleardoublepage}
+%\include{abstract}
+%\clearpage{\pagestyle{plain}\cleardoublepage}
 
 \tableofcontents
 \listoffigures
@@ -297,6 +306,7 @@ Erlangen, den \today
 \include{Task_1}
 \include{Task_2_1}
 \include{Task_2_2}
+\include{Conclusion}
 \include{appendix1}
 
 \manualmark

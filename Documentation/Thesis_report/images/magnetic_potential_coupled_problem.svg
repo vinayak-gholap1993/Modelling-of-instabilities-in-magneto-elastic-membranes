@@ -3,37 +3,37 @@
     xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw"
     version="1.1" baseProfile="full">
     <g>
-        <g latexdraw:type="picture" id="id2087224713">
+        <g latexdraw:type="picture" id="id1366886834">
             <image
                 xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/Task_2_2/images/magnetic_potential.png"
                 x="280.0" y="40.0" height="666" width="535"/>
         </g>
-        <g latexdraw:type="text" id="id502456155" fill="#fc0707" latexdraw:position="bl">
-            <text x="445.00000000000006" y="752.8571428571429">$\phi = + \overline{\phi}$</text>
+        <g latexdraw:type="text" id="id790424260" fill="#fc0707" latexdraw:position="bl">
+            <text x="425.00000000000006" y="762.8571428571429">\Large{$\phi = + \overline{\phi}$}</text>
         </g>
-        <g latexdraw:type="text" id="id964933486" fill="#ff0c00" latexdraw:position="bl">
-            <text x="450.00000000000006" y="7.85714285714289">$\phi = -  \overline{\phi}$</text>
+        <g latexdraw:type="text" id="id618163113" fill="#ff0c00" latexdraw:position="bl">
+            <text x="430.00000000000006" y="12.85714285714289">\Large{$\phi = -  \overline{\phi}$}</text>
         </g>
-        <g latexdraw:type="joinedLines" id="id1005672584">
+        <g latexdraw:type="joinedLines" id="id1787706971">
             <polyline
                 points="464.51612903225805,735.483870967742 464.51612903225805,703.2258064516129 "
                 stroke-width="2.0" stroke="#f30c0c"
-                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1005672584)"/>
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1787706971)"/>
         </g>
-        <g latexdraw:type="joinedLines" id="id1103389197">
+        <g latexdraw:type="joinedLines" id="id707797075">
             <polyline
                 points="470.96774193548384,9.67741935483871 470.96774193548384,48.387096774193544 "
                 stroke-width="2.0" stroke="#f30c0c"
-                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-1103389197)"/>
+                latexdraw:rotationAngle="0.0" marker-end="url(#arrow1-707797075)"/>
         </g>
     </g>
     <defs>
-        <marker overflow="visible" orient="auto" id="arrow1-1005672584">
+        <marker overflow="visible" orient="auto" id="arrow1-1787706971">
             <path
                 d="M 0.0 0.0 L -4.652083333333334 1.6614583333333335 L -4.652083333333334 0.0 L -4.652083333333334 -1.6614583333333335 z "
                 latexdraw:arrSizeNum="2.0" fill="#f30c0c"/>
         </marker>
-        <marker overflow="visible" orient="auto" id="arrow1-1103389197">
+        <marker overflow="visible" orient="auto" id="arrow1-707797075">
             <path
                 d="M 0.0 0.0 L -4.652083333333334 1.6614583333333335 L -4.652083333333334 0.0 L -4.652083333333334 -1.6614583333333335 z "
                 latexdraw:arrSizeNum="2.0" fill="#f30c0c"/>
@@ -45,7 +45,7 @@
             <latexdraw:displayXScale>true</latexdraw:displayXScale>
             <latexdraw:displayYScale>true</latexdraw:displayYScale>
             <latexdraw:unit>CM</latexdraw:unit>
-            <latexdraw:zoom>1.55</latexdraw:zoom>
+            <latexdraw:zoom>0.95</latexdraw:zoom>
             <latexdraw:magneticGridStyle>CUSTOMISED</latexdraw:magneticGridStyle>
             <latexdraw:gridGap>5</latexdraw:gridGap>
             <latexdraw:magneticGrid>true</latexdraw:magneticGrid>

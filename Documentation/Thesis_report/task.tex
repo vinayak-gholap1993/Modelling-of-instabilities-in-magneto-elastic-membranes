@@ -1,11 +1,10 @@
 \begin{center}
 \Huge \bf Tasks
 \end{center}
-
+\label{sec:task_list}
 \begin{enumerate}
 \item[Task 1] Magneto-static magnetic scalar potential (MSP) formulation:
 \begin{enumerate}
-\item Literature survey on non-linear magneto-elasticity and its finite element modelling \cite{dorfmann2004, dorfmann2005, reddy_toroid, barham}
 \item Devise a method of modelling the thin tubular membrane toroidal geometry using the MSP formulation 
 \item Set up simulation code for the 3D and axisymmetric (2.5D) problem
 \item Validate the axisymmetric formulation 
@@ -13,9 +12,9 @@
 \item[Task 2] Quasi-static finite strain elasticity problem:
 \begin{enumerate}
 \item Understand and implement a quasi-static finite-strain elasticity problem for pure mechanical loads and deformations \cite{Pelteret2016a, Pelteret2012}
-\item Extend the application code from Task 1 for the axisymmetric formulation of the MSP problem to a coupled magneto-elastic problem known as a vector-valued problem
+\item Extend the application code from Task 1 to include finite elasticity
 \item Implement a constitutive material law considering the geometric and material non-linearity of an isotropic continuum elastic body \cite{Wriggers2008}
-\item Implement an iterative Newton method with (quasi-static linear) load incrementing algorithm to solve the non-linear system of equations for the vector-valued displacement solution
+\item Implement an iterative Newton method with (quasi-static linear) load incrementing algorithm to solve for the vector-valued displacements
 \item Test the developed code with mechanical test problems that exhibit finite deformations with instability/buckling characteristics
 \end{enumerate}
 \item[Task 3] Coupled magneto-elasticity problem:
@@ -25,9 +24,9 @@
 \item Implement a segregated iterative solver from the literature \cite{Benzi2005} to solve the coupled saddle point system
 \item Examine material behaviour at high mechanical and magnetic loads for material instability
 \end{enumerate}
-\item[Task 4] Path-following solution methods:
-\begin{enumerate}
-\item Literature survey of the path-following non-linear solvers \cite{Vasios, Wriggers2008, Riks1979, CRISFIELD1981}
-\item Implement the Arc-Length solver considering the Crisfield method
-\end{enumerate}
+%\item[Task 4] Path-following solution methods:
+%\begin{enumerate}
+%\item Literature survey of the path-following non-linear solvers \cite{Vasios, Wriggers2008, Riks1979, CRISFIELD1981}
+%\item Implement the Arc-Length solver considering the Crisfield method
+%\end{enumerate}
 \end{enumerate}

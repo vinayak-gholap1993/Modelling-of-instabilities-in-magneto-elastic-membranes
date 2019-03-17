@@ -211,7 +211,7 @@ The term $\mathbf{R}$ refers to the higher-order truncated terms. The linear par
 \mathbf{L} \left[ \mathbf{G} \right]_{\mathbf{x} = \overline{\mathbf{x}}} = \mathbf{G}(\overline{\mathbf{x}}) + D \mathbf{G}(\overline{\mathbf{x}}) \cdot \Delta\mathbf{x}.
 \end{equation} 
 Thus, the first-order Taylor series expansion corresponds to the linearisation of the weak form in the finite element applications. 
-\subsection{Linearisation of Kinematical quantity}
+\subsection{Linearisation of kinematical quantity}
 The linearisation of the variation of Green-Lagrange strain tensor is 
 \begin{equation}
 \mathbf{L}\left[ \mathbf{E} \right] = \mathbf{E}(\overline{\bm{\varphi}}) + D \mathbf{E}(\bm{\varphi}) \cdot \Delta \mathbf{u},
@@ -223,7 +223,7 @@ D \mathbf{E}(\bm{\varphi}) \cdot \Delta\mathbf{u} = \dfrac{1}{2} \left[ \Delta(\
 \label{eq:2.18}
 \end{equation}
 with $\Delta\mathbf{E}$ being the increment of the Green-Lagrange deformation tensor.
-\subsection{Linearisation of Constitutive equation}
+\subsection{Linearisation of constitutive equation}
 The constitutive equation for the hyperelastic Neo-Hookean material model in \Cref{sec:const_law} was derived in terms of the right Cauchy-Green deformation tensor $\mathbf{C}$ and thus the second Piola-Kirchhoff stress tensor also depends on $\mathbf{C}$. The linearisation of $\mathbf{S}$ is
 \begin{align}
 \mathbf{L}\left[ \mathbf{S} \right]_{\bm{\varphi} = \overline{\bm{\varphi}}} \ &= \ \mathbf{S}(\overline{\bm{\varphi}}) + D \mathbf{S}(\bm{\varphi}) \cdot \Delta\mathbf{u} \nonumber \\
@@ -397,7 +397,7 @@ u_{z, R} & (1 + u_{z, Z}) & 0 \\
 \end{bmatrix}.
 \label{eq:2.26}
 \end{equation}
-This results in a $2^{nd}$ order $[(dim + 1) \times (dim + 1)]$ tensor $\mathbf{F}$ in a $dim = 2$ dimensional problem (axisymmetric).  Further, the derived quantities using the deformation gradient $\mathbf{F}$ such as second Piola-Kirchhoff stress $\mathbf{S}$ and Green-Lagrange strain $\mathbf{E}$ are also $3 \times 3$ tensors whereas the fourth order material elasticity tensor $\mathfrak{C}$ is a $3 \times 3 \times 3 \times 3$ tensor in a 2D axisymmetric problem.
+This results in a $2^{nd}$ order $[(dim + 1) \times (dim + 1)]$ tensor $\mathbf{F}$ in a $dim = 2$ dimensional problem (axisymmetric).  Further, the derived quantities using the deformation gradient $\mathbf{F}$ such as second Piola-Kirchhoff stress $\mathbf{S}$ and Green-Lagrange strain $\mathbf{E}$ are also $3 \times 3$ tensors whereas the fourth order material elasticity tensor $\mathfrak{C}$ is a $3 \times 3 \times 3 \times 3$ tensor in a 2.5D axisymmetric problem.
 
 \subsection{Data structures employed}
 \subsubsection{Constitutive material model (CMM)}
@@ -425,7 +425,7 @@ Jacobian & $J$ & - \\
 \label{tab:2.1}
 \end{table}
 
-\subsubsection{Local Quadrature point history data (LQPH)}
+\subsubsection{Local quadrature point history data (LQPH)}
 A data structure to store data items at each local quadrature point was used and adapted to our needs from \cite{Pelteret2012}. This data structure stores a pointer (in our case a std$::$shared\_ptr) to the CMM object at each quadrature point. It also stores the material quantities evaluated at the quadrature point such as the deformation gradient $\mathbf{F}$, the second Piola-Kirchhoff stress and the fourth order material elasticity tensor $\mathfrak{C}$. This data structure is provided with two functionalities: first, to initialize each cell of $q$ number of quadrature points with $q$ copies of this object and set-up the CMM object data at each of these $q$ points with user input material quantities such as shear modulus $\mu$ and Poisson's ratio $\nu$. Secondly, update the CMM object using the computed kinematic quantity such as $\mathbf{F}$ from the current solution state. The LQPH data structure also provides ``getter" functions to access the current values of quantities such as $\mathbf{F}, \mathbf{S} \ \text{and} \ \mathfrak{C}$ that can be directly accessed, for e.g., during the assembly of the system matrix and R.H.S. vector.\par 
 Using a generic data structure implementation one can have different material models with individual material property values for $\mu$ and $\nu$ in different regions of the simulation domain. For example, in our modelling case for the quasi-static compressible finite strain elasticity problem, we model the torus-shaped magneto-elastic membrane along with the surrounding free space (through which the magnetic field permeates). Both, the free space and membrane, are considered to be composed of an elastic material. In this scenario one can employ separate material models for the free space and the magneto-elastic membrane and also use comparative values for the material parameters $\mu$ and $\nu$ (e.g. use low stiffness parameter to idealize the free space as a very complaint elastic solid). 
 
@@ -433,7 +433,7 @@ Using a generic data structure implementation one can have different material mo
 Within the scope of finite strain elasticity, in order to capture the non-linear material behaviour undergoing finite deformations for large loads using a non-linear solver such as Newton Raphson method, it is necessary to apply the total load in small increments considering the quadratic convergence of the Newton Raphson method when near the solution point. Thus, one needs to control the applied load in each load step and such a method is called a load controlled Newton Raphson method. Here, we consider a uniformly increasing load in each load step with a constant load step size. User input parameters taken are the total load $\mathbf{F}_{ext}$ to be applied at the end of the load cycle and the load step size $\Delta \mathbf{F}_{ext}$ that is applied in each of these load steps. \par 
 The data structure implemented for the load stepping stores the current load step number, current load value, final/total load to be applied $\mathbf{F}_{ext}$ and the increment of the load $\Delta \mathbf{F}_{ext}$ in each load cycle. Use of this data structure can be observed in \Cref{alg:2.1} at the first algorithmic loop. Once the Newton Raphson solver has converged (arrived at the equilibrium state of the continuum body) for the applied load increment, the load step data structure increments the current load step number and the current applied load.
  
-\section{Test models and Results}
+\section{Test models and results}
 
 \subsection{Unit testing with CTest}
 For consistency checks and reproducibility of the results of the different implementation steps, various unit tests were set up. A \textbf{unit test} is a software testing method to test an individual module (in object-oriented programming, a function or a class) to determine whether it is fail-proof and thus fit to use. Unit tests are short code fragments written by a software developer to test the individual blocks of the software and benchmark the functioning of the unit block during a software development cycle. The primary goal of unit testing is to find problems in the early stage of the development cycle. This is performed by isolating individual parts of the program and show that these individual parts function correctly and continue to function properly through the software development cycle. We employ one such testing tool, \href{https://gitlab.kitware.com/cmake/community/wikis/doc/ctest/Testing-With-CTest}{CTest}, that is distributed as a part of CMake build process application. \par 
@@ -463,7 +463,7 @@ Tests with different geometries and loading and boundary conditions were set up 
 
 We consider an axisymmetric geometry with unit cube cross section which is discretized into nine elements, cf. \Cref{fig:2.1.1}. To check for the discretization error in the numerical solution using a selected finite element, we also have a distorted grid with the grid points in the interior of mesh distorted in a random way, cf. \Cref{fig:2.1.2}. The hyperelastic Neo-Hookean material model as given in \Cref{eq:2.2} was considered for the patch material. The material parameters chosen for this test were $\mu = 3e^{-2}$ Pa and $\nu = 0.4$. The considered boundary conditions are: homogeneous Dirichlet boundary condition on the boundary along the axis of symmetry (boundary id = 0) and inhomogeneous Dirichlet boundary condition (tensile load) on boundary id = 1. The prescribed displacement of $0.1 $m was applied in a uniformly increasing step of $0.025 $m. Lagrange finite elements with bi-linear and bi-quadratic shape functions were employed for this patch test. One h-adaptive mesh refinement cycle was performed to compare the quality of solution between the coarse mesh and once h-adaptively refined mesh for the distorted grid geometry. \par 
 
-\begin{figure}[h]
+\begin{figure}[h!]
 \centering
 \begin{subfigure}[b]{0.35\textwidth}
 \centering
@@ -574,7 +574,7 @@ where $h_k$ is taken to be the greatest length of the diagonals of the cell K, $
 
 \Cref{alg:2.2} highlights the procedure one carries out to perform h-adaptive mesh refinement. We employ the \textbf{SOLVE-ESTIMATE-MARK-REFINE} cycle for adaptive refinement. In the solve phase we assemble the linear system of equations and solve it on the coarse/current mesh. By use of heuristically derived error estimator such as the Kelly error estimator, we estimate the error on each cell of the mesh. In the mark phase, following some chosen strategy we mark the cells with largest error for refinement and coarsening. In the last phase, we refine and coarsen the marked cells and continue this iterative procedure for a user selected number of refinement cycles. More details of the refinement procedure with the mathematical foundations for the error estimator and the different marking strategies one can employ can be found in \cite[Chapter 4]{Gholap_project}. \par 
 
-\begin{algorithm}[h]
+\begin{algorithm}[h!]
 \begin{enumerate}
 \item Start with the coarse mesh
 \item Solve on this mesh
@@ -700,6 +700,13 @@ table[x=Disp_norm,y=Load_value]{crisfield_beam_eq_path.dat};
 
 The results using the Newton-Raphson solution method for the solution of the non-linear test models are presented in \Cref{fig:2.15}. The resulting load-displacement plots, also known as the equilibrium path, for the point $(0, 0.27)$ in the hooped beam test and the point $(0, 100)$ in the crisfield beam test are depicted in \Cref{fig:2.16} (lower edge points on the boundary along the axis of symmetry). For the hooped beam test, as observed in \Cref{fig:2.16.1}, in the early stages of loading, for each load increment of size $7.5e^{-7}$ N there is a proportional increase in the resulting displacement. We observe a linear relation between the load and displacement in this stage which one can identify as the initial linear response of a hyperelastic material. After a certain load limit is reached, we observe for a small load increment a resulting large displacement identified by the jumps in the cross marked points in the zoomed view in \Cref{fig:2.16.1}. This is also clearly observable in the results of \Cref{fig:2.15.1}. Between the load step number 134 and 135 corresponding to the zoomed region of interest, the structure undergoes a sudden large deformation for a small increment in the applied load. A similar result is also observed for the crisfield beam test in the early stages of loading cycle. The large jump in the displacement from $\approx 1.3$ m to $\approx 4.3$ m for a small increment of load of size $1e^{-6}$ N in \Cref{fig:2.16.2} indicates that the structure has undergone unstable deformation. This significantly large displacement is clearly illustrated in \Cref{fig:2.15.2} between the load step 10 and 11. This work softening of the structure is due to the reduced material stiffness after reaching a certain limit load point that leads to material instability and buckling. \par 
 
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.6\textwidth]{newton_method_failure.png}
+\caption{Failure of Newton's method to accurately capture the solution after a limit point is reached \cite{Vasios}}
+\label{fig:2.17}
+\end{figure}
+
 \begin{figure}[ht!]
 \centering
 \begin{subfigure}[b]{0.49\textwidth}
@@ -754,14 +761,8 @@ The results using the Newton-Raphson solution method for the solution of the non
 
 As observed in both the \Cref{fig:2.16.1,fig:2.16.2} in the region of interest near the limit point, the tangent to the equilibrium path, also known as the tangent stiffness, approaches to zero. As already pointed out in the literature \cite{Riks1979}, \cite{CRISFIELD1981} and \cite{Vasios}, a major drawback of the employed Newton's method is the failure of the method to accurately follow the equilibrium path once the tangent stiffness reaches zero. This happens due to the formulation of Newton's method, and in particular that it restricts the load parameter to change monotonically in every increment \cite{Vasios}. This problem is better visualized in \Cref{fig:2.17}. The jump from one stable point to another without following the actual unstable buckling path is clearly identified in the result for the crisfield beam equilibrium path in \Cref{fig:2.16.2}. Thus, the failure of the Newton method after the limit point was verified by our tests and it should be noted that the method was not able to capture the material instability resulting in incorrect deformations after the limit point. Employing a robust non-linear path-following solution method from the literature \cite{CRISFIELD1981} (such as the Arc-Length method) can be seen as the logical extension to study the instability behaviour of such structures. \par 
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.6\textwidth]{newton_method_failure.png}
-\caption{Failure of Newton's method to accurately capture the solution after a limit point is reached \cite{Vasios}}
-\label{fig:2.17}
-\end{figure}
-
-\section{Finite deformations of torus membrane with free space}
+\newpage
+\section{Numerical results for the finite deformations of torus membrane with free space}
 For the geometry of our interest as observed in \Cref{fig:2.7.1}, we now study the elastic finite deformations of the torus magneto-elastic membrane with initial circular cross-section under a quasi-static inflating pressure load. The membrane is modelled as a non-linear elastic material employing the hyperelastic Neo-Hookean material model, cf. \Cref{eq:2.2}. The material parameter values for the magneto-elastic membrane were taken as $\mu = 3e^4$ Pa, $\nu = 0.4$. The surrounding free space (vacuum) through which the magnetic field $\mathbb{H}$ permeates is also modelled as a relatively less stiff elastic material, employing the same Neo-Hookean material model but with different material parameter values of $\mu = 3e^{-2}$ Pa and $\nu = 0.3$. Employing the total Lagrangian formulation, the inflating pressure load was applied on the undeformed/reference domain in uniformly increasing load steps as:
 
 \begin{equation}
@@ -893,16 +894,16 @@ The resulting element averaged Cauchy stress components can be observed in \Cref
 For appropriate modelling of the membrane and free space with considered assumptions, it is necessary that we choose the material values for the free space such that we can closely approximate our free space material as being a compliant solid with negligible stiffness and thus exerting negligible loads on the inflating elastic torus membrane geometry of our interest. For values of $\mu < 3e^{-2}$ Pa, we observed negligible differences in the resulting deformed states and stress when compared to the results for the value of $\mu = 3e^{-2}$ Pa. Thus, a chosen value of $\mu \approx 3e^{-2}$ Pa can be considered as appropriate to model the free space. \par 
 
 \section{Extensions planned for coupled problem}
-The planned extensions for the next task are introducing the coupled problem and multi-physics employing a material model for the magneto-elastic material of our interest. The to be considered Neo-Hookean material model for the magneto-elastic material is given as
+The planned extensions for the next chapter are introducing the coupled problem and multi-physics employing a material model for the magneto-elastic material of our interest. The to be considered Neo-Hookean material model for the magneto-elastic material is given as
 \begin{equation}
 \Psi \equiv \dfrac{\mu}{2} [\mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} - 2 \ln J] + \dfrac{\lambda}{2} (\ln J)^2 \textcolor{red}{- \dfrac{\mu_0 \mu_r}{2} \left[ J \ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right]}.
 \end{equation}
-The additional highlighted term takes into account the energy stored in the body due to applied external magnetic load $\mathbb{H}$ and the response of the coupled interaction between the displacement field and the magnetic field. The loads to be applied would be the uniformly distributed inflating pressure load on the inner interface of the torus membrane and the static magnetic field as mentioned in the results of previous Task 1. Furthermore, we would then consider the solution field to be comprised of two blocks, the scalar magnetic potential $\phi$ and the vector-valued displacement field $\mathbf{u}$. The corresponding linear algebra concepts for such a multi-physics problem are mentioned in further sections.
+The additional highlighted term takes into account the energy stored in the body due to applied external magnetic load $\mathbb{H}$ and the response of the coupled interaction between the displacement field and the magnetic field. The loads to be applied would be the uniformly distributed inflating pressure load on the inner interface of the torus membrane and the static magnetic field as mentioned in the results of previous Chapter 2. Furthermore, we would then consider the solution field to be comprised of two blocks, the scalar magnetic potential $\phi$ and the vector-valued displacement field $\mathbf{u}$. The corresponding linear algebra concepts for such a multi-physics problem are mentioned in further sections.
 
-\subsection{Vector-valued problem} 
+\subsection*{Vector-valued problem} 
 The solution in the elasticity problem discussed here is not just a single scalar function but has displacements $\mathbf{u} := \left\lbrace u_x, u_y, u_z \right\rbrace^T$ in each euclidean direction, thus we have a vector system which is a set of scalar functions and thus is also addressed as \textit{vector-valued solution}. When considering the coupled magneto-elastic problem, the resulting vector-valued solution has elements $\left\lbrace \phi, u_x, u_y, u_z \right\rbrace^T$. These elements of the vector-valued solution can be grouped into \textit{blocks}, where for the coupled magneto-elastic problem we have two blocks at each global degree of freedom in the finite element mesh, one block for the magnetic scalar potential function $\phi$ and the second block for the vector displacement function $\mathbf{u}$ with three individual components $u_x, u_y, u_z$ in 3D. This way one is able to access all the components/elements of the vector field such as displacement together without splitting them into their individual components. 
 
-\subsection{Block linear algebra} 
+\subsection*{Block linear algebra} 
 Use of the block structure also proves advantageous in terms of linear algebra and solution methods. One can think of the global linear system of equation $\mathbf{A}\mathbf{x} = \mathbf{b}$ as
 \begin{equation*}
 \begin{bmatrix}
@@ -921,7 +922,7 @@ Use of the block structure also proves advantageous in terms of linear algebra a
 \end{equation*}
 where $\phi$ and $\mathbf{u}$ are the values of the scalar magnetic potential field and the displacement field. $\mathbf{A}_{\phi\phi}$ denotes the matrix contributions arising from the linearisation of the magnetic problem and $\mathbf{A}_{\mathbf{u}\mathbf{u}}$ describes the tangent matrix contribution from the elasticity problem. $\mathbf{A}_{\phi \mathbf{u}}$ and $\mathbf{A}_{\mathbf{u} \phi}$ are the coupled interaction contributions. One can solve the complete system considering as a single unit which can be convenient for the assembly of the matrix and right-hand-side vector for some class of problems. When employing the Gauss elimination rather than solving the problem monolithically, depending upon the properties of the (block) matrices for individual problem, one can then define individual preconditioners that best suite the operators present in the system of equations rather than defining a single preconditioner for the global matrix $\mathbf{A}$.
 
-\subsection{Vector-valued Finite Elements} 
+\subsection*{Vector-valued finite elements} 
 We shall consider here in all the discussions only \textit{primitive finite elements}. A finite element is said to be primitive if there is a unique relation from the shape function number to the vector component of the vector-valued element. This means for a primitive element we have exactly one non-zero component for each shape function of the vector-valued element. The Lagrangian elements that we shall employ are primitive elements. For the considered vector-valued coupled magneto-elastic problem we build the vector-valued finite element from simpler base elements using tensor product of the base elements. We take multiple simple elements (eg. scalar linear Lagrange elements $Q_1$) and connect them to have an element with more than one block. For the vector-valued displacement field in 2D, we can construct a vector-valued finite element using two $Q_1$ elements (each constituting to a single component $u_x$ and $u_y$) to form using a tensor product $Q_1 \times Q_1$ element with two components. This will form a single block in our coupled problem where the second block for the scalar magnetic potential will have only a single component such as a quadratic element $Q_2$. Thus, the vector-valued element we shall employ, for e.g., can be represented in block form as ($Q_1 \times Q_1, Q_2$) which will have in total $\text{dim}+1$ individual components in 2D as [$u_x, u_y, \phi$]. \newline 
 
 
