@@ -29,7 +29,7 @@ where $\overline{b}$ is the prescribed magnetic flux on the far-field boundary.
 
 \section{Constitutive material model for coupled problem}
 \label{sec:const_law_coupled}
-The material response is characterised by a Helmholtz free energy density function. For the considered magneto-elastic material, in addition to the dependence on the deformation gradient $\mathbf{F}$ and the Jacobian $J$ (as already seen in quasi-static finite strain compressible elasticity, Chapter 3), the free energy density function now also depends on the referential magnetic vector field. The strain energy function (S.E.F.) is given as: 
+The material response is characterised by a Helmholtz free energy density function. For the considered magneto-elastic material, in addition to the dependence on the deformation gradient $\mathbf{F}$ and the Jacobian $J$ (as already seen in quasi-static finite strain compressible elasticity, Chapter 3), the free energy density function now also depends on the referential magnetic vector field. The strain energy function (S.E.F.) is given as 
 \begin{equation}
 \Psi = \widetilde{\Psi} (J, \mathbf{F}, \mathbb{H}) = \Psi (J, \mathbf{C}, \mathbb{H}).
 \label{eq:3.1}
@@ -49,12 +49,12 @@ which is termed as the alternative formulation in \cite{dorfmann2004}. With $\ma
 J^{-1} \mathbf{C} \cdot \mathbb{B} = \mu_0 \left[ \mathbb{H} + \mathbb{M} \right].
 \label{eq:3.3.2}
 \end{equation}
-The magnetization vector field exists only in the solid magneto-elastic material and vanishes in the free space. $\mathbb{B}$ is given by another constitutive relation as \cite{dorfmann2004}: 
+The magnetization vector field exists only in the solid magneto-elastic material and vanishes in the free space. $\mathbb{B}$ is given by another constitutive relation as \cite{dorfmann2004} 
 \begin{equation}
 \mathbb{B} = -\dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}}.
 \label{eq:3.4}
 \end{equation}
-The S.E.F corresponding to a compressible coupled magneto-elastic Neo-Hookean material is given as: 
+The S.E.F corresponding to a compressible coupled magneto-elastic Neo-Hookean material is given as 
 \begin{align}
 \Psi (J, \mathbf{C}, \mathbb{H}) &= \dfrac{\mu}{2} \left[ \mathbf{C} : \mathbf{I} - \mathbf{I} : \mathbf{I} -2 \ln J \right] + \dfrac{\lambda}{2} (\ln J)^2 \textcolor{red}{- \frac{\mu_0 \mu_r}{2} [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}, \\
 &= \Psi^{\text{elas}} (\mathbf{C}) + \mu_r M_0 (J, \mathbf{C}, \mathbb{H}), \\
@@ -70,10 +70,10 @@ The second Piola-Kirchhoff stress $\mathbf{S}$ for the considered S.E.F. as stat
 \end{align*}
 Side calculation 1:
 \begin{align*}
-\dfrac{\partial [\mathbf{C} : \mathbf{I}]}{\partial \mathbf{C}} &= \mathbf{I} \\ 
-\dfrac{\partial \ln J}{\partial \mathbf{C}} &= \dfrac{1}{J} \dfrac{\partial J}{\partial \mathbf{C}} \\
-\dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} &= 2 \ \ln J \ \dfrac{\partial \ln J}{\partial \mathbf{C}} \\
-\dfrac{\partial J}{\partial \mathbf{C}} &= \dfrac{1}{2} J \mathbf{C}^{-1} \ \  \text{c.f. \cite[see][page 46 Equation (3.124)]{Wriggers2008}}
+\dfrac{\partial [\mathbf{C} : \mathbf{I}]}{\partial \mathbf{C}} &= \mathbf{I}, \\ 
+\dfrac{\partial \ln J}{\partial \mathbf{C}} &= \dfrac{1}{J} \dfrac{\partial J}{\partial \mathbf{C}}, \\
+\dfrac{\partial (\ln J)^2}{\partial \mathbf{C}} &= 2 \ \ln J \ \dfrac{\partial \ln J}{\partial \mathbf{C}}, \\
+\dfrac{\partial J}{\partial \mathbf{C}} &= \dfrac{1}{2} J \mathbf{C}^{-1} \ \  \text{c.f. \cite[see][page 46 Equation (3.124)]{Wriggers2008}}.
 \end{align*}
 \begin{align*}
 \mathbf{S} &= \mu \mathbf{I} -  \mu \mathbf{C}^{-1} + \lambda \ln J \mathbf{C}^{-1} - \mu_0 \mu_r \dfrac{\partial [J \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbf{C}}
@@ -100,7 +100,7 @@ c.f. \cite[see][page 519]{Wriggers2008}:
 \label{eq:3.6}
 \end{empheq}
 
-The referential magnetic induction vector field is given as:
+The referential magnetic induction vector field is given as
 \begin{align*}
 \mathbb{B} &= - \dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}} = - \dfrac{\partial M_0 (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}}\\
 &= \dfrac{\mu_0 \mu_r}{2} \dfrac{\partial [J \ \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H}]}{\partial \mathbb{H}} \\
@@ -180,7 +180,7 @@ The tensors
 \textcolor{red}{\mathbb{X}} &:= \dfrac{1}{4} \left[ C^{-1}_{KI} H_I C^{-1}_{LM} C^{-1}_{NJ} H_J + C^{-1}_{KI} H_I C^{-1}_{LN} C^{-1}_{MJ} H_J + C^{-1}_{LI} H_I C^{-1}_{KM} C^{-1}_{NJ} H_J + C^{-1}_{LI} H_I C^{-1}_{KN} C^{-1}_{MJ} H_J \right]\\
 \textcolor{blue}{\mathbb{Y}} &:= \dfrac{1}{4} \left[ C^{-1}_{KM} C^{-1}_{NI} H_I C^{-1}_{LJ} H_J + C^{-1}_{KN} C^{-1}_{MI} H_I C^{-1}_{LJ} H_J + C^{-1}_{LM} C^{-1}_{NI} H_I C^{-1}_{KJ} H_J + C^{-1}_{LN} C^{-1}_{MI} H_I C^{-1}_{KJ} H_J \right]
 \end{align*}
-\noindent with basis matrix $\mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N$ are both symmetric rank-4 tensors such that for given symmetric rank-2 tensors $\mathbf{M}, \mathbf{N}, \mathbf{P}, \mathbf{Q}$, we have:
+\noindent with basis matrix $\mathbf{E}_K \otimes \mathbf{E}_L \otimes \mathbf{E}_M \otimes \mathbf{E}_N$ are both symmetric rank-4 tensors such that for given symmetric rank-2 tensors $\mathbf{M}, \mathbf{N}, \mathbf{P}, \mathbf{Q}$, we have
 \begin{align*}
 \mathbf{N} &= \textcolor{red}{\mathbb{X}} : \mathbf{M}, \\
 \mathbf{Q} &= \textcolor{blue}{\mathbb{Y}} : \mathbf{P}.
@@ -216,9 +216,9 @@ The derivation for the magneto-static tangent $\mathbf{D} := \dfrac{\partial^2 \
 
 The magneto-elasticity tangent tensor that defines the sensitivity of the second Piola-Kirchhoff stress $\mathbf{S}$ w.r.t. the applied referential magnetic field $\mathbb{H}$ can be derived as follows:
 \begin{align*}
-\mathbb{P} &= -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -\dfrac{\partial}{\partial \mathbb{H}} \left( 2 \dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C}} \right) = -2 \ \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbb{H}}\\
+\mathbb{P} &= -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -\dfrac{\partial}{\partial \mathbb{H}} \left( 2 \dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C}} \right) = -2 \ \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \partial \mathbb{H}}.\\
 \intertext{Employing the result of \Cref{eq:3.6} for $\mathbf{S}$, we have}
-\mathbb{P} &= \dfrac{\mu_0 \mu_r}{2} \ J \ \left[ \mathbf{C}^{-1} \otimes \dfrac{\partial}{\partial \mathbb{H}} \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right) \right] - \mu_0 \mu_r \ J \ \dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}}
+\mathbb{P} &= \dfrac{\mu_0 \mu_r}{2} \ J \ \left[ \mathbf{C}^{-1} \otimes \dfrac{\partial}{\partial \mathbb{H}} \left( \mathbf{C}^{-1} : \mathbb{H} \otimes \mathbb{H} \right) \right] - \mu_0 \mu_r \ J \ \dfrac{\partial [ (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) ]^{sym}}{\partial \mathbb{H}}.
 \end{align*}
 Side calculation 1:
 \begin{align*}
@@ -227,7 +227,7 @@ Side calculation 1:
 &= \left[ C^{-1}_{JI} \ \delta_{IK} \ H_J + C^{-1}_{IJ} \ \delta_{JK} \ H_I \right] \ \mathbf{E}_K \\
 &= \left[ C^{-1}_{JK} \ H_J + C^{-1}_{IK} \ H_I \right] \ \mathbf{E}_K \\
 &= \left[ C^{-1}_{KJ} \ H_J + C^{-1}_{KI} \ H_I \right] \ \mathbf{E}_K \\
-&= 2 [\mathbf{C}^{-1} \cdot \mathbb{H}]
+&= 2 [\mathbf{C}^{-1} \cdot \mathbb{H}].
 \end{align*}
 Side calculation 2:
 \begin{align*}
@@ -239,7 +239,7 @@ Side calculation 2:
 \begin{split}
 = & \ \dfrac{1}{2} \left[ C^{-1}_{IK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
 &+ \dfrac{1}{2} \left[ C^{-1}_{JK} \ C^{-1}_{IN} \ H_N + C^{-1}_{JM} \ H_M \ C^{-1}_{IK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
-\end{split}\\
+\end{split}.\\
 \intertext{Observing the symmetry over the indices $I$ and $J$, we have}
 &= \left[ C^{-1}_{IK} \ C^{-1}_{JN} \ H_N + C^{-1}_{IM} \ H_M \ C^{-1}_{JK} \right] \ \mathbf{E}_I \otimes \mathbf{E}_J \otimes \mathbf{E}_K \\
 &= \mathbf{C}^{-1} \otimes (\mathbf{C}^{-1} \cdot \mathbb{H}) + (\mathbf{C}^{-1} \cdot \mathbb{H}) \otimes \mathbf{C}^{-1}
@@ -253,10 +253,10 @@ Side calculation 2:
 
 The corresponding system of partial differential equations (the strong forms of the local balance equations) for each field, the scalar-valued magnetic potential field in Chapter 2 and the vector-valued displacement field for an axisymmetric solid in Chapter 3, were described in detail. The required boundary conditions to formulate a boundary-value problem were also mentioned for both the individual field (decoupled) problems. We now consider the fully-coupled problem of the (axisymmetric) magneto-elastic membrane immersed in a free space. The strong form of the complete system for the coupled problem in the total Lagrangian formulation is as follows:
 \begin{align}
-\text{Kinematics}:& \ \mathbb{H}, \ \mathbf{F}, \ \mathbf{C} := \mathbf{F}^T \cdot \mathbf{F}, \ \mathbf{E} := \dfrac{1}{2} (\mathbf{C} - \mathbf{I}) \label{eq:3.22.1}\\
-\text{Equilibrium}:& \ \text{Div} \mathbb{B} = 0 \label{eq:3.22.2}\\
-& \ \text{Div}(\mathbf{F} \cdot \mathbf{S}) + \mathbf{b}^p = \mathbf{0} \label{eq:3.22.3}\\
-\text{Constitutive equation}:& \ \mathbb{B} = -\dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}} \label{eq:3.22.4}\\
+\text{Kinematics}:& \ \mathbb{H}, \ \mathbf{F}, \ \mathbf{C} := \mathbf{F}^T \cdot \mathbf{F}, \ \mathbf{E} := \dfrac{1}{2} (\mathbf{C} - \mathbf{I}), \label{eq:3.22.1}\\
+\text{Equilibrium}:& \ \text{Div} \mathbb{B} = 0, \label{eq:3.22.2}\\
+& \ \text{Div}(\mathbf{F} \cdot \mathbf{S}) + \mathbf{b}^p = \mathbf{0}, \label{eq:3.22.3}\\
+\text{Constitutive equation}:& \ \mathbb{B} = -\dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H}}, \label{eq:3.22.4}\\
 & \ \mathbf{S} = 2\dfrac{\partial \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C}}.
 \label{eq:3.22.5}
 \end{align}
@@ -335,7 +335,7 @@ Assuming the state of the system is known at some load or time step $t_{n-1}$, t
 \end{equation} 
 where $\Delta \left\lbrace \cdot \right\rbrace := \left\lbrace \cdot \right\rbrace_{i+1} - \left\lbrace \cdot \right\rbrace_i$ is the incremental change between the iterative solver iterations $i$ and $i+1$ and the value of a quantity at the current Newton iteration at the currently unknown load/time state $t_n$ is denoted as $\left\lbrace \cdot \right\rbrace_i^n = \left\lbrace \cdot \right\rbrace_i$.
 
-Assuming dead load ($\mathbf{b}^p = \mathbf{0}$), the direct terms of linearisation are given as:
+Assuming dead load ($\mathbf{b}^p = \mathbf{0}$), the direct terms of linearisation are given as
 \begin{align}
 D^2_{\Delta \phi, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} \delta \mathbb{H} \cdot \mathbf{D} \cdot \Delta \mathbb{H} \ \mathrm{d}V, \label{eq:3.30.1}\\
 D^2_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi_{int} &= \int\limits_{\mathcal{D}_0} \Delta \delta \mathbf{E} : \mathbf{S} \ \mathrm{d}V + \int\limits_{\mathcal{D}_0} \delta \mathbf{E} : \mathfrak{C} : \Delta \mathbf{E} \ \mathrm{d}V, \label{eq:3.30.2}
@@ -349,7 +349,7 @@ D^2_{\Delta \mathbf{u}, \delta \phi} \Pi_{int} &= - \int\limits_{\mathcal{D}_0} 
 \end{align}
 where $\mathbb{P} := -\dfrac{\partial \mathbf{S}}{\partial \mathbb{H}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbf{C} \otimes \mathbb{H}}$ and $\mathbb{P}^T := 2 \dfrac{\partial \mathbb{B}}{\partial \mathbf{C}} = -2 \dfrac{\partial^2 \Psi (J, \mathbf{C}, \mathbb{H})}{\partial \mathbb{H} \otimes \partial \mathbf{C}}$ are the referential magneto-elasticity tensors. The derived form of the different tangents is mentioned in \Cref{sec:const_law_coupled}. \par 
 
-The final linear form of \Cref{eq:3.25} can be written as:
+The final linear form of \Cref{eq:3.25} can be written as
 \begin{align}
 D_{\delta \phi} \Pi + D^2_{\Delta \phi, \delta \phi} \Pi + D^2_{\Delta \phi, \delta \mathbf{u}} \Pi = \mathbf{0}, \nonumber \\
 D_{\delta \mathbf{u}} \Pi + D^2_{\Delta \mathbf{u}, \delta \mathbf{u}} \Pi + D^2_{\Delta \mathbf{u}, \delta \phi} \Pi = \mathbf{0}.
@@ -405,7 +405,7 @@ D_{\delta \mathbf{u}} \Pi_{ext} &= \sum\limits_I \delta u_I \int\limits_{\partia
 D_{\delta \phi} \Pi &= - \sum\limits_I \delta \phi_I \int\limits_{\mathcal{D}_0} \left[ \nabla_0 N_I (\mathbf{X}) \cdot \mathbb{B} \right] \ \mathrm{d}V.
 \label{eq:3.37}
 \end{align}
-The resulting discretized equations \Cref{eq:3.36,eq:3.37} must hold for all arbitrary variations $\delta \phi_I$ and $\delta u_I$. The algebraic system to be solved at time/load step $t_n$ and Newton iterate $i$ is
+The resulting discretized \Cref{eq:3.36,eq:3.37} must hold for all arbitrary variations $\delta \phi_I$ and $\delta u_I$. The algebraic system to be solved at time/load step $t_n$ and Newton iterate $i$ is
 \begin{equation}
 \begin{bmatrix}
 \mathbf{K}_{\phi \phi} & \mathbf{K}_{\phi \mathbf{u}} \\
@@ -428,7 +428,7 @@ The solution update is then performed as follows
 \mathbf{d}_{i+1}^n = \mathbf{d}_i^n + \Delta \mathbf{d}^n.
 \label{eq:3.38}
 \end{equation}
-Applying the Gauss quadrature rule for the numerical integration and also considering the transformation needed for the axisymmetric formulation (as previously discussed in Chapter 2 and 2.1), the final cell wise FE assembly is given as follows:
+Applying the Gauss quadrature rule for the numerical integration and also considering the transformation needed for the axisymmetric formulation (as previously discussed in Chapter 2 and Chapter 3), the final cell wise FE assembly is given as follows:
 \begin{align}
 K_{IJ} = &- \sum\limits_q \left[ \nabla_0 N_I (q) \cdot \mathbf{D} \cdot \nabla_0 N_J (q) \right] \ \alpha \ J \ w(q) \nonumber \\
 &+ \sum\limits_q \left[ \left[ \mathbf{F}^T \cdot \nabla_0 \mathbf{N}_I (q) \right] : \mathbb{P} \cdot \nabla_0 N_J (q) \right] \ \alpha \ J \ w(q) \nonumber \\
@@ -540,7 +540,7 @@ The Schur complement reduction is based on the Gauss elimination of the sparse b
 \mathbf{K}_{\phi \phi} \cdot \Delta \mathbf{d}_{\phi} + \mathbf{K}_{\phi \mathbf{u}} \cdot \Delta \mathbf{d}_{\mathbf{u}} = -\mathbf{R}_{\phi}, \ \ \mathbf{K}_{\mathbf{u} \phi} \cdot \Delta \mathbf{d}_{\phi} + \mathbf{K}_{\mathbf{u} \mathbf{u}} \cdot \Delta \mathbf{d}_{\mathbf{u}} = -\mathbf{R}_{\mathbf{u}}. 
 \label{eq:3.16}
 \end{equation}
-The matrix $\mathbf{S}$ called the Schur complement of block $\mathbf{K}_{\phi \phi}$ in $\mathbf{K}$ is defined as:
+The matrix $\mathbf{S}$ called the Schur complement of block $\mathbf{K}_{\phi \phi}$ in $\mathbf{K}$ is defined as
 \begin{equation}
 \mathbf{S} = \mathbf{K}_{\mathbf{u} \mathbf{u}} - \mathbf{K}_{\mathbf{u} \phi} \mathbf{K}_{\phi \phi}^{-1} \mathbf{K}_{\phi \mathbf{u}} \equiv \mathbf{D} - \mathbf{C} \mathbf{A}^{-1} \mathbf{B} \ \ \text{from \Cref{eq:3.11}}.
 \label{eq:3.18}

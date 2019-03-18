@@ -64,7 +64,7 @@ The magnetic induction vector $\mathbbm{b}$ is modelled in terms of magnetic fie
 \begin{equation}
 \mathbbm{b} = \mathbbm{b}(\mathbbm{h}).
 \end{equation}
-We consider the magnetization ($\mathbbm{m}$) and the magnetic field $(\mathbbm{h})$ are aligned. For a material with relative permeability $\mu_r$ we have
+We consider the magnetization ($\mathbbm{m}$) and the magnetic field $(\mathbbm{h})$ are aligned. For a material with relative permeability $\mu_r$, we have
 \begin{equation}
 \mathbbm{h} + \mathbbm{m} = \mathbbm{h} + (\mu_r - 1)\mathbbm{h} = \mu_r \mathbbm{h}.
 \end{equation}
@@ -84,26 +84,26 @@ with the body symmetric about the Y-axis in the cylindrical co-ordinate system. 
 \mathbf{n} \cdot \llbracket \mathbbm{b} \rrbracket = 0 \ \ \text{on} \ \partial\mathcal{B}_t \ (\text{Natural boundary condition}).
 \label{eq:1.10}
 \end{align}
-Taking integration of the strong form over the whole domain we have 
+Taking integration of the strong form over the whole domain, we have 
 \begin{equation}
 \int\limits_{z} \int\limits_{y} \int\limits_{x} \nabla \cdot \mathbbm{b} \ \mathrm{d}z \ \mathrm{d}y \ \mathrm{d}x = 0 \ \ \text{in} \ \mathcal{B}_t. 
 \end{equation}
-The rules for co-ordinate transformation between Cartesian and Cylindrical co-ordinate system are:
+The rules for co-ordinate transformation between Cartesian and Cylindrical co-ordinate system are
 \begin{align}
 x &= r \cos \theta, \ y = r \sin \theta, \ z = z, \nonumber\\
 \mathrm{d}x &= \mathrm{d}r, \ \mathrm{d}y = r \mathrm{d}\theta, \ \mathrm{d}z = \mathrm{d}z, \nonumber\\
 \text{with} \ r &= \sqrt{x^2 + y^2} \ \text{and} \ \tan \theta = \frac{y}{x}.
 \end{align}
-Applying the rules for co-ordinate transformation, we have:
+Applying the rules for co-ordinate transformation, we have
 \begin{equation}
 \int\limits_{z} \int\limits_{\theta} \int\limits_{r} \nabla \cdot \mathbbm{b} \ \mathrm{d}z \ r \ \mathrm{d}\theta \ \mathrm{d}r = 0 \ \ \text{in} \ \mathcal{B}_t.
 \end{equation}
-For a magnetic field (induction) invariant w.r.t. the $\theta$ co-ordinate, i.e. symmetric field about the Y-axis, we have:
+For a magnetic field (induction) invariant w.r.t. the $\theta$ co-ordinate, i.e. symmetric field about the Y-axis, we have
 \begin{align}
 \int\limits_{\theta} \mathrm{d}\theta = 2 \pi \implies \int\limits_{z} \int\limits_{r} \nabla \cdot \mathbbm{b} \ \mathrm{d}z \ 2 \pi r \ \mathrm{d}r = 0 \ \ \text{in} \ \mathcal{B}_t.
 \label{eq:1.6}
 \end{align}
-Employing the relation given by Equation \eqref{eq:1.7} we have
+Employing the relation given by Equation \eqref{eq:1.7}, we have
 \begin{equation}
 \int\limits_{z} \int\limits_{r} \mu_0 \mu_r \ 2 \pi r \ \nabla \cdot \mathbbm{h} \ \mathrm{d}z \ \mathrm{d}r = 0 \ \ \text{in} \ \mathcal{B}_t.
 \label{eq:1.8}
@@ -124,11 +124,11 @@ Multiplying Equation \eqref{eq:1.9} with the test function $\eta$:
 \begin{equation}
 \int\limits_{z} \int\limits_{r} \mu_0 \mu_r \ 2 \pi r \ [(\nabla \cdot \nabla \phi)] \eta \ \mathrm{d}z \ \mathrm{d}r = 0 \ \ \forall \eta \in V.
 \end{equation}
-We observe different continuity requirements hold concerning the solution function $\phi$ and the test function $\eta$; $\phi$ is required to have second derivatives thus indicating continuous first derivatives, whereas there is no derivative on $\eta$. Thus the two function spaces $S$ and $V$ are not the same. This leads to an unsymmetrical formulation. To avoid this, we reformulate the above equation using integration by parts to have a symmetric formulation:
+We observe different continuity requirements hold concerning the solution function $\phi$ and the test function $\eta$; $\phi$ is required to have second derivatives thus indicating continuous first derivatives, whereas there is no derivative on $\eta$. Thus the two function spaces $S$ and $V$ are not the same. This leads to an unsymmetrical formulation. To avoid this, we reformulate the above equation using integration by parts to have a symmetric formulation
 \begin{equation}
 \int\limits_{z} \int\limits_{r} \mu_0 \mu_r \ 2 \pi r \ [ \nabla \cdot (\nabla\phi \ \eta) - (\nabla \phi \cdot \nabla \eta) ] \ \mathrm{d}z \ \mathrm{d}r = 0 \ \ \forall \eta \in V.
 \end{equation}
-Applying the Gauss divergence theorem on the first term we have:
+Applying the Gauss divergence theorem on the first term, we have
 \begin{equation}
 \int\limits_{\partial \Omega} \mu_0 \mu_r \ 2 \pi r \ \nabla \phi \cdot \mathbf{n} \ \eta \ \mathrm{d}\sigma - \int\limits_{z} \int\limits_{r} \mu_0 \mu_r \ 2 \pi r \ (\nabla \phi \cdot \nabla \eta) \ \mathrm{d}z \ \mathrm{d}r = 0 \ \ \forall \eta \in V,
 \end{equation}
@@ -285,10 +285,10 @@ table[x=NumberOfCells,y=TotalEnergy]{3d_3ref_energy_ncells.dat};
 \label{fig:1.4}
 \end{figure} \par 
 
-We observe the total energy in the magneto-elastic membrane due to the applied magneto-static magnetic scalar potential for the axisymmetric formulation for 4 refinement cycles in Figure \eqref{fig:1.4.1} and for the 3D simulation for 3 refinement cycles in Figure \eqref{fig:1.4.2} (less number of refinement cycles due to memory bottleneck with vastly growing number of cells). 4 MPI processes were employed to obtain the results. As can be observed, the total energy by both the approaches are comparable with a maximum relative error of 15\%. We observe a convergence in the total energy with each h-adaptive mesh refinement cycle. High computational cost for the 3D simulation is clearly observable when comparing the number of cells in the domain against the number of cells in axisymmetric (2.5D) simulation result. \par 
+We observe the total energy in the magneto-elastic membrane due to the applied magneto-static magnetic scalar potential for the axisymmetric formulation for 4 refinement cycles in Figure \eqref{fig:1.4.1} and for the 3D simulation for 3 refinement cycles in Figure \eqref{fig:1.4.2} (less number of refinement cycles due to memory bottleneck with vastly growing number of cells). Four MPI processes were employed to obtain the results. As can be observed, the total energy by both the approaches are comparable with a maximum relative error of 15\%. We observe a convergence in the total energy with each h-adaptive mesh refinement cycle. High computational cost for the 3D simulation is clearly observable when comparing the number of cells in the domain against the number of cells in axisymmetric (2.5D) simulation result. \par 
 
 \subsection{Experiment with the permanent magnet region and the applied potential}
-We carried out a study on the size of the permanent magnet region in which we constrain the DoFs to a linearly varying magnetic potential. This region, as explained earlier, is a rectangular box in 2D/circular disk in 3D. In addition to studying the behaviour of results on the dependence of the size of this magnet region, we also experimented with the change in the linear potential function values. The magnet region dimensions (length and height) and the potential function to apply are user input parameters and are varied in this study. This experiment was carried out for the axisymmetric (2.5D) model only.\par 
+We carried out a study on the size of the permanent magnet region in which we constrain the degrees of freedom to a linearly varying magnetic potential. This region, as explained earlier, is a rectangular box in 2D/circular disk in 3D. In addition to studying the behaviour of results on the dependence of the size of this magnet region, we also experimented with the change in the linear potential function values. The magnet region dimensions (length and height) and the potential function to apply are user input parameters and are varied in this study. This experiment was carried out for the axisymmetric (2.5D) model only.\par 
 
 \begin{figure}[h]
 \centering
@@ -333,7 +333,7 @@ We carried out a study on the size of the permanent magnet region in which we co
 \label{fig:1.5}
 \end{figure}
 
-In the above figures we observe the resulting magnetic field $\mathbbm{h}$ for the input magnet region and applied magnetic potential parameters. Figure \eqref{fig:1.5.4} has double the magnet size when compared to the magnet size in Figure \eqref{fig:1.5.1}. When comparing the results for this effect of increased magnet size, we observe in Figure \eqref{fig:1.5.5} an increase in the magnitude of the magnetic field against the result in Figure \eqref{fig:1.5.2}. In Figure \eqref{fig:1.5.3} we increase the applied magnetic potential ten times of that used in the result for Figure \eqref{fig:1.5.2} keeping the size of the permanent magnet region the same. We observe the magnetic field has proportionally increased by same magnitude. Combined increase in the magnet region (twice as original size) and magnetic potential (10 times the original value) we observe the magnetic field has increased by a significantly large magnitude, see Figure \eqref{fig:1.5.6}. It is important to observe that the direction of magnetic field near the torus membrane did not change in any of the variation case. The aim of this study is to find appropriate values for the above three parameters such that we have a tangential magnetic field in the torus membrane to satisfy the curl free condition as given in Equation \eqref{eq:1.2}. \par 
+In the above figures we observe the resulting magnetic field $\mathbbm{h}$ for the input magnet region and applied magnetic potential parameters. Figure \eqref{fig:1.5.4} has double the magnet size when compared to the magnet size in Figure \eqref{fig:1.5.1}. When comparing the results for this effect of increased magnet size, we observe in Figure \eqref{fig:1.5.5} an increase in the magnitude of the magnetic field against the result in Figure \eqref{fig:1.5.2}. In Figure \eqref{fig:1.5.3} we increase the applied magnetic potential ten times of that used in the result for Figure \eqref{fig:1.5.2} keeping the size of the permanent magnet region the same. We observe the magnetic field has proportionally increased by same magnitude. Combined increase in the magnet region (twice as original size) and magnetic potential (ten times the original value) we observe the magnetic field has increased by a significantly large magnitude, see Figure \eqref{fig:1.5.6}. It is important to observe that the direction of magnetic field near the torus membrane did not change in any of the variation case. The aim of this study is to find appropriate values for the above three parameters such that we have a tangential magnetic field in the torus membrane to satisfy the curl free condition as given in Equation \eqref{eq:1.2}. \par 
 
 The results with appropriately chosen values of these parameters for future work are depicted in Figure \eqref{fig:1.6} and \eqref{fig:1.7}.
 
