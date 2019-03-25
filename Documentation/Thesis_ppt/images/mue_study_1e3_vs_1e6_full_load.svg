@@ -1,0 +1,63 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw"
+    version="1.1" baseProfile="full">
+    <g>
+        <g latexdraw:type="picture" id="id118544461">
+            <image
+                xlink:href="/home/vinayak/Desktop/thesis/Master-Thesis/Documentation/Task_2.1_documentation/new_images/mue_study_1e3_vs_1e6_full_load.png"
+                x="80.0" y="-20.0" height="754" width="936"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id268574835">
+            <polyline
+                points="704.6153846153846,87.30769230769229 781.5384615384615,87.30769230769229 "
+                stroke-width="4.0" stroke="#f30404"
+                latexdraw:rotationAngle="0.0" marker-start="url(#arrow0-268574835)"/>
+        </g>
+        <g latexdraw:type="joinedLines" id="id299667554">
+            <polyline
+                points="769.2307692307692,307.6923076923077 684.6153846153846,307.6923076923077 "
+                stroke-width="4.0" stroke="#f30404"
+                latexdraw:rotationAngle="0.0" marker-start="url(#arrow0-299667554)"/>
+        </g>
+        <g latexdraw:type="text" id="id1383299525" fill="#f30404" latexdraw:position="bl">
+            <text x="789.6153846153846" y="102.30769230769229">\Huge{$\mu_2 = 3e^{-2}$ Pa}</text>
+        </g>
+        <g latexdraw:type="text" id="id1789080635" fill="#f30404" latexdraw:position="bl">
+            <text x="459.61538461538464" y="327.30769230769226">\Huge{$\mu_1 = 3e^{1}$ Pa}</text>
+        </g>
+    </g>
+    <defs>
+        <marker overflow="visible" orient="auto" id="arrow0-268574835">
+            <path
+                d="M 0.0 0.0 L 3.7260416666666667 1.3307291666666667 L 3.7260416666666667 0.0 L 3.7260416666666667 -1.3307291666666667 z "
+                latexdraw:arrSizeNum="2.0" fill="#f30404"/>
+        </marker>
+        <marker overflow="visible" orient="auto" id="arrow0-299667554">
+            <path
+                d="M 0.0 0.0 L 3.7260416666666667 1.3307291666666667 L 3.7260416666666667 0.0 L 3.7260416666666667 -1.3307291666666667 z "
+                latexdraw:arrSizeNum="2.0" fill="#f30404"/>
+        </marker>
+    </defs>
+    <metadata>
+        <latexdraw:metadata>
+            <latexdraw:latexIncludes/>
+            <latexdraw:displayXScale>true</latexdraw:displayXScale>
+            <latexdraw:displayYScale>true</latexdraw:displayYScale>
+            <latexdraw:unit>CM</latexdraw:unit>
+            <latexdraw:zoom>0.65</latexdraw:zoom>
+            <latexdraw:magneticGridStyle>CUSTOMISED</latexdraw:magneticGridStyle>
+            <latexdraw:gridGap>5</latexdraw:gridGap>
+            <latexdraw:magneticGrid>true</latexdraw:magneticGrid>
+            <latexdraw:version>3.3.8</latexdraw:version>
+            <latexdraw:size>
+                <latexdraw:width>1301</latexdraw:width>
+                <latexdraw:height>744</latexdraw:height>
+            </latexdraw:size>
+            <latexdraw:position>
+                <latexdraw:x>65.0</latexdraw:x>
+                <latexdraw:y>24.0</latexdraw:y>
+            </latexdraw:position>
+        </latexdraw:metadata>
+    </metadata>
+</svg>
