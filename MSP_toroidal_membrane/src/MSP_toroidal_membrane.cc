@@ -85,9 +85,9 @@ void MSP_Toroidal_Membrane<dim>::set_initial_fe_indices()
 
     // Setting of higher degree FE to cells in toroid membrane
     if (cell->material_id() == material_id_toroid)
-        cell->set_active_fe_index(0); // 1 for FE_Q(2) or 2 for FE_Q(3)
+        cell->set_active_fe_index(parameters.poly_degree_chosen-1); // 1 for FE_Q(2) or 2 for FE_Q(3)
     else
-        cell->set_active_fe_index(0);
+        cell->set_active_fe_index(parameters.poly_degree_chosen-1);
     }
 }
 
@@ -1523,8 +1523,10 @@ MSP_Toroidal_Membrane<dim>::solve_nonlinear_system(TrilinosWrappers::MPI::BlockV
 // Using block elimination for solution update and load parameter update
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
+                                                                      TrilinosWrappers::MPI::BlockVector &delta_solution_update,
                                                                       double &lambda,
-                                                                      const unsigned int newton_iteration)
+                                                                      const unsigned int newton_iteration,
+                                                                      double &k_0)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Solve linear system: Block elimination");
 
@@ -1543,8 +1545,8 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
                                          mpi_communicator);
     TrilinosWrappers::MPI::BlockVector neg_G(locally_owned_partitioning,
                                              mpi_communicator);
-    TrilinosWrappers::MPI::BlockVector delta_solution_update(locally_owned_partitioning,
-                                                             mpi_communicator);
+//    TrilinosWrappers::MPI::BlockVector delta_solution_update(locally_owned_partitioning,
+//                                                             mpi_communicator);
     SolverControl solver_control (parameters.lin_slvr_max_it*system_matrix.block(u_block, u_block).m(),
                                   parameters.lin_slvr_tol);
     /*ReductionControl solver_control (parameters.lin_slvr_max_it * system_matrix.block(u_block, u_block).m(),
@@ -1637,7 +1639,7 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
         assemble_P(P.block(u_block));
         const double P_norm = P.block(u_block).l2_norm();
         P.block(u_block) /= P_norm;
-        pcout << "\nP norm: " << P_norm << std::endl;
+        pcout << "\nP norm: " << P.block(u_block).l2_norm() << std::endl;
         pcout << "G norm: " << system_rhs.block(u_block).l2_norm() << std::endl;
 
         // Predictor step for initial displacement increment delta_solution_P_0
@@ -1651,29 +1653,33 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
 
             // Need to figure out about +- sign
             double CS_i = 1.0;
-            double k_0 = 0.0, k_i = 0.0;
             // for 1st load iteration step sign: +1 with lambda_k = 0.0
             if (loadstep.get_loadstep() == 1)
             {
                 k_0 = ( P.block(u_block) * delta_solution_P_0.block(u_block)) /
                         (delta_solution_P_0.block(u_block).norm_sqr());
+                pcout << "k_0: " << k_0 << std::endl;
                 lambda += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
             }
+        }
 
             // for further load iterations: compute the sign using
             // current stiffness parameter
-            else
-            {
-                k_i = (P.block(u_block) * delta_solution_update.block(u_block)) /
-                        (delta_solution_update.block(u_block).norm_sqr());
+//            else
+//            {
+                pcout << "delta_sol_up norm: " << delta_solution_update.block(u_block).l2_norm() << std::endl;
+                double k_i = (P.block(u_block) * delta_solution_update.block(u_block)) /
+                                (delta_solution_update.block(u_block).norm_sqr());
+                pcout << "k_0: " << k_0 << "\n"
+                      << "k_i: " << k_i << std::endl;
                 CS_i = k_i / k_0;
                 pcout << "CS_i: " << CS_i << std::endl;
                 Assert((CS_i >= -1.0) && (CS_i <= 1.0),
                        ExcInternalError());
                 lambda += CS_i * (parameters.delta_s / delta_solution_P_0.block(u_block).l2_norm());
-            }
+//            }
             Assert(lambda != 0.0, ExcInternalError());
-        }
+//        }
 
         pcout << "lambda: " << lambda << std::endl;
         // G = F_int_i - lambda_i * F_ext_i => (sys_mat * sol - lambda * sys_rhs) at current iteration i
@@ -1694,13 +1700,13 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
 
          // By Defn: D_f_u = \nabla_u f_i = f^T
 //         D_f_u.block(u_block) = 2.0 * solution_up.block(u_block);
-         D_f_u.block(u_block) = (2.0 / g) * solution_up.block(u_block);
+         D_f_u.block(u_block) = (1.0 / g) * solution_up.block(u_block);
 
          // By Defn: f,lambda_i = (\partial f)/(\partial lambda)
          // => 2 * psi^2 * delta_lambda_i * (P^T * P)
          /*D_f_lambda = 2.0 * parameters.psi * parameters.psi * lambda *
                       (P.block(u_block).norm_sqr());*/
-         D_f_lambda = 2.0 * parameters.psi * parameters.psi * lambda *
+         D_f_lambda = 1.0 * parameters.psi * parameters.psi * lambda *
                  (P.block(u_block).norm_sqr()) / g;
 
          pcout << "D_f_u norm: " << D_f_u.block(u_block).l2_norm() << " \n"
@@ -1719,16 +1725,25 @@ void MSP_Toroidal_Membrane<dim>::solve_linear_system_block_eliminaton(TrilinosWr
         // Step 2: Compute displacement update
         delta_solution_update.block(u_block) = (delta_lambda_update * delta_solution_P.block(u_block) +
                                                 delta_solution_G.block(u_block));
+        pcout << "delta_sol_up norm: " << delta_solution_update.block(u_block).l2_norm() << std::endl;
         solution_up.block(u_block) += delta_solution_update.block(u_block);
     }
+    constraints.distribute(solution_up.block(u_block));
     solution_update.block(u_block) = solution_up.block(u_block);
+
+    pcout
+        << std::fixed << std::setprecision(3) << std::scientific
+        << solver_control.last_step()
+        << "\t" << solver_control.last_value();
 }
 
 
 // Nonlinear system of equation iterative solver using Arc-Length method
 template <int dim>
 void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
-                                                                               double &lambda)
+                                                                               TrilinosWrappers::MPI::BlockVector &delta_solution_update,
+                                                                               double &lambda,
+                                                                               double &k_0)
 {
     TimerOutput::Scope timer_scope (computing_timer, "Solve nonlinear system: Arc-Length");
     pcout << "Load step: " << loadstep.get_loadstep() << " "
@@ -1748,6 +1763,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
     print_convergence_header();
 
     unsigned int newton_iteration = 0;
+
     for(; newton_iteration < parameters.max_iterations_NR; ++newton_iteration)
     {
         pcout << "    " << newton_iteration << " \t | ";
@@ -1776,8 +1792,8 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
         error_residual_norm.normalize(error_residual_0);
 
         if((newton_iteration > 3 &&
-            error_residual_norm.u <= parameters.tol_f &&
-            error_update_norm.u <= parameters.tol_u)
+            error_residual_norm.u <= parameters.tol_f /*&&
+            error_update_norm.u <= parameters.tol_u*/)
             ||
             (newton_iteration > 5 &&
              error_residual.norm < (parameters.abs_err_tol_f *
@@ -1791,7 +1807,7 @@ void MSP_Toroidal_Membrane<dim>::solve_nonlinear_system_with_arc_length_method(T
         // Solve linear system in two steps using block elimination:
         // Step 1: solve for load parameter update delta_lambda
         // Step 2: Back substituion to find displacement update solution_delta
-        solve_linear_system_block_eliminaton(solution_update, lambda, newton_iteration);
+        solve_linear_system_block_eliminaton(solution_update, delta_solution_update, lambda, newton_iteration, k_0);
 
         get_error_update(solution_update, error_update);
         if (newton_iteration == 0)
@@ -2188,9 +2204,9 @@ void MSP_Toroidal_Membrane<dim>::average_cauchy_stress_components(Vector<double>
                                     update_quadrature_points |
                                     update_JxW_values);
 
-    typename Triangulation<dim>::active_cell_iterator
-    cell = triangulation.begin_active(),
-    endc = triangulation.end();
+    typename hp::DoFHandler<dim>::active_cell_iterator
+    cell = hp_dof_handler.begin_active(),
+    endc = hp_dof_handler.end();
     for (; cell!=endc; ++cell)
         if(cell->is_locally_owned())
     {
@@ -3001,12 +3017,16 @@ void MSP_Toroidal_Membrane<dim>::run ()
       TrilinosWrappers::MPI::BlockVector solution_delta(locally_owned_partitioning,
                                                         locally_relevant_partitioning,
                                                         mpi_communicator);
+      TrilinosWrappers::MPI::BlockVector delta_solution_update(locally_owned_partitioning,
+                                                               mpi_communicator);
       // Declare the incremental load update
-      double lambda = 0.001;
+      double lambda = 0.0;
+      double k_0 = 0.0;
 
       if (parameters.nonlinear_solver_type == "Newton-Raphson")
       {
           loadstep.increment();
+          loadstep.increment_load();
 
           const unsigned int total_num_loadsteps = loadstep.final()/loadstep.get_delta_load();
           // Create postprocessor object for load displacement data
@@ -3019,7 +3039,8 @@ void MSP_Toroidal_Membrane<dim>::run ()
 
           // Can add a loop over load domain here later
           // currently single load step taken
-          while (std::abs(loadstep.current()) <= std::abs(loadstep.final()))
+          while (std::abs(loadstep.current()) < std::abs(loadstep.final() +
+                                                         (0.01 * loadstep.get_delta_load())))
           {
               solution_delta = 0.0;
               solve_nonlinear_system(solution_delta);
@@ -3041,6 +3062,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
               compute_error ();
               output_results(cycle, loadstep.get_loadstep());
               loadstep.increment();
+              loadstep.increment_load();
           }
 
           // Write load disp data to an output file for given point
@@ -3063,7 +3085,7 @@ void MSP_Toroidal_Membrane<dim>::run ()
           {
               solution_delta = 0.0;
 
-              solve_nonlinear_system_with_arc_length_method(solution_delta, lambda);
+              solve_nonlinear_system_with_arc_length_method(solution_delta, delta_solution_update, lambda, k_0);
               solution += solution_delta;
 
               compute_error ();

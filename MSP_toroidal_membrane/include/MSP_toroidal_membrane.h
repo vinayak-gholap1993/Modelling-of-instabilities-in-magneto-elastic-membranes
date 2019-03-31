@@ -225,6 +225,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
   {
     unsigned int poly_degree_min;
     unsigned int poly_degree_max;
+    unsigned int poly_degree_chosen;
 
     static void
     declare_parameters(ParameterHandler &prm);
@@ -245,6 +246,10 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
       prm.declare_entry("Maximum polynomial degree", "2",
                         Patterns::Integer(1),
                         "Displacement system polynomial order");
+
+      prm.declare_entry("Chosen polynomial degree", "1",
+                        Patterns::Integer(1),
+                        "Chosen system polynomial order");
     }
     prm.leave_subsection();
   }
@@ -255,6 +260,7 @@ void LoadStep::parse_parameters(ParameterHandler &prm)
     {
       poly_degree_min = prm.get_integer("Minimum polynomial degree");
       poly_degree_max = prm.get_integer("Maximum polynomial degree");
+      poly_degree_chosen = prm.get_integer("Chosen polynomial degree");
     }
     prm.leave_subsection();
   }
@@ -1122,10 +1128,14 @@ private:
   void print_convergence_footer();
   void average_cauchy_stress_components(Vector<double> &, const unsigned int &, const unsigned int &) const;
   void solve_nonlinear_system_with_arc_length_method(TrilinosWrappers::MPI::BlockVector &solution_delta,
-                                                     double &lambda);
+                                                     TrilinosWrappers::MPI::BlockVector &delta_solution_update,
+                                                     double &lambda,
+                                                     double &k_0);
   void solve_linear_system_block_eliminaton(TrilinosWrappers::MPI::BlockVector &solution_update,
+                                            TrilinosWrappers::MPI::BlockVector &delta_solution_update,
                                             double &lambda,
-                                            const unsigned int newton_iteration);
+                                            const unsigned int newton_iteration,
+                                            double &k_0);
 
   MPI_Comm           mpi_communicator;
   const unsigned int n_mpi_processes;
